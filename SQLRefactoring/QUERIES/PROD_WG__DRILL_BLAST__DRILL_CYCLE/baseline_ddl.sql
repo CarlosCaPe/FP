@@ -1,0 +1,240 @@
+create or replace view DRILL_CYCLE(
+	ORIG_SRC_ID,
+	SITE_CODE,
+	BENCH,
+	PUSHBACK,
+	PATTERN_NAME,
+	ORIGINAL_PATTERN_NAME,
+	DRILL_CYCLE_SK,
+	DRILL_HOLE_SHIFT_ID,
+	DRILL_ID,
+	DRILL_BIT_ID,
+	SYSTEM_OPERATOR_ID,
+	DRILL_HOLE_ID,
+	DRILL_HOLE_NAME,
+	DRILL_PLAN_SK,
+	DRILL_HOLE_STATUS,
+	IS_HOLE_PLANNED_FLAG,
+	START_HOLE_TS_UTC,
+	END_HOLE_TS_UTC,
+	START_HOLE_TS_LOCAL,
+	END_HOLE_TS_LOCAL,
+	DRILL_HOLE_DURATION_SECONDS,
+	ACTUAL_DRILL_HOLE_DEPTH_FEET,
+	ACTUAL_DRILL_HOLE_DEPTH_METERS,
+	GPS_ACCURACY,
+	ACTUAL_DRILL_HOLE_START_FEET_X,
+	ACTUAL_DRILL_HOLE_START_FEET_Y,
+	ACTUAL_DRILL_HOLE_START_FEET_Z,
+	ACTUAL_DRILL_HOLE_END_FEET_X,
+	ACTUAL_DRILL_HOLE_END_FEET_Y,
+	ACTUAL_DRILL_HOLE_END_FEET_Z,
+	ACTUAL_DRILL_HOLE_LONGITUDE,
+	ACTUAL_DRILL_HOLE_LATITUDE,
+	ACTUAL_DRILL_HOLE_START_METERS_X,
+	ACTUAL_DRILL_HOLE_START_METERS_Y,
+	ACTUAL_DRILL_HOLE_START_METERS_Z,
+	ACTUAL_DRILL_HOLE_END_METERS_X,
+	ACTUAL_DRILL_HOLE_END_METERS_Y,
+	ACTUAL_DRILL_HOLE_END_METERS_Z,
+	AUTODRILL_DURATION_SECONDS,
+	AUTODRILL_USAGE_PCT,
+	DRILL_HOLE_PENETRATION_RATE_AVG_FEET_HOUR,
+	OPERATOR_LOGIN_TS_UTC,
+	OPERATOR_LOGOUT_TS_UTC,
+	OPERATOR_LOGIN_TS_LOCAL,
+	OPERATOR_LOGOUT_TS_LOCAL,
+	BEARING,
+	DRILL_TOWER_ANGLE_DEGREE_CALCULATED,
+	DRILL_TOWER_ANGLE_DEGREE_SYSTEM,
+	DRILL_HOLE_DUPLICATED_FLAG,
+	DRILL_HOLE_UPSIDE_DOWN_FLAG,
+	DRILL_HOLE_START_END_TIME_INVALID_FLAG,
+	DRILL_HOLE_START_END_TIME_OVERLAP_FLAG,
+	DRILL_HOLE_DEPTH_INVALID_FLAG,
+	DRILL_HOLE_ANGLE_INVALID_FLAG,
+	DRILL_HOLE_POSITION_INVALID_FLAG,
+	TIME_BETWEEN_DRILL_HOLES_SECONDS,
+	AIR_PRESSURE_PSI,
+	FEED_FORCE_NEWTONS,
+	ROTATION_TORQUE_NM,
+	BIT_SPEED_RPM,
+	WATER_FLOW_GPM,
+	INSTANTANOUS_PENRATE_MWD_METERS_HOUR,
+	INSTANTANOUS_PENRATE_MWD_FEET_HOUR,
+	DRILL_HOLE_OFF_TARGET_FEET,
+	DRILL_HOLE_OFF_TARGET_METERS,
+	DRILL_HOLE_HORIZONTAL_ACCURACY_PCT,
+	DRILL_HOLE_VERTICAL_ACCURACY_PCT,
+	OVERDRILL_UNDERDRILL_FLAG,
+	OVERDRILL_UNDERDRILL_FEET,
+	OVERDRILL_UNDERDRILL_METERS,
+	DRILLING_STOPS_COUNT,
+	DRILL_HOLE_REDRILL_FLAG,
+	PROPEL_START_TS_UTC,
+	PROPEL_END_TS_UTC,
+	PARK_POSITION_START_TS_UTC,
+	PARK_POSITION_END_TS_UTC,
+	LEVEL_START_TS_UTC,
+	LEVEL_END_TS_UTC,
+	DRILL_START_TS_UTC,
+	DRILL_END_TS_UTC,
+	RETRACT_START_TS_UTC,
+	RETRACT_END_TS_UTC,
+	PROPEL_START_TS_LOCAL,
+	PROPEL_END_TS_LOCAL,
+	PARK_POSITION_START_TS_LOCAL,
+	PARK_POSITION_END_TS_LOCAL,
+	LEVEL_START_TS_LOCAL,
+	LEVEL_END_TS_LOCAL,
+	DRILL_START_TS_LOCAL,
+	DRILL_END_TS_LOCAL,
+	RETRACT_START_TS_LOCAL,
+	RETRACT_END_TS_LOCAL,
+	PROPEL_DURATION,
+	PARK_POSITION_DURATION,
+	LEVEL_DURATION,
+	DRILL_DURATION,
+	RETRACT_DURATION,
+	SYSTEM_DRILL_STATE_DURATION_SECONDS,
+	SYSTEM_SETUP_STATE_DURATION_SECONDS,
+	SYSTEM_AUTO_LEVEL_DURATION_SECONDS,
+	SYSTEM_AUTO_DELEVEL_DURATION_SECONDS,
+	PLAN_CREATION_TS_LOCAL,
+	SYSTEM_VERSION,
+	ACTUAL_MCF_BLOCK_ID,
+	DESIGN_MCF_BLOCK_ID,
+	DW_LOAD_TS,
+	DW_MODIFY_TS
+) as
+/****************************************************************************************************************************************************
+* view NAME: PROD_WG.DRILL_BLAST.DRILL_CYCLE
+* PURPOSE:  This view Centralizes information about drilling cycles from multiple sources like CAT Terrain and Surface manager source system etc.
+*note 1: the drill_plan_sk might be null in the case there is no match between drilled_hole_b and planned_hole_b
+*note 2: the mismatches between drilled_hole_b and planned_hole_b are known as any of the following scenarios
+*scenario1: Ad-hoc Patterns, this means there are records in the drilled hole table with incorrect hole id like negative numbers
+*scenario2: manually entered records in drilled hole table with non standard hole id like '01','02'
+*scenario3: A combination of active records and in active records from drilled_hole_b vs planned_hole_b tables
+*scenario4: Missing records in planned_hole_b table 
+* SITE: 	
+* Usage:  	Select * from PROD_WG.DRILL_BLAST.DRILL_CYCLE limit 10;
+* Primary Key : orig_src_id,site_code,  drill_hole_shift_id, system_version , drill_id, drill_hole_id
+* Driving table/view:  PROD_TARGET.COLLECTIONS.DRILLBLAST_DRILL_CYCLE_V
+* CREATE/CHANGE LOG :  
+* DATE             MOD BY               GCC                                                 DESC
+*--------------------------------------------------------------------------------------------------------------------------------------------------------
+*  2025-08-01    MURALI NAIDU           Drill Productivity Data Model             Initial version 
+*  2025-08-26    MURALI NAIDU           Drill Productivity Data Model             repointed data to PROD_general.( fuse is not able to handle archival process now, will repoint to surfacemanager once fuse able to handle archival data)
+*  2025-10-27    MURALI NAIDU           Drill Productivity Data Model             Adding dimensional columns to the drill cycle view  
+*  2025-10-31    MURALI NAIDU           Drill Productivity Data Model             Renaming columns as per ethan's request  
+*  2025-11-26    Murali Naidu           Drill Prodctivity Data Model              Adding Block id and instantanous_penrate_mwd_feet_hour columns
+******************************************************************************************************************************************************/
+select 
+orig_src_id
+	,site_code
+	,bench
+	,pushback
+	,pattern_name
+	,original_pattern_name
+	,drill_cycle_sk
+	,drill_hole_shift_id
+	,drill_id
+	,drill_bit_id
+	,system_operator_id
+	,drill_hole_id
+	,drill_hole_name
+	,drill_plan_sk
+	,drill_hole_status
+	,is_hole_planned_flag
+	,start_hole_ts_utc
+	,end_hole_ts_utc
+	,start_hole_ts_local
+	,end_hole_ts_local
+	,drill_hole_duration_seconds
+	,actual_drill_hole_depth_feet
+	,actual_drill_hole_depth_meters
+	,gps_accuracy
+	,actual_drill_hole_start_feet_x
+	,actual_drill_hole_start_feet_y
+	,actual_drill_hole_start_feet_z
+	,actual_drill_hole_end_feet_x
+	,actual_drill_hole_end_feet_y
+	,actual_drill_hole_end_feet_z
+	,actual_drill_hole_longitude
+	,actual_drill_hole_latitude
+	,actual_drill_hole_start_meters_x
+	,actual_drill_hole_start_meters_y
+	,actual_drill_hole_start_meters_z
+	,actual_drill_hole_end_meters_x
+	,actual_drill_hole_end_meters_y
+	,actual_drill_hole_end_meters_z
+	,autodrill_duration_seconds
+	,autodrill_usage_pct
+	,drill_hole_penetration_rate_avg_feet_hour
+	,operator_login_ts_utc
+	,operator_logout_ts_utc
+	,operator_login_ts_local
+	,operator_logout_ts_local
+	,bearing
+	,drill_tower_angle_degree_calculated
+	,drill_tower_angle_degree_system
+	,drill_hole_duplicated_flag
+	,drill_hole_upside_down_flag
+	,drill_hole_start_end_time_invalid_flag
+	,drill_hole_start_end_time_overlap_flag
+	,drill_hole_depth_invalid_flag
+	,drill_hole_angle_invalid_flag
+	,drill_hole_position_invalid_flag
+	,time_between_drill_holes_seconds
+	,air_pressure_psi
+	,feed_force_newtons
+	,rotation_torque_nm
+	,bit_speed_rpm
+	,water_flow_gpm
+	,instantanous_penrate_mwd_meters_hour
+    ,instantanous_penrate_mwd_feet_hour
+	,drill_hole_off_target_feet
+	,drill_hole_off_target_meters
+	,drill_hole_horizontal_accuracy_pct
+	,drill_hole_vertical_accuracy_pct
+	,overdrill_underdrill_flag
+	,overdrill_underdrill_feet
+	,overdrill_underdrill_meters
+	,drilling_stops_count
+	,drill_hole_redrill_flag
+	,propel_start_ts_utc
+	,propel_end_ts_utc
+	,park_position_start_ts_utc
+	,park_position_end_ts_utc
+	,level_start_ts_utc
+	,level_end_ts_utc
+	,drill_start_ts_utc
+	,drill_end_ts_utc
+	,retract_start_ts_utc
+	,retract_end_ts_utc
+	,propel_start_ts_local
+	,propel_end_ts_local
+	,park_position_start_ts_local
+	,park_position_end_ts_local
+	,level_start_ts_local
+	,level_end_ts_local
+	,drill_start_ts_local
+	,drill_end_ts_local
+	,retract_start_ts_local
+	,retract_end_ts_local
+    ,propel_duration
+    ,park_position_duration
+    ,level_duration
+    ,drill_duration
+    ,retract_duration
+	,system_drill_state_duration_seconds
+	,system_setup_state_duration_seconds
+	,system_auto_level_duration_seconds
+	,system_auto_delevel_duration_seconds
+	,plan_creation_ts_local
+	,system_version
+	,actual_mcf_block_id
+	,design_mcf_block_id
+	,dw_load_ts
+	,dw_modify_ts
+	from PROD_target.collections.drillblast_drill_cycle_v;

@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "snowrefactor"
+version = "0.1.0"
+description = "Regression harness for Snowflake query refactors (baseline vs refactor)"
+requires-python = ">=3.10"
+dependencies = [
+  "snowflake-connector-python[pandas]>=3.7.0",
+  "python-dotenv>=1.0.0",
+  "pandas>=2.1.0",
+  "pyyaml>=6.0.1",
+  "rich>=13.7.0",
+]
+
+[project.scripts]
+snowrefactor = "snowrefactor.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

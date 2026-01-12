@@ -1,0 +1,22 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Secrets
+.env
+**/.env
+
+# Reports / generated outputs
+reports/
+**/reports/
+
+# Local tooling
+.vscode/
+.DS_Store
+Thumbs.db

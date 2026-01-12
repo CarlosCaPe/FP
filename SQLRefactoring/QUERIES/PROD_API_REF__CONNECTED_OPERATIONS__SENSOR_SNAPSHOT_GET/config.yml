@@ -1,0 +1,9 @@
+# Optional settings for comparisons
+order_by:
+  - TAG_NAME
+  - VALUE_UTC_TS
+  - SENSOR_VALUE
+  - UOM
+  - QUALITY
+# primary_key: []
+# max_fetch_rows: 200000

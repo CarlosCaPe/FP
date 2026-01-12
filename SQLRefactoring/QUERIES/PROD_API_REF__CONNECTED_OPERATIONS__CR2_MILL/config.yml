@@ -1,0 +1,10 @@
+# View metadata for this refactor
+# target_view: PROD_API_REF.CONNECTED_OPERATIONS.CR2_MILL
+# order_by: []  # optional for deterministic checksum
+# primary_key: []  # optional for key-based comparisons
+# max_fetch_rows: 200000
+
+# This view includes a runtime timestamp (CURRENT_TIMESTAMP) which will differ between
+# baseline and refactor executions. Exclude it from checksum/stats comparisons.
+ignore_columns:
+	- UTC_CREATED_DATE

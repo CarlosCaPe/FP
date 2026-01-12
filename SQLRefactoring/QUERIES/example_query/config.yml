@@ -1,0 +1,6 @@
+# Optional settings for comparisons
+# primary_key:
+#   - id
+# order_by:
+#   - id
+# max_fetch_rows: 200000

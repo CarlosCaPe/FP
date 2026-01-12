@@ -1,0 +1,94 @@
+{
+  "dynamic_tables": [
+    {
+      "ddl": null,
+      "describe": null,
+      "domain": "DYNAMIC TABLE",
+      "fqn": "PROD_TARGET.COLLECTIONS.DRILLBLAST_DRILL_CYCLE_DT",
+      "path_from_root": [
+        {
+          "db": "PROD_WG",
+          "domain": "VIEW",
+          "name": "DRILL_CYCLE",
+          "schema": "DRILL_BLAST"
+        },
+        {
+          "db": "PROD_TARGET",
+          "domain": "VIEW",
+          "name": "DRILLBLAST_DRILL_CYCLE_V",
+          "schema": "COLLECTIONS"
+        },
+        {
+          "db": "PROD_TARGET",
+          "domain": "DYNAMIC TABLE",
+          "name": "DRILLBLAST_DRILL_CYCLE_DT",
+          "schema": "COLLECTIONS"
+        }
+      ],
+      "show": null
+    }
+  ],
+  "env": {
+    "database": "SANDBOX_DATA_ENGINEER",
+    "role": "SG-AZW-SFLK-ENG-GENERAL",
+    "schema": "CCARRILL2",
+    "warehouse": "WH_BATCH_DE_NONPROD"
+  },
+  "generated_utc": "2026-01-06T19:05:19Z",
+  "graph": {
+    "edges": [
+      {
+        "from": {
+          "db": "PROD_WG",
+          "domain": "VIEW",
+          "name": "DRILL_CYCLE",
+          "schema": "DRILL_BLAST"
+        },
+        "to": {
+          "db": "PROD_TARGET",
+          "domain": "VIEW",
+          "name": "DRILLBLAST_DRILL_CYCLE_V",
+          "schema": "COLLECTIONS"
+        }
+      },
+      {
+        "from": {
+          "db": "PROD_TARGET",
+          "domain": "VIEW",
+          "name": "DRILLBLAST_DRILL_CYCLE_V",
+          "schema": "COLLECTIONS"
+        },
+        "to": {
+          "db": "PROD_TARGET",
+          "domain": "DYNAMIC TABLE",
+          "name": "DRILLBLAST_DRILL_CYCLE_DT",
+          "schema": "COLLECTIONS"
+        }
+      },
+      {
+        "from": {
+          "db": "PROD_TARGET",
+          "domain": "VIEW",
+          "name": "DRILLBLAST_DRILL_CYCLE_V",
+          "schema": "COLLECTIONS"
+        },
+        "to": {
+          "db": "PROD_TARGET",
+          "domain": "TABLE",
+          "name": "DRILLBLAST_DRILL_CYCLE_C",
+          "schema": "COLLECTIONS"
+        }
+      }
+    ],
+    "nodes_visited": 2
+  },
+  "notes": [],
+  "root": {
+    "db": "PROD_WG",
+    "domain": "VIEW",
+    "name": "DRILL_CYCLE",
+    "schema": "DRILL_BLAST"
+  },
+  "show_object_dependencies": null,
+  "show_object_dependencies_error": "001003 (42000): SQL compilation error:\nsyntax error line 1 at position 5 unexpected 'OBJECT'."
+}

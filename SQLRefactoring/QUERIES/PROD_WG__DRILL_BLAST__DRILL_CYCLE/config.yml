@@ -1,0 +1,5 @@
+# View metadata for this refactor
+# target_view: PROD_WG.DRILL_BLAST.DRILL_CYCLE
+# order_by: []  # optional for deterministic checksum
+# primary_key: []  # optional for key-based comparisons
+# max_fetch_rows: 200000

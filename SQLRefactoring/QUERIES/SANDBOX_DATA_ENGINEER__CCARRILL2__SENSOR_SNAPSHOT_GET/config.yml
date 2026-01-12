@@ -1,0 +1,4 @@
+# Optional settings for comparisons
+# order_by: []
+# primary_key: []
+# max_fetch_rows: 200000
