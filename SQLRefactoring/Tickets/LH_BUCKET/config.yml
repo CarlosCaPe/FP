@@ -1,0 +1,47 @@
+# LH_BUCKET CT Refactoring Configuration
+# Assignment from: M. Hidayath
+# Date: 2026-01-19
+
+source:
+  database: PROD_TARGET
+  schema: COLLECTIONS
+  table: LH_BUCKET_C
+  type: TRANSIENT TABLE
+  clustering: [ORIG_SRC_ID, SITE_CODE, TRIP_TS_LOCAL::DATE]
+
+target:
+  database: DEV_API_REF
+  schema: FUSE
+  table: LH_BUCKET_CT
+  procedure: LH_BUCKET_CT_P
+  task: LH_BUCKET_CT_TASK
+
+reference_procedure: DEV_API_REF.FUSE.DRILLBLAST_DRILL_CYCLE_CT_P
+
+business_key:
+  - BUCKET_ID
+
+incremental_column: TRIP_TS_LOCAL
+
+parameters:
+  incremental_days: 3
+  task_schedule_minutes: 15
+  max_lookback_days: 30
+
+tasks:
+  - name: Create CT table
+    status: complete
+    file: refactor_ddl.sql
+  - name: Create CT procedure
+    status: complete
+    file: refactor_ddl.sql
+  - name: Test procedure
+    status: pending
+  - name: Schedule task (every 15 min)
+    status: pending
+
+notes: |
+  - Source is TRANSIENT TABLE (not a view)
+  - Clustering enables micro-partition pruning on TRIP_TS_LOCAL
+  - Existing procs: DISPATCH_LH_BUCKET_C_P, FLEET_LH_BUCKET_C_P
+  - FK relationship: LOADING_CYCLE_ID -> LH_LOADING_CYCLE

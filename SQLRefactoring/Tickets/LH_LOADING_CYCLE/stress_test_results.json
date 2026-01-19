@@ -1,0 +1,78 @@
+{
+  "test_date": "2026-01-19T15:40:09.949783",
+  "table": "LH_LOADING_CYCLE_CT",
+  "results": [
+    {
+      "days": 1,
+      "duration_seconds": 3.38,
+      "rows": 10976,
+      "result": "SUCCESS: Inserted=10976, Updated=0, Archived=0"
+    },
+    {
+      "days": 3,
+      "duration_seconds": 2.07,
+      "rows": 32501,
+      "result": "SUCCESS: Inserted=32501, Updated=0, Archived=0"
+    },
+    {
+      "days": 5,
+      "duration_seconds": 1.88,
+      "rows": 52412,
+      "result": "SUCCESS: Inserted=52412, Updated=0, Archived=0"
+    },
+    {
+      "days": 7,
+      "duration_seconds": 1.75,
+      "rows": 72537,
+      "result": "SUCCESS: Inserted=72537, Updated=0, Archived=0"
+    },
+    {
+      "days": 10,
+      "duration_seconds": 2.56,
+      "rows": 107206,
+      "result": "SUCCESS: Inserted=107206, Updated=0, Archived=0"
+    },
+    {
+      "days": 14,
+      "duration_seconds": 2.26,
+      "rows": 151484,
+      "result": "SUCCESS: Inserted=151484, Updated=0, Archived=0"
+    },
+    {
+      "days": 21,
+      "duration_seconds": 3.14,
+      "rows": 233339,
+      "result": "SUCCESS: Inserted=233339, Updated=0, Archived=0"
+    },
+    {
+      "days": 30,
+      "duration_seconds": 2.08,
+      "rows": 338932,
+      "result": "SUCCESS: Inserted=338932, Updated=0, Archived=0"
+    },
+    {
+      "days": 45,
+      "duration_seconds": 2.38,
+      "rows": 338932,
+      "result": "SUCCESS: Inserted=338932, Updated=0, Archived=0"
+    },
+    {
+      "days": 60,
+      "duration_seconds": 2.49,
+      "rows": 338931,
+      "result": "SUCCESS: Inserted=338931, Updated=0, Archived=0"
+    },
+    {
+      "days": 75,
+      "duration_seconds": 2.77,
+      "rows": 338931,
+      "result": "SUCCESS: Inserted=338931, Updated=0, Archived=0"
+    },
+    {
+      "days": 90,
+      "duration_seconds": 3.55,
+      "rows": 338931,
+      "result": "SUCCESS: Inserted=338931, Updated=0, Archived=0"
+    }
+  ]
+}

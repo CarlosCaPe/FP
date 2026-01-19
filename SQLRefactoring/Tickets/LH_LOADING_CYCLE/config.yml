@@ -1,0 +1,50 @@
+# LH_LOADING_CYCLE CT Refactoring Configuration
+# Assignment from: M. Hidayath
+# Date: 2026-01-19
+
+source:
+  database: PROD_TARGET
+  schema: COLLECTIONS
+  table: LH_LOADING_CYCLE_C
+  type: TRANSIENT TABLE
+  clustering: [ORIG_SRC_ID, SITE_CODE, SHIFT_ID]
+
+target:
+  database: DEV_API_REF
+  schema: FUSE
+  table: LH_LOADING_CYCLE_CT
+  procedure: LH_LOADING_CYCLE_CT_P
+  task: LH_LOADING_CYCLE_CT_TASK
+
+reference_procedure: DEV_API_REF.FUSE.DRILLBLAST_DRILL_CYCLE_CT_P
+
+business_key:
+  - LOADING_CYCLE_ID
+
+incremental_column: CYCLE_START_TS_LOCAL
+
+parameters:
+  incremental_days: 3
+  task_schedule_minutes: 15
+  max_lookback_days: 30
+
+tasks:
+  - name: Create CT table
+    status: complete
+    file: refactor_ddl.sql
+  - name: Create CT procedure
+    status: complete
+    file: refactor_ddl.sql
+  - name: Test procedure
+    status: pending
+  - name: Schedule task (every 15 min)
+    status: pending
+
+dependencies:
+  - LH_BUCKET_CT  # LH_BUCKET references LOADING_CYCLE_ID
+
+notes: |
+  - Source is TRANSIENT TABLE (not a view)
+  - Clustered on SHIFT_ID (not date-based)
+  - Existing procs: DISPATCH_LH_LOADING_CYCLE_C_P, FLEET_LH_LOADING_CYCLE_C_P
+  - Should be loaded after LH_BUCKET per dependency diagram
