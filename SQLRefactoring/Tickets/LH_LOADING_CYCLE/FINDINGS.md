@@ -45,3 +45,31 @@
 2. Filter on `CYCLE_START_TS_LOCAL::DATE` for incremental loads
 3. Include `DW_LOGICAL_DELETE_FLAG` in CT table for soft deletes
 4. Hash-based update detection on all non-key columns
+
+## What is a CT (Change Tracking) Table?
+
+| Characteristic | Regular Table | CT Table |
+|----------------|---------------|----------|
+| **Purpose** | Store data | Track **changes** for synchronization |
+| **Extra columns** | No | `DW_LOGICAL_DELETE_FLAG`, `DW_LOAD_TS`, `DW_MODIFY_TS` |
+| **Soft deletes** | Physical DELETE | Flag `'Y'` (record stays for sync) |
+| **Updates** | Manual/batch ETL | Automated task every **15 min** |
+| **History** | Full window | Rolling **N days** only |
+| **Change detection** | None | **HASH()** compares src vs tgt |
+
+### Key CT Columns:
+```sql
+DW_LOGICAL_DELETE_FLAG  VARCHAR(1)    -- 'N' = active, 'Y' = deleted (soft delete)
+DW_LOAD_TS              TIMESTAMP     -- When record was inserted
+DW_MODIFY_TS            TIMESTAMP     -- When record was last modified
+```
+
+### Data Flow:
+```
+[Source Table]  →  MERGE (every 15min)  →  [CT Table]  →  SYNC via IROC  →  [SQL Server]
+     ↓                                         ↓
+LH_LOADING_CYCLE_C                      LH_LOADING_CYCLE_CT
+                                              ↓
+                                     DW_MODIFY_TS > last_sync
+                                     (only sends changes)
+```
