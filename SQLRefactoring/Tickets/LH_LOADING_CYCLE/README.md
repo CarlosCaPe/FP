@@ -1,16 +1,22 @@
-# LH_LOADING_CYCLE CT Refactoring
+# LH_LOADING_CYCLE INCR Refactoring
 
 ## Overview
-- **Source**: `PROD_TARGET.COLLECTIONS.LH_LOADING_CYCLE_C`
-- **Target**: `DEV_API_REF.FUSE.LH_LOADING_CYCLE_CT`
+- **Source**: `PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE` (VIEW)
+- **Target**: `DEV_API_REF.FUSE.LH_LOADING_CYCLE_INCR`
 - **Assigned by**: M. Hidayath
-- **Date**: 2026-01-19
+- **Date**: 2026-01-20
+
+## ⚠️ UPDATED: Source Changed
+Per Hidayath's feedback (2026-01-20):
+- **Old source**: `PROD_TARGET.COLLECTIONS.LH_LOADING_CYCLE_C` (table)
+- **New source**: `PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE` (VIEW)
+- **Old naming**: `_CT` → **New naming**: `_INCR`
 
 ## Requirements
 | Requirement | Status |
 |-------------|--------|
-| Creation of CT table | ✅ Complete |
-| Creation of CT procedure | ✅ Complete |
+| Creation of INCR table | ✅ Complete |
+| Creation of INCR procedure | ✅ Complete |
 | Testing the Procedure | ✅ Complete |
 | Schedule task (every 15 min) | ✅ Complete |
 
@@ -30,39 +36,44 @@
 - `LH_BUCKET_CT` should be deployed first (LH_BUCKET references LOADING_CYCLE_ID)
 
 ## Files
-- [baseline_ddl.sql](baseline_ddl.sql) - Source and target table definitions
-- [refactor_ddl.sql](refactor_ddl.sql) - CT table, procedure, and task definitions
+- [refactor_ddl_v2.sql](refactor_ddl_v2.sql) - **CURRENT**: INCR table, procedure, task (using VIEW source)
+- [refactor_ddl.sql](refactor_ddl.sql) - Deprecated: CT version using _C table
 - [FINDINGS.md](FINDINGS.md) - Analysis and recommendations
 - [config.yml](config.yml) - Configuration and status tracking
 
-## Next Steps
-1. Deploy LH_BUCKET_CT first (dependency)
-2. Deploy CT table to DEV_API_REF.FUSE
-3. Deploy CT procedure
-4. Run initial backfill: `CALL DEV_API_REF.FUSE.LH_LOADING_CYCLE_CT_P('30');`
-5. Validate row counts match source
-6. Enable task: `ALTER TASK DEV_API_REF.FUSE.LH_LOADING_CYCLE_CT_TASK RESUME;`
+## Progress Log
+| Date | Update |
+|------|--------|
+| 2026-01-19 | Ticket created |
+| 2026-01-19 | CT table and procedure DDL completed (using _C table) |
+| 2026-01-20 | **Source changed**: Now using `PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE` VIEW |
+| 2026-01-20 | **Renamed**: `_CT` → `_INCR` per Hidayath |
+| 2026-01-20 | INCR table, procedure, and task deployed |
+| 2026-01-20 | Stress testing completed (1-90 days) |
+| 2026-01-20 | Task enabled and running |
 
 ## Snowflake Objects Created
 ```sql
 -- TABLE
-DEV_API_REF.FUSE.LH_LOADING_CYCLE_CT
+DEV_API_REF.FUSE.LH_LOADING_CYCLE_INCR
 
 -- PROCEDURE
-DEV_API_REF.FUSE.LH_LOADING_CYCLE_CT_P(NUMBER_OF_DAYS VARCHAR DEFAULT '3')
+DEV_API_REF.FUSE.LH_LOADING_CYCLE_INCR_P(NUMBER_OF_DAYS VARCHAR DEFAULT '3')
 
 -- TASK (every 15 minutes)
-DEV_API_REF.FUSE.LH_LOADING_CYCLE_CT_T
+DEV_API_REF.FUSE.LH_LOADING_CYCLE_INCR_T
 ```
 
 ## Performance Results (Stress Test)
 | Days | Duration | Rows |
 |------|----------|------|
-| 1 | 3.4s | 10,976 |
-| 3 | 2.1s | 32,501 |
-| 7 | 1.8s | 72,537 |
-| 14 | 2.3s | 151,484 |
-| 30 | 2.1s | 338,932 |
+| 1 | 58.96s | 17,756 |
+| 3 | 93.09s | 39,906 |
+| 7 | 47.47s | 79,350 |
+| 14 | 82.07s | 158,137 |
+| 30 | 228.93s | 344,866 |
+| 60 | 85.82s | 692,830 |
+| 90 | 73.61s | 1,051,443 |
 
 ## What is a CT (Change Tracking) Table?
 
