@@ -1,0 +1,24 @@
+# Regression config for DRILLBLAST_DRILL_CYCLE_CT
+# Keep max_fetch_rows low so the harness switches to in-db profiling for large datasets.
+primary_key:
+  - ORIG_SRC_ID
+  - SITE_CODE
+  - DRILL_HOLE_SHIFT_ID
+  - SYSTEM_VERSION
+  - DRILL_ID
+  - DRILL_HOLE_ID
+
+order_by:
+  - ORIG_SRC_ID
+  - SITE_CODE
+  - DRILL_HOLE_SHIFT_ID
+  - SYSTEM_VERSION
+  - DRILL_ID
+  - DRILL_HOLE_ID
+
+max_fetch_rows: 5000
+
+# Load/modify timestamps are expected to differ between runs.
+ignore_columns:
+  - DW_LOAD_TS
+  - DW_MODIFY_TS
