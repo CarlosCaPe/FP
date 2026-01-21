@@ -1,53 +1,82 @@
 # SQL Azure Schema Repository
 
-This folder contains SQL DDL snapshots from Azure SQL databases.
+Repositorio de DDL (schemas) extraídos de las bases de datos SQL Azure del proyecto.
 
-## 🚧 TODO - Próximos Pasos
-
-1. **Ejecutar desde servidor en red corporativa** - Los scripts no funcionan desde fuera de la red (VPN/Firewall)
-2. **Probar `extract_schemas_v2.py`** - Usa azure-identity, debería funcionar con `az login`
-3. **Extraer schemas de las 6 bases de datos** en DEV, TEST, PROD
-4. **Organizar estructura** - Una vez extraídos, revisar y limpiar los DDL
-5. **Usar como base para crear nuevos objetos** - Este repo será el source of truth para SQL Azure
-
-## Servers
-
-| Environment | Server |
-|-------------|--------|
-| DEV | azwd22midbx02.eb8a77f2eea6.database.windows.net |
-| TEST | azwt22midbx02.9959d3e6fe6e.database.windows.net |
-| PROD | azwp22midbx02.8232c56adfdf.database.windows.net |
-
-## Structure
+## 📁 Estructura del Proyecto
 
 ```
 SQLAzure/
-├── DEV/
-│   └── <database>/
-│       └── <schema>/
-│           ├── Tables/
-│           ├── Views/
-│           ├── StoredProcedures/
-│           └── Functions/
-├── TEST/
-│   └── ...
-└── PROD/
-    └── ...
+├── README.md                 # Este archivo
+├── requirements.txt          # Dependencias Python
+├── .env.example             # Template de variables de entorno
+├── scripts/                  # Scripts de extracción
+│   ├── extract_schemas.py    # Extractor con ODBC Driver 17
+│   ├── extract_schemas_v2.py # Extractor con azure-identity
+│   └── extract_sqlcmd.py     # Extractor con sqlcmd CLI
+└── schemas/                  # DDL extraídos (por ambiente)
+    ├── DEV/
+    │   └── <database>/
+    │       └── <schema>/
+    │           ├── Tables/
+    │           ├── Views/
+    │           ├── StoredProcedures/
+    │           └── Functions/
+    ├── TEST/
+    └── PROD/
 ```
 
-## Usage
+## 🔧 Servidores
 
-### Extract all schemas
+| Ambiente | Servidor |
+|----------|----------|
+| DEV | `azwd22midbx02.eb8a77f2eea6.database.windows.net` |
+| TEST | `azwt22midbx02.9959d3e6fe6e.database.windows.net` |
+| PROD | `azwp22midbx02.8232c56adfdf.database.windows.net` |
+
+## 🚀 Instalación
+
+```bash
+# Desde el folder SQLAzure
+pip install -r requirements.txt
+
+# Autenticarse con Azure CLI
+az login
+```
+
+## 📋 Uso
+
+### Extraer todos los schemas
+
+```bash
+cd scripts
+python extract_schemas_v2.py  # Recomendado - usa azure-identity
+```
+
+### Extraer con ODBC (alternativo)
+
 ```bash
 python extract_schemas.py
 ```
 
-### Requirements
+## 🚧 TODO
+
+- [ ] Ejecutar desde servidor en red corporativa (VPN requerida)
+- [ ] Probar `extract_schemas_v2.py` con `az login`
+- [ ] Extraer schemas de las 6 bases de datos
+- [ ] Revisar y limpiar los DDL extraídos
+- [ ] Documentar diferencias entre ambientes
+
+## 🔐 Autenticación
+
+Los scripts usan **Microsoft Entra ID** (Azure AD) con MFA.
+
+### Opciones:
+1. **Azure CLI** (recomendado): `az login` antes de ejecutar
+2. **Interactive Browser**: El script abre el navegador para autenticación
+3. **Service Principal**: Para CI/CD (configurar en `.env`)
+
+## 📝 Notas
+
+- Requiere acceso VPN a la red corporativa
+- ODBC Driver 17/18 for SQL Server requerido
 - Python 3.8+
-- pyodbc
-- ODBC Driver 18 for SQL Server
-- Azure AD authentication configured
-
-## Authentication
-
-Uses Azure Active Directory Interactive authentication (Microsoft Entra MFA).
