@@ -82,3 +82,62 @@ Refactor:
 **Expected performance**:
 - Bytes scanned: ~52 GB → ~7-8 GB (only 1 of 7 tables)
 - Execution time: ~40s → ~10s (estimated)
+
+---
+
+## 🚨 IMPORTANTE: Migración a ADX (Héctor Solís - Enero 2026)
+
+Las tablas `SENSOR_READING_*_B` **serán removidas de Snowflake**. Los consumidores deben migrar a ADX.
+
+### Información del cluster (de Héctor)
+
+| Campo | Valor |
+|-------|-------|
+| Cluster | `fctsnaproddatexp01.westus2.kusto.windows.net` |
+| Subscription | NA Production |
+| Acceso | Solicitar a Chris Martin |
+
+### Mapeo de tablas Snowflake → ADX
+
+| Snowflake (DEPRECATED) | ADX Database | ADX Function |
+|------------------------|--------------|--------------|
+| `SENSOR_READING_SAM_B` | Miami | `FCTSCURRENT` |
+| `SENSOR_READING_MOR_B` | Morenci | `FCTSCURRENT` |
+| `SENSOR_READING_CMX_B` | Climax | `FCTSCURRENT` |
+| `SENSOR_READING_SIE_B` | Sierrita | `FCTSCURRENT` |
+| `SENSOR_READING_NMO_B` | NewMexico | `FCTSCURRENT` |
+| `SENSOR_READING_BAG_B` | Bagdad | `FCTSCURRENT` |
+| `SENSOR_READING_CVE_B` | CerroVerde | `FCTSCURRENT` |
+
+### Queries de ejemplo (de Héctor)
+
+**Snapshot (último valor)**:
+```kql
+database('Bagdad').FCTSCURRENT
+| where sensor_id == "BAG-REPT_CLP_CYANEX_VOL"
+```
+
+**Histórico (180 días)**:
+```kql
+database('Bagdad').FCTS
+| where timestamp > ago(180d)
+| where sensor_id == "BAG-REPT_CLP_CYANEX_VOL"
+```
+
+**Buscar sensor en Registry**:
+```kql
+database('Global').RegistryStreams
+| where sensor_id == "BAG-REPT_CLP_CYANEX_VOL"
+```
+
+### Archivos de migración
+
+- [adx_equivalent.kql](adx_equivalent.kql) - Queries KQL equivalentes a SENSOR_SNAPSHOT_GET
+- [adx_sensor_snapshot.py](adx_sensor_snapshot.py) - Script Python para llamar ADX
+
+### Plan de migración
+
+1. ✅ Documentar equivalencias Snowflake → ADX
+2. 🔄 Validar acceso al cluster con Chris Martin
+3. 🔄 Notificar a equipo IROC sobre cambio de fuente
+4. 🔄 Actualizar aplicaciones que usan `SENSOR_SNAPSHOT_GET`

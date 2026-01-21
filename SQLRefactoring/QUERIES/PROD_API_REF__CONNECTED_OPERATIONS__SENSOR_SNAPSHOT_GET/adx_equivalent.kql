@@ -1,0 +1,118 @@
+// ============================================================================
+// ADX EQUIVALENT: SENSOR_SNAPSHOT_GET
+// ============================================================================
+// La función de Snowflake SENSOR_SNAPSHOT_GET devuelve el último valor (snapshot)
+// de sensores por SITE_CODE. En ADX, esto es exactamente lo que hace FCTSCURRENT.
+//
+// Mapeo de Snowflake → ADX:
+// | Snowflake Table              | ADX Database | ADX Table/Function |
+// |------------------------------|--------------|-------------------|
+// | SENSOR_READING_SAM_B         | Miami        | FCTSCURRENT       |
+// | SENSOR_READING_MOR_B         | Morenci      | FCTSCURRENT       |
+// | SENSOR_READING_CMX_B         | Climax       | FCTSCURRENT       |
+// | SENSOR_READING_SIE_B         | Sierrita     | FCTSCURRENT       |
+// | SENSOR_READING_NMO_B         | NewMexico    | FCTSCURRENT       |
+// | SENSOR_READING_BAG_B         | Bagdad       | FCTSCURRENT       |
+// | SENSOR_READING_CVE_B         | CerroVerde   | FCTSCURRENT       |
+//
+// Cluster: fctsnaproddatexp01.westus2.kusto.windows.net
+// (o fctsnaproddatexp02 según permisos)
+// ============================================================================
+
+// -----------------------------------------------------------------------------
+// EJEMPLO 1: Snapshot de un sensor específico (equivalente a SENSOR_SNAPSHOT_GET con PI_POINT)
+// -----------------------------------------------------------------------------
+
+// Snowflake original:
+// SELECT * FROM TABLE(SENSOR_SNAPSHOT_GET('MOR', FALSE, ARRAY_CONSTRUCT(''), 
+//     ARRAY_CONSTRUCT('BLNKPNTRCHR_OPC.SMOHYD.PI_SLP_RATE')))
+
+// ADX equivalente (Morenci):
+database('Morenci').FCTSCURRENT
+| where sensor_id in ('BLNKPNTRCHR_OPC.SMOHYD.PI_SLP_RATE')
+| project 
+    TAG_NAME = sensor_id,
+    VALUE_UTC_TS = timestamp,
+    SENSOR_VALUE = tostring(value),
+    UOM = unit,
+    QUALITY = quality
+
+// -----------------------------------------------------------------------------
+// EJEMPLO 2: Snapshot de múltiples sensores
+// -----------------------------------------------------------------------------
+
+// Snowflake original:
+// SELECT * FROM TABLE(SENSOR_SNAPSHOT_GET('MOR', FALSE, ARRAY_CONSTRUCT(''), 
+//     ARRAY_CONSTRUCT(
+//         'BLNKPNTRCHR_OPC.SMOHYD.PI_SLP_RATE',
+//         'BLNKPNTRCHR_OPC.SMOHYD.PI_MAN_HOIST_FLTRTE',
+//         'BLNKPNTRCHR_OPC.SMOHYD.PI_SLP_RATE_CHNG',
+//         'BLNKPNTRCHR_OPC.SMOHYD.PI_SEL_PUMPING_RATE'
+//     )))
+
+// ADX equivalente:
+let sensor_list = dynamic([
+    'BLNKPNTRCHR_OPC.SMOHYD.PI_SLP_RATE',
+    'BLNKPNTRCHR_OPC.SMOHYD.PI_MAN_HOIST_FLTRTE',
+    'BLNKPNTRCHR_OPC.SMOHYD.PI_SLP_RATE_CHNG',
+    'BLNKPNTRCHR_OPC.SMOHYD.PI_SEL_PUMPING_RATE'
+]);
+database('Morenci').FCTSCURRENT
+| where sensor_id in (sensor_list)
+| project 
+    TAG_NAME = sensor_id,
+    VALUE_UTC_TS = timestamp,
+    SENSOR_VALUE = tostring(value),
+    UOM = unit,
+    QUALITY = quality
+
+// -----------------------------------------------------------------------------
+// EJEMPLO 3: Histórico de los últimos 30 días (si no existe FCTSCURRENT)
+// -----------------------------------------------------------------------------
+
+// Si necesitas histórico en vez de snapshot, usa FCTS:
+let sensor_list = dynamic(['BLNKPNTRCHR_OPC.SMOHYD.PI_SLP_RATE']);
+database('Morenci').FCTS
+| where timestamp > ago(30d)
+| where sensor_id in (sensor_list)
+| summarize arg_max(timestamp, *) by sensor_id  // Último valor por sensor
+| project 
+    TAG_NAME = sensor_id,
+    VALUE_UTC_TS = timestamp,
+    SENSOR_VALUE = tostring(value),
+    UOM = unit,
+    QUALITY = quality
+
+// -----------------------------------------------------------------------------
+// EJEMPLO 4: Buscar sensor_id en el Registry (si no conoces el nombre exacto)
+// -----------------------------------------------------------------------------
+
+database('Global').RegistryStreams
+| where sensor_id contains "SLP_RATE"
+| take 10
+
+// -----------------------------------------------------------------------------
+// FUNCIÓN PARAMETRIZADA (crear en ADX si se necesita reusar)
+// -----------------------------------------------------------------------------
+
+// Puedes crear una función en ADX que replique la firma de SENSOR_SNAPSHOT_GET:
+//
+// .create-or-alter function SENSOR_SNAPSHOT_GET(site_code:string, sensor_ids:dynamic)
+// {
+//     let db_name = case(
+//         site_code == "SAM", "Miami",
+//         site_code == "MOR", "Morenci",
+//         site_code == "CMX", "Climax",
+//         site_code == "SIE", "Sierrita",
+//         site_code == "NMO", "NewMexico",
+//         site_code == "BAG", "Bagdad",
+//         site_code == "CVE", "CerroVerde",
+//         "Unknown"
+//     );
+//     database(db_name).FCTSCURRENT
+//     | where sensor_id in (sensor_ids)
+//     | project TAG_NAME = sensor_id, VALUE_UTC_TS = timestamp, 
+//               SENSOR_VALUE = tostring(value), UOM = unit, QUALITY = quality
+// }
+//
+// Uso: SENSOR_SNAPSHOT_GET("MOR", dynamic(['sensor1', 'sensor2']))
