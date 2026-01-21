@@ -141,3 +141,47 @@ database('Global').RegistryStreams
 2. 🔄 Validar acceso al cluster con Chris Martin
 3. 🔄 Notificar a equipo IROC sobre cambio de fuente
 4. 🔄 Actualizar aplicaciones que usan `SENSOR_SNAPSHOT_GET`
+
+---
+
+## 📊 Regression Test Results (2026-01-21)
+
+### 3-Version Timing Comparison
+
+**Test ejecutado con sensores Snowflake** (`CR03_CRUSH_OUT_TIME, PE_MOR_CC_MflPileTonnage, PE_MOR_CC_MillPileTonnage`):
+
+| Version | Time | Rows | Notes |
+|---------|------|------|-------|
+| **1. Baseline** | **46.048s** | 3 | Original - UNION 7 tables (~52 GB) |
+| **2. Refactor** | **21.305s** | 3 | Optimized - IDENTIFIER(CASE) (~7 GB) |
+| **3. ADX** | N/A | 0 | Sensors not found (different naming) |
+
+**Test ejecutado con sensores ADX** (`MOR-PW23_01-Rolling Avg, MOR-PW23_01-PW23_01_GPM, MOR-PW23_01-Corr_GPM`):
+
+| Version | Time | Rows | Notes |
+|---------|------|------|-------|
+| **1. Baseline** | N/A | 0 | Sensors not found |
+| **2. Refactor** | 14.286s | 0 | Sensors not found |
+| **3. ADX** | **4.368s** | 3 | Real data returned |
+
+### Performance Speedup Summary
+
+| Comparison | Factor | Description |
+|------------|--------|-------------|
+| **Refactor vs Baseline** | **2.2x faster** | 46s → 21s (same data) |
+| **ADX vs Baseline** | **~10x faster** | 46s → 4.4s (estimated) |
+
+### Key Findings
+
+1. **✅ Refactor works**: 54% reduction in execution time on Snowflake
+2. **✅ ADX is fastest**: ~4s response time vs 21-46s on Snowflake
+3. **⚠️ Naming mismatch**: Sensor IDs are different between platforms
+   - Snowflake: `CR03_CRUSH_OUT_TIME`, `PE_MOR_CC_xxx`
+   - ADX: `MOR-PW23_01-xxx`, `MOR-REPT_xxx`
+4. **✅ Same schema**: Both return 5 columns (TAG_NAME, VALUE_UTC_TS, SENSOR_VALUE, UOM, QUALITY)
+
+### Test Scripts
+
+- [regression_test.py](regression_test.py) - 3-version comparison script
+- [adx_function.kql](adx_function.kql) - KQL function definition
+- [VERSIONS.md](VERSIONS.md) - Full documentation of all 3 versions
