@@ -1,0 +1,1421 @@
+{
+  "cluster": "https://fctsnaproddatexp02.westus2.kusto.windows.net",
+  "extracted_at": "2026-01-21T22:39:34.599029Z",
+  "databases": {
+    "AppIntegration": {
+      "name": "AppIntegration",
+      "tables": [],
+      "functions": [
+        {
+          "name": "AcidTankLevels",
+          "parameters": "()",
+          "body": "{\r\nlet sensors = toscalar(\r\n    database('Global').RegistryStreamsPivot_MV\r\n    | where Workflow contains \"AcidTanks\"\r\n    | summarize make_list(sensor_id)\r\n);\r\ndatabase('Global').FCTS_CURRENT_VALUE()\r\n| where sensor_id in (sensors)\r\n| project site_code, data_source, sensor_id, timestamp, value\r\n| order by site_code asc, sensor_id asc \r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "HaulTruck",
+          "parameters": "()",
+          "body": "{\n// 2025-06-17 Eric Smith: Updated Gallon/Liter conversion\nlet varName = \"active\";\ndatabase(\"Global\").RegistryStreamsPivot_MV\n    | where OpStatsLoader =~ \"true\"\n    | where status == \"active\"\n    | where isnotempty(SAPEquipmentID)\n        and isnotempty(SAPMeasurementID)\n        and isnotempty(SAPMeasurementType)\n    | join kind=leftouter (\ndatabase(\"Global\").FCTS_CURRENT_VALUE\n    | summarize arg_max(timestamp,*) by sensor_id\n    | project site_code,sensor_id, timestamp, value\n    ) on\n    $left.sensor_id == $right.sensor_id\n| extend value = toreal(value)\n// | extend case(site_code == \"SAMEM\", value = value/3.785, value) // <------ REMOVED 2025-06-17 Eric Smith\n| extend value = round(iff(site_code == \"SAMEM\" and sensor_id has \"Fuel Consumption\", value / 3.785, value), 2) // <-------- ADDED 2025-06-17 Eric Smith\n| extend value = round(iff(uom == \"s\", value / 3600.0, value), 2)  // Convert seconds to hours if uom is 'S'\n| extend value = round(iff(uom == \"m\", value / 1609.344, value),2)  // Convert meters to Miles if uom is 'm'    // <-------- ADDED 2025-10-03 Michael Ibarra\n| project SAPEquipmentID, SAPMeasurementID, SAPMeasurementType, timestamp=datetime_utc_to_local(timestamp,'US/Arizona'), value, uom=SAPUOM\n| where isnan(value) == false\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "HaulTruck_DEV",
+          "parameters": "()",
+          "body": "{\n// 2025-06-17 Baskar Selvaraj: Created dev version of the function\nlet TimeZone = 'US/Arizona';\nlet TimeNow = datetime_utc_to_local(now(), TimeZone);\nlet Time1dayAgo = TimeNow - 2d;\ndatabase(\"Global\").RegistryStreamsPivot_MV\n    | where OpStatsLoader =~ \"true\"\n    | where status == \"active\"\n    | where isnotempty(SAPEquipmentID)\n        and isnotempty(SAPMeasurementID)\n        and isnotempty(SAPMeasurementType)\n    | join kind=leftouter (\n        database(\"Global\").FCTS_CURRENT_VALUE\n        | summarize arg_max(timestamp, value, data_source) by sensor_id\n        | project sensor_id, timestamp, value, data_source\n    ) on sensor_id\n| extend timestampA = datetime_utc_to_local(timestamp, TimeZone)\n| extend value = toreal(value)\n| extend Loadtimestamp = iff(isnull(timestampA) or timestampA <= Time1dayAgo, TimeNow, timestampA)\n| extend Loadvalue = iff(isnull(value) or timestampA <= Time1dayAgo, 0.0, value)\n| extend LoadSAPMeasurementType = iff(SAPMeasurementType == \"COUNTER\" and Loadvalue == 0, \"VALUE\", SAPMeasurementType)\n| extend Check1 = iff(SAPMeasurementType != LoadSAPMeasurementType, \"XXXX\", \"\")\n| extend Loadvalue = case(\n    Loadvalue > 0 and site_code == \"SAMEM\" and sensor_id has \"Fuel Consumption\", round(Loadvalue / 3.785, 2),\n    Loadvalue > 0 and uom == \"s\", round(Loadvalue / 3600.0, 2),\n    Loadvalue > 0 and uom == \"m\", round(Loadvalue / 1609.344, 2),\n    round(Loadvalue, 2)\n)\n| project SAPEquipmentID, SAPMeasurementID, SAPMeasurementType=LoadSAPMeasurementType, timestamp=Loadtimestamp, value=Loadvalue, uom=SAPUOM\n| where isnan(value) == false\n| order by SAPEquipmentID\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "Morenci_Batman_BallMill_Aggregates",
+          "parameters": "()",
+          "body": "{\r\nlet source = datatable(\r\n    section: int,\r\n    ballmill: int,\r\n    tphtag: string,\r\n    tphflt: string,\r\n    millpowertag: string,\r\n    classifierampstag: string,\r\n    classifierphtag: string,\r\n    frontlaundertag: string,\r\n    backlaundertag: string,\r\n    classifierphsptag: string\r\n)[\r\n    1, 1, \"MOR-WIC0101_PV\", \"MOR-WIC0101_PV_FLT\", \"MOR-JIC3201_PV\", \"MOR-IIC3101_PV\", \"MOR-AIC9101_PV\", \"MOR-LI0301_PV\", \"MOR-LI0901_PV\", \"MOR-AIC9101_SP\",\r\n    1, 2, \"MOR-WIC0102_PV\", \"MOR-WIC0102_PV_FLT\", \"MOR-JIC3202_PV\", \"MOR-IIC3102_PV\", \"MOR-AIC9102_PV\", \"MOR-LI0302_PV\", \"MOR-LI0902_PV\", \"MOR-AIC9102_SP\",\r\n    1, 3, \"MOR-WIC0103_PV\", \"MOR-WIC0103_PV_FLT\", \"MOR-JIC3203_PV\", \"MOR-IIC3103_PV\", \"MOR-AIC9103_PV\", \"MOR-LI0303_PV\", \"MOR-LI0903_PV\", \"MOR-AIC9103_SP\",\r\n    1, 4, \"MOR-WIC0104_PV\", \"MOR-WIC0104_PV_FLT\", \"MOR-JIC3204_PV\", \"MOR-IIC3104_PV\", \"MOR-AIC9104_PV\", \"MOR-LI0304_PV\", \"MOR-LI0904_PV\", \"MOR-AIC9104_SP\",\r\n    1, 5, \"MOR-WIC0105_PV\", \"MOR-WIC0105_PV_FLT\", \"MOR-JIC3205_PV\", \"MOR-IIC3105_PV\", \"MOR-AIC9105_PV\", \"MOR-LI0305_PV\", \"MOR-LI0905_PV\", \"MOR-AIC9105_SP\",\r\n    1, 6, \"MOR-WIC0106_PV\", \"MOR-WIC0106_PV_FLT\", \"MOR-JIC3206_PV\", \"MOR-IIC3106_PV\", \"MOR-AIC9106_PV\", \"MOR-LI0306_PV\", \"MOR-LI0906_PV\", \"MOR-AIC9106_SP\",\r\n    1, 7, \"MOR-WIC0107_PV\", \"MOR-WIC0107_PV_FLT\", \"MOR-JIC3207_PV\", \"MOR-IIC3107_PV\", \"MOR-AIC9107_PV\", \"MOR-LI0307_PV\", \"MOR-LI0907_PV\", \"MOR-AIC9107_SP\",\r\n    1, 8, \"MOR-WIC0108_PV\", \"MOR-WIC0108_PV_FLT\", \"MOR-JIC3208_PV\", \"MOR-IIC3108_PV\", \"MOR-AIC9108_PV\", \"MOR-LI0308_PV\", \"MOR-LI0908_PV\", \"MOR-AIC9108_SP\",\r\n    2, 9, \"MOR-WIC0109_PV\", \"MOR-WIC0109_PV_FLT\", \"MOR-JIC3209_PV\", \"MOR-IIC3109_PV\", \"MOR-AIC9109_PV\", \"MOR-LI0309_PV\", \"MOR-LI0909_PV\", \"MOR-AIC9109_SP\",\r\n    2, 10, \"MOR-WIC0110_PV\", \"MOR-WIC0110_PV_FLT\", \"MOR-JIC3210_PV\", \"MOR-IIC3110_PV\", \"MOR-AIC9110_PV\", \"MOR-LI0310_PV\", \"MOR-LI0910_PV\", \"MOR-AIC9110_SP\",\r\n    2, 11, \"MOR-WIC0111_PV\", \"MOR-WIC0111_PV_FLT\", \"MOR-JIC3211_PV\", \"MOR-IIC3111_PV\", \"MOR-AIC9111_PV\", \"MOR-LI0311_PV\", \"MOR-LI0911_PV\", \"MOR-AIC9111_SP\",\r\n    2, 12, \"MOR-WIC0112_PV\", \"MOR-WIC0112_PV_FLT\", \"MOR-JIC3212_PV\", \"MOR-IIC3112_PV\", \"MOR-AIC9112_PV\", \"MOR-LI0312_PV\", \"MOR-LI0912_PV\", \"MOR-AIC9112_SP\",\r\n    2, 13, \"MOR-WIC0113_PV\", \"MOR-WIC0113_PV_FLT\", \"MOR-JIC3213_PV\", \"MOR-IIC3113_PV\", \"MOR-AIC9113_PV\", \"MOR-LI0313_PV\", \"MOR-LI0913_PV\", \"MOR-AIC9113_SP\",\r\n    2, 14, \"MOR-WIC0114_PV\", \"MOR-WIC0114_PV_FLT\", \"MOR-JIC3214_PV\", \"MOR-IIC3114_PV\", \"MOR-AIC9114_PV\", \"MOR-LI0314_PV\", \"MOR-LI0914_PV\", \"MOR-AIC9114_SP\",\r\n    2, 15, \"MOR-WIC0115_PV\", \"MOR-WIC0115_PV_FLT\", \"MOR-JIC3215_PV\", \"MOR-IIC3115_PV\", \"MOR-AIC9115_PV\", \"MOR-LI0315_PV\", \"MOR-LI0915_PV\", \"MOR-AIC9115_SP\",\r\n    2, 16, \"MOR-WIC0116_PV\", \"MOR-WIC0116_PV_FLT\", \"MOR-JIC3216_PV\", \"MOR-IIC3116_PV\", \"MOR-AIC9116_PV\", \"MOR-LI0316_PV\", \"MOR-LI0916_PV\", \"MOR-AIC9116_SP\",\r\n    3, 17, \"MOR-WIC0117_PV\", \"MOR-WIC0117_PV_FLT\", \"MOR-JIC3217_PV\", \"MOR-IIC3117_PV\", \"MOR-AIC9117_PV\", \"MOR-LI0317_PV\", \"MOR-LI0917_PV\", \"MOR-AIC9117_SP\",\r\n    3, 18, \"MOR-WIC0118_PV\", \"MOR-WIC0118_PV_FLT\", \"MOR-JIC3218_PV\", \"MOR-IIC3118_PV\", \"MOR-AIC9118_PV\", \"MOR-LI0318_PV\", \"MOR-LI0918_PV\", \"MOR-AIC9118_SP\",\r\n    3, 19, \"MOR-WIC0119_PV\", \"MOR-WIC0119_PV_FLT\", \"MOR-JIC3219_PV\", \"MOR-IIC3119_PV\", \"MOR-AIC9119_PV\", \"MOR-LI0319_PV\", \"MOR-LI0919_PV\", \"MOR-AIC9119_SP\",\r\n    3, 20, \"MOR-WIC0120_PV\", \"MOR-WIC0120_PV_FLT\", \"MOR-JIC3220_PV\", \"MOR-IIC3120_PV\", \"MOR-AIC9120_PV\", \"MOR-LI0320_PV\", \"MOR-LI0920_PV\", \"MOR-AIC9120_SP\",\r\n    3, 21, \"MOR-WIC0121_PV\", \"MOR-WIC0121_PV_FLT\", \"MOR-JIC3221_PV\", \"MOR-IIC3121_PV\", \"MOR-AIC9121_PV\", \"MOR-LI0321_PV\", \"MOR-LI0921_PV\", \"MOR-AIC9121_SP\",\r\n    3, 22, \"MOR-WIC0122_PV\", \"MOR-WIC0122_PV_FLT\", \"MOR-JIC3222_PV\", \"MOR-IIC3122_PV\", \"MOR-AIC9122_PV\", \"MOR-LI0322_PV\", \"MOR-LI0922_PV\", \"MOR-AIC9122_SP\",\r\n    4, 23, \"MOR-WIC0123_PV\", \"MOR-WIC0123_PV_FLT\", \"MOR-JIC3223_PV\", \"MOR-IIC3123_PV\", \"MOR-AIC9123_PV\", \"MOR-LI0323_PV\", \"MOR-LI0923_PV\", \"MOR-AIC9123_SP\",\r\n    4, 24, \"MOR-WIC0124_PV\", \"MOR-WIC0124_PV_FLT\", \"MOR-JIC3224_PV\", \"MOR-IIC3124_PV\", \"MOR-AIC9124_PV\", \"MOR-LI0324_PV\", \"MOR-LI0924_PV\", \"MOR-AIC9124_SP\",\r\n    4, 25, \"MOR-WIC0125_PV\", \"MOR-WIC0125_PV_FLT\", \"MOR-JIC3225_PV\", \"MOR-IIC3125_PV\", \"MOR-AIC9125_PV\", \"MOR-LI0325_PV\", \"MOR-LI0925_PV\", \"MOR-AIC9125_SP\",\r\n    4, 26, \"MOR-WIC0126_PV\", \"MOR-WIC0126_PV_FLT\", \"MOR-JIC3226_PV\", \"MOR-IIC3126_PV\", \"MOR-AIC9126_PV\", \"MOR-LI0326_PV\", \"MOR-LI0926_PV\", \"MOR-AIC9126_SP\",\r\n    4, 27, \"MOR-WIC0127_PV\", \"MOR-WIC0127_PV_FLT\", \"MOR-JIC3227_PV\", \"MOR-IIC3127_PV\", \"MOR-AIC9127_PV\", \"MOR-LI0327_PV\", \"MOR-LI0927_PV\", \"MOR-AIC9127_SP\",\r\n    3, 28, \"MOR-WIC0128_PV\", \"MOR-WIC0128_PV_FLT\", \"MOR-JIC3228_PV\", \"MOR-IIC3128_PV\", \"MOR-AIC9128_PV\", \"MOR-LI0328_PV\", \"MOR-LI0928_PV\", \"MOR-AIC9128_SP\",\r\n    4, 29, \"MOR-WIC0129_PV\", \"MOR-WIC0129_PV_FLT\", \"MOR-JIC3229_PV\", \"MOR-IIC3129_PV\", \"MOR-AIC9129_PV\", \"MOR-LI0329_PV\", \"MOR-LI0929_PV\", \"MOR-AIC9129_SP\",\r\n    4, 30, \"MOR-WIC0130_PV\", \"MOR-WIC0130_PV_FLT\", \"MOR-JIC3230_PV\", \"MOR-IIC3130_PV\", \"MOR-AIC9130_PV\", \"MOR-LI0330_PV\", \"MOR-LI0930_PV\", \"MOR-AIC9130_SP\",\r\n    3, 31, \"MOR-WIC0131_PV\", \"MOR-WIC0131_PV_FLT\", \"MOR-JIC3231_PV\", \"MOR-IIC3131_PV\", \"MOR-AIC9113_PV\", \"MOR-LI0331_PV\", \"MOR-LI0931_PV\", \"MOR-AIC9131_SP\",\r\n    4, 32, \"MOR-WIC0132_PV\", \"MOR-WIC0132_PV_FLT\", \"MOR-JIC3232_PV\", \"MOR-IIC3132_PV\", \"MOR-AIC9132_PV\", \"MOR-LI0332_PV\", \"MOR-LI0932_PV\", \"MOR-AIC9132_SP\"\r\n];\r\nlet manualmills = datatable(\r\n    section: int,\r\n    ballmill: int,\r\n    dischargedensitytag: string,\r\n    classifierdensitytag: string,\r\n    classifierwetgrindtag: string,\r\n)[\r\n    1, 1, \"MOR-MorenciMill-BallMill01-DischargeDensity\", \"MOR-MorenciMill-BallMill01-ClassifierDensity\", \"MOR-MorenciMill-BallMill01-ClassifierWetGrind\",\r\n    1, 2, \"MOR-MorenciMill-BallMill02-DischargeDensity\", \"MOR-MorenciMill-BallMill02-ClassifierDensity\", \"MOR-MorenciMill-BallMill02-ClassifierWetGrind\",\r\n    1, 3, \"MOR-MorenciMill-BallMill03-DischargeDensity\", \"MOR-MorenciMill-BallMill03-ClassifierDensity\", \"MOR-MorenciMill-BallMill03-ClassifierWetGrind\",\r\n    1, 4, \"MOR-MorenciMill-BallMill04-DischargeDensity\", \"MOR-MorenciMill-BallMill04-ClassifierDensity\", \"MOR-MorenciMill-BallMill04-ClassifierWetGrind\",\r\n    1, 5, \"MOR-MorenciMill-BallMill05-DischargeDensity\", \"MOR-MorenciMill-BallMill05-ClassifierDensity\", \"MOR-MorenciMill-BallMill05-ClassifierWetGrind\",\r\n    1, 6, \"MOR-MorenciMill-BallMill06-DischargeDensity\", \"MOR-MorenciMill-BallMill06-ClassifierDensity\", \"MOR-MorenciMill-BallMill06-ClassifierWetGrind\",\r\n    1, 7, \"MOR-MorenciMill-BallMill07-DischargeDensity\", \"MOR-MorenciMill-BallMill07-ClassifierDensity\", \"MOR-MorenciMill-BallMill07-ClassifierWetGrind\",\r\n    1, 8, \"MOR-MorenciMill-BallMill08-DischargeDensity\", \"MOR-MorenciMill-BallMill08-ClassifierDensity\", \"MOR-MorenciMill-BallMill08-ClassifierWetGrind\",\r\n    2, 9, \"MOR-MorenciMill-BallMill09-DischargeDensity\", \"MOR-MorenciMill-BallMill09-ClassifierDensity\", \"MOR-MorenciMill-BallMill09-ClassifierWetGrind\",\r\n    2, 10, \"MOR-MorenciMill-BallMill10-DischargeDensity\", \"MOR-MorenciMill-BallMill10-ClassifierDensity\", \"MOR-MorenciMill-BallMill10-ClassifierWetGrind\",\r\n    2, 11, \"MOR-MorenciMill-BallMill11-DischargeDensity\", \"MOR-MorenciMill-BallMill11-ClassifierDensity\", \"MOR-MorenciMill-BallMill11-ClassifierWetGrind\",\r\n    2, 12, \"MOR-MorenciMill-BallMill12-DischargeDensity\", \"MOR-MorenciMill-BallMill12-ClassifierDensity\", \"MOR-MorenciMill-BallMill12-ClassifierWetGrind\",\r\n    2, 13, \"MOR-MorenciMill-BallMill13-DischargeDensity\", \"MOR-MorenciMill-BallMill13-ClassifierDensity\", \"MOR-MorenciMill-BallMill13-ClassifierWetGrind\",\r\n    2, 14, \"MOR-MorenciMill-BallMill14-DischargeDensity\", \"MOR-MorenciMill-BallMill14-ClassifierDensity\", \"MOR-MorenciMill-BallMill14-ClassifierWetGrind\",\r\n    2, 15, \"MOR-MorenciMill-BallMill15-DischargeDensity\", \"MOR-MorenciMill-BallMill15-ClassifierDensity\", \"MOR-MorenciMill-BallMill15-ClassifierWetGrind\",\r\n    2, 16, \"MOR-MorenciMill-BallMill16-DischargeDensity\", \"MOR-MorenciMill-BallMill16-ClassifierDensity\", \"MOR-MorenciMill-BallMill16-ClassifierWetGrind\",\r\n    3, 17, \"MOR-MorenciMill-BallMill17-DischargeDensity\", \"MOR-MorenciMill-BallMill17-ClassifierDensity\", \"MOR-MorenciMill-BallMill17-ClassifierWetGrind\",\r\n    3, 18, \"MOR-MorenciMill-BallMill18-DischargeDensity\", \"MOR-MorenciMill-BallMill18-ClassifierDensity\", \"MOR-MorenciMill-BallMill18-ClassifierWetGrind\",\r\n    3, 19, \"MOR-MorenciMill-BallMill19-DischargeDensity\", \"MOR-MorenciMill-BallMill19-ClassifierDensity\", \"MOR-MorenciMill-BallMill19-ClassifierWetGrind\",\r\n    3, 20, \"MOR-MorenciMill-BallMill20-DischargeDensity\", \"MOR-MorenciMill-BallMill20-ClassifierDensity\", \"MOR-MorenciMill-BallMill20-ClassifierWetGrind\",\r\n    3, 21, \"MOR-MorenciMill-BallMill21-DischargeDensity\", \"MOR-MorenciMill-BallMill21-ClassifierDensity\", \"MOR-MorenciMill-BallMill21-ClassifierWetGrind\",\r\n    3, 22, \"MOR-MorenciMill-BallMill22-DischargeDensity\", \"MOR-MorenciMill-BallMill22-ClassifierDensity\", \"MOR-MorenciMill-BallMill22-ClassifierWetGrind\",\r\n    4, 23, \"MOR-MorenciMill-BallMill23-DischargeDensity\", \"MOR-MorenciMill-BallMill23-ClassifierDensity\", \"MOR-MorenciMill-BallMill23-ClassifierWetGrind\",\r\n    4, 24, \"MOR-MorenciMill-BallMill24-DischargeDensity\", \"MOR-MorenciMill-BallMill24-ClassifierDensity\", \"MOR-MorenciMill-BallMill24-ClassifierWetGrind\",\r\n    4, 25, \"MOR-MorenciMill-BallMill25-DischargeDensity\", \"MOR-MorenciMill-BallMill25-ClassifierDensity\", \"MOR-MorenciMill-BallMill25-ClassifierWetGrind\",\r\n    4, 26, \"MOR-MorenciMill-BallMill26-DischargeDensity\", \"MOR-MorenciMill-BallMill26-ClassifierDensity\", \"MOR-MorenciMill-BallMill26-ClassifierWetGrind\",\r\n    4, 27, \"MOR-MorenciMill-BallMill27-DischargeDensity\", \"MOR-MorenciMill-BallMill27-ClassifierDensity\", \"MOR-MorenciMill-BallMill27-ClassifierWetGrind\",\r\n    3, 28, \"MOR-MorenciMill-BallMill28-DischargeDensity\", \"MOR-MorenciMill-BallMill28-ClassifierDensity\", \"MOR-MorenciMill-BallMill28-ClassifierWetGrind\",\r\n    4, 29, \"MOR-MorenciMill-BallMill29-DischargeDensity\", \"MOR-MorenciMill-BallMill29-ClassifierDensity\", \"MOR-MorenciMill-BallMill29-ClassifierWetGrind\",\r\n    4, 30, \"MOR-MorenciMill-BallMill30-DischargeDensity\", \"MOR-MorenciMill-BallMill30-ClassifierDensity\", \"MOR-MorenciMill-BallMill30-ClassifierWetGrind\",\r\n    3, 31, \"MOR-MorenciMill-BallMill31-DischargeDensity\", \"MOR-MorenciMill-BallMill31-ClassifierDensity\", \"MOR-MorenciMill-BallMill31-ClassifierWetGrind\",\r\n    4, 32, \"MOR-MorenciMill-BallMill32-DischargeDensity\", \"MOR-MorenciMill-BallMill32-ClassifierDensity\", \"MOR-MorenciMill-BallMill32-ClassifierWetGrind\"\r\n];\r\nlet start = ago(3h);\r\nlet tph = source | project tphtag;\r\nlet tphflt = source | project tphflt;\r\nlet millpower = source | project millpowertag;\r\nlet classifieramps = source | project classifierampstag;\r\nlet classifierph = source | project classifierphtag;\r\nlet frontlaunder = source | project frontlaundertag;\r\nlet backlaunder = source | project backlaundertag;\r\nlet classifierphsp = source | project classifierphsptag;\r\nlet millstart = ago(7d);\r\nlet dischargedensitytags = manualmills | project dischargedensitytag;\r\nlet classifierdensitytags = manualmills | project classifierdensitytag;\r\nlet classifierwetgrindtags = manualmills | project classifierwetgrindtag;\r\nlet tph_current = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (tph)\r\n    | where timestamp > start\r\n    | project sensor_id, timestamp, tph = toreal(value)\r\n    | summarize arg_max(timestamp, *) by sensor_id\r\n    | extend tph_now = iff(tph < 10, 0.0, tph)\r\n    | project sensor_id, timestamp, tph_now;\r\nlet tph_flt_current = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (tphflt)\r\n    | where timestamp > start\r\n    | project sensor_id, tph_flt = toreal(value)\r\n    | where tph_flt != 0\r\n    | summarize tpoh = avg(tph_flt) by sensor_id;\r\nlet mill_power_current = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (millpower)\r\n    | where timestamp > start\r\n    | project sensor_id, timestamp, mill_power_raw = toreal(value)\r\n    | summarize arg_max(timestamp, *) by sensor_id\r\n    | extend mill_power = iff(mill_power_raw < 10, 0.0, mill_power_raw)\r\n    | project sensor_id, timestamp, mill_power;\r\nlet classifier_amps_current = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (classifieramps)\r\n    | where timestamp > start\r\n    | project sensor_id, timestamp, classifier_amps_raw = toreal(value)\r\n    | summarize arg_max(timestamp, *) by sensor_id\r\n    | extend classifier_amps = iff(classifier_amps_raw < 0.5, 0.0, classifier_amps_raw)\r\n    | project sensor_id, timestamp, classifier_amps;\r\nlet classifier_ph_current = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (classifierph)\r\n    | where timestamp > start\r\n    | project sensor_id, timestamp, classifier_ph_raw = toreal(value)\r\n    | summarize arg_max(timestamp, *) by sensor_id\r\n    | extend classifier_ph = iff(classifier_ph_raw < 0.5, 0.0, classifier_ph_raw)\r\n    | project sensor_id, timestamp, classifier_ph;\r\nlet front_launder_current = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (frontlaunder)\r\n    | where timestamp > start\r\n    | project sensor_id, timestamp, front_launder_raw = toreal(value)\r\n    | summarize arg_max(timestamp, *) by sensor_id\r\n    | extend front_launder = iff(front_launder_raw < 0.1, 0.0, front_launder_raw)\r\n    | project sensor_id, timestamp, front_launder;\r\nlet back_launder_current = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (backlaunder)\r\n    | where timestamp > start\r\n    | project sensor_id, timestamp, back_launder_raw = toreal(value)\r\n    | summarize arg_max(timestamp, *) by sensor_id\r\n    | extend back_launder = iff(back_launder_raw < 0.1, 0.0, back_launder_raw)\r\n    | project sensor_id, timestamp, back_launder;\r\nlet classifier_phsp_current = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (classifierphsp)\r\n    | where timestamp > start\r\n    | project sensor_id, timestamp, classifier_phsp_raw = toreal(value)\r\n    | summarize arg_max(timestamp, *) by sensor_id\r\n    | extend classifier_phsp = iff(classifier_phsp_raw < 0.5, 0.0, classifier_phsp_raw)\r\n    | project sensor_id, timestamp, classifier_phsp;\r\nlet discharge_density_current = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (dischargedensitytags)\r\n    | where timestamp > millstart\r\n    | project sensor_id, timestamp, discharge_density_raw = toreal(value)\r\n    | summarize arg_max(timestamp, *) by sensor_id\r\n    | extend density_discharge = iff(discharge_density_raw < 0 or discharge_density_raw > 100, 0.0, discharge_density_raw)\r\n    | project sensor_id, density_discharge_timestamp = timestamp, density_discharge;\r\nlet classifier_density_current = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (classifierdensitytags)\r\n    | where timestamp > millstart\r\n    | project sensor_id, timestamp, classifier_density_raw = toreal(value)\r\n    | summarize arg_max(timestamp, *) by sensor_id\r\n    | extend density_classifier = iff(classifier_density_raw < 0 or classifier_density_raw > 100, 0.0, classifier_density_raw)\r\n    | project sensor_id, density_classifier_timestamp = timestamp, density_classifier;\r\nlet classifier_wet_grind_current = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (classifierwetgrindtags)\r\n    | where timestamp > millstart\r\n    | project sensor_id, timestamp, classifier_wet_grind_raw = toreal(value)\r\n    | summarize arg_max(timestamp, *) by sensor_id\r\n    | extend wet_grind_classifier = iff(classifier_wet_grind_raw < 0 or classifier_wet_grind_raw > 100, 0.0, classifier_wet_grind_raw)\r\n    | project sensor_id, wet_grind_classifier_timestamp = timestamp, wet_grind_classifier;\r\nlet result = source\r\n    | join kind = fullouter tph_current on $left.tphtag == $right.sensor_id\r\n    | join kind = fullouter tph_flt_current on $left.tphflt == $right.sensor_id\r\n    | join kind = fullouter mill_power_current on $left.millpowertag == $right.sensor_id\r\n    | join kind = fullouter classifier_amps_current on $left.classifierampstag == $right.sensor_id\r\n    | join kind = fullouter classifier_ph_current on $left.classifierphtag == $right.sensor_id\r\n    | join kind = fullouter front_launder_current on $left.frontlaundertag == $right.sensor_id\r\n    | join kind = fullouter back_launder_current on $left.backlaundertag == $right.sensor_id\r\n    | join kind = fullouter classifier_phsp_current on $left.classifierphsptag == $right.sensor_id\r\n    | extend tpoh = iff(isnull(tpoh), 0.0, tpoh)\r\n    | extend tpoh_now = iff(isnull(tpoh), 0.0, tpoh)\r\n    | extend mill_power = iff(isnull(mill_power), 0.0, mill_power)\r\n    | extend classifier_amps = iff(isnull(classifier_amps), 0.0, classifier_amps)\r\n    | extend classifier_ph = iff(isnull(classifier_ph), 0.0, classifier_ph)\r\n    | extend front_launder = iff(isnull(front_launder), 0.0, front_launder)\r\n    | extend back_launder = iff(isnull(back_launder), 0.0, back_launder)\r\n    | extend classifier_phsp = iff(isnull(classifier_phsp), 0.0, classifier_phsp)\r\n    | project\r\n        section,\r\n        ballmill,\r\n        tph_now,\r\n        tpoh_now,\r\n        mill_power,\r\n        classifier_amps,\r\n        classifier_ph,\r\n        front_launder,\r\n        back_launder,\r\n        classifier_phsp\r\n    | order by ballmill asc;\r\nlet manualresult = manualmills\r\n    | join kind = fullouter discharge_density_current on $left.dischargedensitytag == $right.sensor_id\r\n    | join kind = fullouter classifier_density_current on $left.classifierdensitytag == $right.sensor_id\r\n    | join kind = fullouter classifier_wet_grind_current on $left.classifierwetgrindtag == $right.sensor_id\r\n    | extend density_discharge = iff(isnull(density_discharge), 0.0, density_discharge)\r\n    | extend density_discharge_timestamp = iff(isnull(density_discharge_timestamp), millstart, density_discharge_timestamp)\r\n    | extend density_classifier = iff(isnull(density_classifier), 0.0, density_classifier)\r\n    | extend density_classifier_timestamp = iff(isnull(density_classifier_timestamp), millstart, density_classifier_timestamp)\r\n    | extend wet_grind_classifier = iff(isnull(wet_grind_classifier), 0.0, wet_grind_classifier)\r\n    | extend wet_grind_classifier_timestamp = iff(isnull(wet_grind_classifier_timestamp), millstart, wet_grind_classifier_timestamp)\r\n    | project\r\n        section,\r\n        ballmill,\r\n        density_discharge,\r\n        density_discharge_timestamp,\r\n        density_classifier,\r\n        density_classifier_timestamp,\r\n        wet_grind_classifier,\r\n        wet_grind_classifier_timestamp\r\n    | order by ballmill asc;\r\nlet final = result\r\n    | join kind = inner manualresult on $left.ballmill == $right.ballmill\r\n    | project\r\n        section,\r\n        ballmill,\r\n        tph_now  = round(tph_now, 2),\r\n        tpoh_now = round(tpoh_now, 2),\r\n        mill_power = round(mill_power, 2),\r\n        classifier_amps = round(classifier_amps, 2),\r\n        classifier_ph = round(classifier_ph, 2),\r\n        front_launder = round(front_launder, 2),\r\n        back_launder = round(back_launder, 2),\r\n        classifier_phsp = round(classifier_phsp, 2),\r\n        density_discharge = round(density_discharge, 2),\r\n        density_discharge_timestamp,\r\n        density_classifier = round(density_classifier, 2),\r\n        density_classifier_timestamp,\r\n        wet_grind_classifier = round(wet_grind_classifier, 2),\r\n        wet_grind_classifier_timestamp,\r\n        last_modified_date = now()\r\n    | order by ballmill asc\r\n    | extend json = pack_all()\r\n    | summarize result = make_list(json);\r\nfinal | project TimestampUtc=now(), Value=tostring(result)\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "Morenci_Batman_Section_Aggregates",
+          "parameters": "()",
+          "body": "{\r\nlet section = datatable(section: int, tphsec: string, gpmsec: string)[\r\n    1, \"MOR-WIC01_SECTION01_PV\", \"MOR-FIC-3161_PV\",\r\n    2, \"MOR-WIC01_SECTION02_PV\", \"MOR-FIC-3165_PV\",\r\n    3, \"MOR-WIC01_SECTION03_PV\", \"MOR-FIC-3171_PV\",\r\n    4, \"MOR-WIC01_SECTION04_PV\", \"MOR-FIC-3175_PV\"\r\n];\r\nlet mills = datatable(section: int, ballmill: int, tphflt: string)[\r\n    1, 1, \"MOR-WIC0101_PV_FLT\",\r\n    1, 2, \"MOR-WIC0102_PV_FLT\",\r\n    1, 3, \"MOR-WIC0103_PV_FLT\",\r\n    1, 4, \"MOR-WIC0104_PV_FLT\",\r\n    1, 5, \"MOR-WIC0105_PV_FLT\",\r\n    1, 6, \"MOR-WIC0106_PV_FLT\",\r\n    1, 7, \"MOR-WIC0107_PV_FLT\",\r\n    1, 8, \"MOR-WIC0108_PV_FLT\",\r\n    2, 9, \"MOR-WIC0109_PV_FLT\",\r\n    2, 10, \"MOR-WIC0110_PV_FLT\",\r\n    2, 11, \"MOR-WIC0111_PV_FLT\",\r\n    2, 12, \"MOR-WIC0112_PV_FLT\",\r\n    2, 13, \"MOR-WIC0113_PV_FLT\",\r\n    2, 14, \"MOR-WIC0114_PV_FLT\",\r\n    2, 15, \"MOR-WIC0115_PV_FLT\",\r\n    2, 16, \"MOR-WIC0116_PV_FLT\",\r\n    3, 17, \"MOR-WIC0117_PV_FLT\",\r\n    3, 18, \"MOR-WIC0118_PV_FLT\",\r\n    3, 19, \"MOR-WIC0119_PV_FLT\",\r\n    3, 20, \"MOR-WIC0120_PV_FLT\",\r\n    3, 21, \"MOR-WIC0121_PV_FLT\",\r\n    3, 22, \"MOR-WIC0122_PV_FLT\",\r\n    4, 23, \"MOR-WIC0123_PV_FLT\",\r\n    4, 24, \"MOR-WIC0124_PV_FLT\",\r\n    4, 25, \"MOR-WIC0125_PV_FLT\",\r\n    4, 26, \"MOR-WIC0126_PV_FLT\",\r\n    4, 27, \"MOR-WIC0127_PV_FLT\",\r\n    3, 28, \"MOR-WIC0128_PV_FLT\",\r\n    4, 29, \"MOR-WIC0129_PV_FLT\",\r\n    4, 30, \"MOR-WIC0130_PV_FLT\",\r\n    3, 31, \"MOR-WIC0131_PV_FLT\",\r\n    4, 32, \"MOR-WIC0132_PV_FLT\",\r\n];\r\nlet manualsection = datatable(section: int, distributorwetgrindtag: string)[\r\n    1, \"MOR-MorenciMill-Section01-DistributorWetGrind\",\r\n    2, \"MOR-MorenciMill-Section02-DistributorWetGrind\",\r\n    3, \"MOR-MorenciMill-Section03-DistributorWetGrind\",\r\n    4, \"MOR-MorenciMill-Section04-DistributorWetGrind\"\r\n];\r\nlet start = ago(3h);\r\nlet tphflt = mills | project tphflt;\r\nlet tphsec = section | project tphsec;\r\nlet gpmsec = section | project gpmsec;\r\nlet sectionstart = ago(7d);\r\nlet distributorwetgrindtags = manualsection | project distributorwetgrindtag;\r\nlet tph_flt_current = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (tphflt)\r\n    | where timestamp > start\r\n    | project sensor_id, tph_flt = toreal(value)\r\n    | where tph_flt != 0\r\n    | summarize tpoh = avg(tph_flt) by sensor_id\r\n    | join mills on $left.sensor_id == $right.tphflt\r\n    | project sensor_id, tpoh, section\r\n    | summarize tpoh_sec_now = avg(tpoh) by section;\r\nlet tph_sec_current = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (tphsec)\r\n    | where timestamp > start\r\n    | project sensor_id, timestamp, tphsec = toreal(value)\r\n    | summarize arg_max(timestamp, *) by sensor_id\r\n    | extend tph_sec_now = iff(tphsec < 10, 0.0, tphsec)\r\n    | project sensor_id, tph_sec_now;\r\nlet gpm_sec_current = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (gpmsec)\r\n    | where timestamp > start\r\n    | project sensor_id, timestamp, gpmsec = toreal(value)\r\n    | summarize arg_max(timestamp, *) by sensor_id\r\n    | extend gpm_sec_now = iff(gpmsec < 10, 0.0, gpmsec)\r\n    | project sensor_id, timestamp, gpm_sec_now;\r\nlet distributor_wet_grind_current = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (distributorwetgrindtags)\r\n    | where timestamp > sectionstart\r\n    | project sensor_id, timestamp, distributor_wet_grind_raw = toreal(value)\r\n    | summarize arg_max(timestamp, *) by sensor_id\r\n    | extend wet_grind_distributor = iff(distributor_wet_grind_raw < 0 or distributor_wet_grind_raw > 100, 0.0, distributor_wet_grind_raw)\r\n    | project sensor_id, wet_grind_distributor_timestamp = timestamp, wet_grind_distributor;\r\nlet result = section\r\n    | join kind = fullouter tph_flt_current on $left.section == $right.section\r\n    | join kind = fullouter tph_sec_current on $left.tphsec == $right.sensor_id\r\n    | join kind = fullouter gpm_sec_current on $left.gpmsec == $right.sensor_id\r\n    | extend tpoh_avg_now = iff(isnull(tpoh_sec_now), 0.0, tpoh_sec_now)\r\n    | extend tph_sec_now = iff(isnull(tph_sec_now), 0.0, tph_sec_now)\r\n    | extend gpm_sec_now = iff(isnull(gpm_sec_now), 0.0, gpm_sec_now)\r\n    | project section, tpoh_avg_now, tph_sec_now, gpm_sec_now\r\n    | order by section asc;\r\nlet manualresult = manualsection\r\n    | join kind = fullouter distributor_wet_grind_current on $left.distributorwetgrindtag == $right.sensor_id\r\n    | extend wet_grind_distributor = iff(isnull(wet_grind_distributor), 0.0, wet_grind_distributor)\r\n    | extend wet_grind_distributor_timestamp = iff(isnull(wet_grind_distributor_timestamp), sectionstart, wet_grind_distributor_timestamp)\r\n    | project section, wet_grind_distributor, wet_grind_distributor_timestamp\r\n    | order by section asc;\r\nlet final = result\r\n    | join kind = inner manualresult on $left.section == $right.section\r\n    | project\r\n        section,\r\n        tpoh_avg_now = round(tpoh_avg_now, 2),\r\n        tph_sec_now = round(tph_sec_now, 2),\r\n        gpm_sec_now = round(gpm_sec_now, 2),\r\n        wet_grind_distributor = round(wet_grind_distributor, 2),\r\n        wet_grind_distributor_timestamp,\r\n        last_modified_date = now()\r\n    | order by section asc\r\n    | extend json = pack_all()\r\n    | summarize result = make_list(json);\r\nfinal | project TimestampUtc=now(), Value=tostring(result)\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "Morenci_Batman_Mill_Overview",
+          "parameters": "()",
+          "body": "{\r\nlet binlevels1 = datatable(section: int, binleveltag: string)[\r\n    1, \"MOR-MS01_LIC21500A_PV\",\r\n    1, \"MOR-MS01_LIC21500B_PV\",\r\n    1, \"MOR-MS01_LIC21500C_PV\",\r\n    1, \"MOR-MS01_LIC21500D_PV\",\r\n    1, \"MOR-MS01_LIC21500E_PV\",\r\n    1, \"MOR-MS01_LIC21500F_PV\",\r\n    1, \"MOR-MS01_LIC21500G_PV\",\r\n    1, \"MOR-MS01_LIC21500H_PV\"\r\n]; \r\nlet binlevels2 = datatable(section: int, binleveltag: string)[\r\n    2, \"MOR-MS01_LIC21500i_PV\",\r\n    2, \"MOR-MS01_LIC21500j_PV\",\r\n    2, \"MOR-MS01_LIC21500k_PV\",\r\n    2, \"MOR-MS01_LIC21500l_PV\",\r\n    2, \"MOR-MS01_LIC21500m_PV\",\r\n    2, \"MOR-MS01_LIC21500n_PV\",\r\n    2, \"MOR-MS01_LIC21500o_PV\",\r\n    2, \"MOR-MS01_LIC21500p_PV\"\r\n]; \r\nlet binlevels3 = datatable(section: int, binleveltag: string)[\r\n    3, \"MOR-MS01_LIC21500p_PV\",\r\n    3, \"MOR-MS03_LIC22500a_PV\",\r\n    3, \"MOR-MS03_LIC22500b_PV\",\r\n    3, \"MOR-MS03_LIC22500c_PV\",\r\n    3, \"MOR-MS03_LIC22500d_PV\",\r\n    3, \"MOR-MS03_LIC22500e_PV\",\r\n    3, \"MOR-MS03_LIC22500f_PV\",\r\n    3, \"MOR-MS03_LIC22500g_PV\"\r\n]; \r\nlet binlevels4 = datatable(section: int, binleveltag: string)[\r\n    4, \"MOR-MS03_LIC22500h_PV\",\r\n    4, \"MOR-MS03_LIC22500i_PV\",\r\n    4, \"MOR-MS03_LIC22500j_PV\",\r\n    4, \"MOR-MS03_LIC22500k_PV\",\r\n    4, \"MOR-MS03_LIC22500l_PV\",\r\n    4, \"MOR-MS03_LIC22500m_PV\",\r\n    4, \"MOR-MS03_LIC22500n_PV\"\r\n]; \r\nlet cleanero = datatable(section: int, cleanertag: string)[\r\n    1, \"MOR-FI-0751_PV\",\r\n    1, \"MOR-FI-0752_PV\",\r\n    1, \"MOR-FI-0753_PV\",\r\n]; \r\nlet cleanere = datatable(section: int, cleanertag: string)[\r\n    1, \"MOR-FI-0754_PV\",\r\n    1, \"MOR-FI-0755_PV\",\r\n    1, \"MOR-FI-0756_PV\",\r\n]; \r\nlet millotot = datatable(section: int, totaltag: string)[\r\n    1, \"MOR-WQI00101A_PV\",\r\n    1, \"MOR-WQI00102A_PV\",\r\n    1, \"MOR-WQI00103A_PV\",\r\n    1, \"MOR-WQI00104A_PV\",\r\n    1, \"MOR-WQI00105A_PV\",\r\n    1, \"MOR-WQI00106A_PV\",\r\n    1, \"MOR-WQI00107A_PV\",\r\n    1, \"MOR-WQI00108A_PV\",\r\n    1, \"MOR-WQI00109A_PV\",\r\n    1, \"MOR-WQI00110A_PV\",\r\n    1, \"MOR-WQI00111A_PV\",\r\n    1, \"MOR-WQI00112A_PV\",\r\n    1, \"MOR-WQI00113A_PV\",\r\n    1, \"MOR-WQI00114A_PV\",\r\n    1, \"MOR-WQI00115A_PV\",\r\n    1, \"MOR-WQI00116A_PV\"\r\n]; \r\nlet milletot = datatable(section: int, totaltag: string)[\r\n    1, \"MOR-WQI00117A_PV\",\r\n    1, \"MOR-WQI00118A_PV\",\r\n    1, \"MOR-WQI00119A_PV\",\r\n    1, \"MOR-WQI00120A_PV\",\r\n    1, \"MOR-WQI00121A_PV\",\r\n    1, \"MOR-WQI00122A_PV\",\r\n    1, \"MOR-WQI00123A_PV\",\r\n    1, \"MOR-WQI00124A_PV\",\r\n    1, \"MOR-WQI00125A_PV\",\r\n    1, \"MOR-WQI00126A_PV\",\r\n    1, \"MOR-WQI00127A_PV\",\r\n    1, \"MOR-WQI00128A_PV\",\r\n    1, \"MOR-WQI00129A_PV\",\r\n    1, \"MOR-WQI00130A_PV\",\r\n    1, \"MOR-WQI00131A_PV\",\r\n    1, \"MOR-WQI00132A_PV\"\r\n]; \r\nlet binleveltags1 = binlevels1 | project binleveltag; \r\nlet binleveltags2 = binlevels2 | project binleveltag; \r\nlet binleveltags3 = binlevels3 | project binleveltag; \r\nlet binleveltags4 = binlevels4 | project binleveltag;\r\nlet cleanerotags = cleanero | project cleanertag;\r\nlet cleaneretags = cleanere | project cleanertag; \r\nlet millotottags = millotot | project totaltag; \r\nlet milletottags = milletot | project totaltag; \r\nlet binleveltableo = database(\"Morenci\").FCTS \r\n    | where sensor_id in~ (\"MOR-MS01_LIC21500_AVG\") \r\n    | where timestamp > ago(3h) \r\n    | project sensor_id, blotimestamp = timestamp, binlevelo = toreal(value) \r\n    | summarize arg_max(blotimestamp, *) by sensor_id \r\n    | project blotimestamp, binlevelo, joincol = \"1\"; \r\nlet binleveltablee = database(\"Morenci\").FCTS \r\n    | where sensor_id in~ (\"MOR-MS03_LIC22500_AVG\") \r\n    | where timestamp > ago(3h) \r\n    | project sensor_id, bletimestamp = timestamp, binlevele = toreal(value) \r\n    | summarize arg_max(bletimestamp, *) by sensor_id \r\n    | project bletimestamp, binlevele, joincol = \"1\"; \r\nlet fourconveyortable = database(\"Morenci\").FCTS \r\n    | where sensor_id in~ (\"MOR-MS02_LIC21200_PV\") \r\n    | where timestamp > ago(3h) \r\n    | project sensor_id, fourtimestamp = timestamp, fourconveyor = toreal(value) \r\n    | summarize arg_max(fourtimestamp, *) by sensor_id \r\n    | project fourtimestamp, fourconveyor, joincol = \"1\"; \r\nlet fouraconveyortable = database(\"Morenci\").FCTS \r\n    | where sensor_id in~ (\"MOR-MS03_LIC22200_PV\") \r\n    | where timestamp > ago(3h) \r\n    | project sensor_id, fouratimestamp = timestamp, fouraconveyor = toreal(value) \r\n    | summarize arg_max(fouratimestamp, *) by sensor_id \r\n    | project fouratimestamp, fouraconveyor, joincol = \"1\"; \r\nlet binlevel1table = database(\"Morenci\").FCTS \r\n    | where sensor_id in~ (binleveltags1) \r\n    | where timestamp > ago(3h) \r\n    | project sensor_id, binlevel1timestamp = timestamp, binlevel1 = toreal(value) \r\n    | summarize arg_max(binlevel1timestamp, *) by sensor_id \r\n    | project binlevel1timestamp, binlevel1, joincol = \"1\" \r\n    | summarize binlevelsec1 = avg(binlevel1), bls1timestamp = max(binlevel1timestamp) \r\n    | extend joincol = \"1\"; \r\nlet binlevel2table = database(\"Morenci\").FCTS \r\n    | where sensor_id in~ (binleveltags2) \r\n    | where timestamp > ago(3h) \r\n    | project sensor_id, binlevel2timestamp = timestamp, binlevel2 = toreal(value)\r\n    | summarize arg_max(binlevel2timestamp, *) by sensor_id\r\n    | project binlevel2timestamp, binlevel2, joincol = \"1\", sensor_id\r\n    | summarize binlevelsec2 = avg(binlevel2), bls2timestamp = max(binlevel2timestamp)\r\n    | extend joincol = \"1\";\r\nlet binlevel3table = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (binleveltags3)\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, binlevel3timestamp = timestamp, binlevel3 = toreal(value)\r\n    | summarize arg_max(binlevel3timestamp, *) by sensor_id\r\n    | project binlevel3timestamp, binlevel3, joincol = \"1\", sensor_id\r\n    | summarize binlevelsec3 = avg(binlevel3), bls3timestamp = max(binlevel3timestamp)\r\n    | extend joincol = \"1\";\r\nlet binlevel4table = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (binleveltags4)\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, binlevel4timestamp = timestamp, binlevel4 = toreal(value)\r\n    | summarize arg_max(binlevel4timestamp, *) by sensor_id\r\n    | project binlevel4timestamp, binlevel4, joincol = \"1\", sensor_id\r\n    | summarize binlevelsec4 = avg(binlevel4), bls4timestamp = max(binlevel4timestamp)\r\n    | extend joincol = \"1\";\r\nlet cleanerotable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (cleanerotags)\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, cleanerotimestamp = timestamp, cleanero = toreal(value)\r\n    | summarize arg_max(cleanerotimestamp, *) by sensor_id\r\n    | project cleanerotimestamp, cleanero, joincol = \"1\", sensor_id\r\n    | summarize cleanero = sum(cleanero), cleanerotimestamp = max(cleanerotimestamp)\r\n    | extend joincol = \"1\";\r\nlet cleaneretable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (cleaneretags)\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, cleaneretimestamp = timestamp, cleanere = toreal(value)\r\n    | summarize arg_max(cleaneretimestamp, *) by sensor_id\r\n    | project cleaneretimestamp, cleanere, joincol = \"1\", sensor_id\r\n    | summarize cleanere = sum(cleanere), cleaneretimestamp = max(cleaneretimestamp)\r\n    | extend joincol = \"1\";\r\nlet roconcotable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-LIC-0651_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, roconcotimestamp = timestamp, roconco = toreal(value)\r\n    | summarize arg_max(roconcotimestamp, *) by sensor_id\r\n    | project roconcotimestamp, roconco, joincol = \"1\";\r\nlet roconcetable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-LIC-0654_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, roconcetimestamp = timestamp, roconce = toreal(value)\r\n    | summarize arg_max(roconcetimestamp, *) by sensor_id\r\n    | project roconcetimestamp, roconce, joincol = \"1\";\r\nlet asilotable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-056_LI00101\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, asilotimestamp = timestamp, asilo = toreal(value)\r\n    | summarize arg_max(asilotimestamp, *) by sensor_id\r\n    | project asilotimestamp, asilo, joincol = \"1\";\r\nlet tank1table = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-LI6391_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, limetank1timestamp = timestamp, limetank1 = toreal(value)\r\n    | summarize arg_max(limetank1timestamp, *) by sensor_id\r\n    | project limetank1timestamp, limetank1, joincol = \"1\";\r\nlet tank2table = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-LI6491_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, limetank2timestamp = timestamp, limetank2 = toreal(value)\r\n    | summarize arg_max(limetank2timestamp, *) by sensor_id\r\n    | project limetank2timestamp, limetank2, joincol = \"1\";\r\nlet tank3table = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-LI6591_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, limetank3timestamp = timestamp, limetank3 = toreal(value)\r\n    | summarize arg_max(limetank3timestamp, *) by sensor_id\r\n    | project limetank3timestamp, limetank3, joincol = \"1\";\r\nlet tank4table = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-LI6691_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, limetank4timestamp = timestamp, limetank4 = toreal(value)\r\n    | summarize arg_max(limetank4timestamp, *) by sensor_id\r\n    | project limetank4timestamp, limetank4, joincol = \"1\";\r\nlet tank5table = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-LI6791_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, limetank5timestamp = timestamp, limetank5 = toreal(value)\r\n    | summarize arg_max(limetank5timestamp, *) by sensor_id\r\n    | project limetank5timestamp, limetank5, joincol = \"1\";\r\nlet regrind1table = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-YA-2001\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, regrind1timestamp = timestamp, regrind1 = toreal(value)\r\n    | summarize arg_max(regrind1timestamp, *) by sensor_id\r\n    | project regrind1timestamp, regrind1, joincol = \"1\";\r\nlet regrind2table = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-YA-2002\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, regrind2timestamp = timestamp, regrind2 = toreal(value)\r\n    | summarize arg_max(regrind2timestamp, *) by sensor_id\r\n    | project regrind2timestamp, regrind2, joincol = \"1\";\r\nlet regrind3table = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-YA-2003\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, regrind3timestamp = timestamp, regrind3 = toreal(value)\r\n    | summarize arg_max(regrind3timestamp, *) by sensor_id\r\n    | project regrind3timestamp, regrind3, joincol = \"1\";\r\nlet regrind4table = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-YA-2004\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, regrind4timestamp = timestamp, regrind4 = toreal(value)\r\n    | summarize arg_max(regrind4timestamp, *) by sensor_id\r\n    | project regrind4timestamp, regrind4, joincol = \"1\";\r\nlet regrind5table = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-YA-2005\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, regrind5timestamp = timestamp, regrind5 = toreal(value)\r\n    | summarize arg_max(regrind5timestamp, *) by sensor_id\r\n    | project regrind5timestamp, regrind5, joincol = \"1\";\r\nlet regrind6table = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-YA-2006\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, regrind6timestamp = timestamp, regrind6 = toreal(value)\r\n    | summarize arg_max(regrind6timestamp, *) by sensor_id\r\n    | project regrind6timestamp, regrind6, joincol = \"1\";\r\nlet column40otable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-LIC-1040_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, column40otimestamp = timestamp, column40o = toreal(value)\r\n    | summarize arg_max(column40otimestamp, *) by sensor_id\r\n    | project column40otimestamp, column40o, joincol = \"1\";\r\nlet column48otable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-LIC-1048_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, column48otimestamp = timestamp, column48o = toreal(value)\r\n    | summarize arg_max(column48otimestamp, *) by sensor_id\r\n    | project column48otimestamp, column48o, joincol = \"1\";\r\nlet column40etable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-LIC-1041_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, column40etimestamp = timestamp, column40e = toreal(value)\r\n    | summarize arg_max(column40etimestamp, *) by sensor_id\r\n    | project column40etimestamp, column40e, joincol = \"1\";\r\nlet column48etable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-LIC-1049_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, column48etimestamp = timestamp, column48e = toreal(value)\r\n    | summarize arg_max(column48etimestamp, *) by sensor_id\r\n    | project column48etimestamp, column48e, joincol = \"1\";\r\nlet mule1atable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-II97131A_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, mule1atimestamp = timestamp, mule1a = toreal(value)\r\n    | summarize arg_max(mule1atimestamp, *) by sensor_id\r\n    | project mule1atimestamp, mule1a, joincol = \"1\";\r\nlet mule1btable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-II97131B_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, mule1btimestamp = timestamp, mule1b = toreal(value)\r\n    | summarize arg_max(mule1btimestamp, *) by sensor_id\r\n    | project mule1btimestamp, mule1b, joincol = \"1\";\r\nlet mule2atable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-II97132A_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, mule2atimestamp = timestamp, mule2a = toreal(value)\r\n    | summarize arg_max(mule2atimestamp, *) by sensor_id\r\n    | project mule2atimestamp, mule2a, joincol = \"1\";\r\nlet mule2btable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-II97132B_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, mule2btimestamp = timestamp, mule2b = toreal(value)\r\n    | summarize arg_max(mule2btimestamp, *) by sensor_id\r\n    | project mule2btimestamp, mule2b, joincol = \"1\";\r\nlet mule3atable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-II97133A_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, mule3atimestamp = timestamp, mule3a = toreal(value)\r\n    | summarize arg_max(mule3atimestamp, *) by sensor_id\r\n    | project mule3atimestamp, mule3a, joincol = \"1\";\r\nlet mule3btable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-II97133B_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, mule3btimestamp = timestamp, mule3b = toreal(value)\r\n    | summarize arg_max(mule3btimestamp, *) by sensor_id\r\n    | project mule3btimestamp, mule3b, joincol = \"1\";\r\nlet mule4atable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-II97134A_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, mule4atimestamp = timestamp, mule4a = toreal(value)\r\n    | summarize arg_max(mule4atimestamp, *) by sensor_id\r\n    | project mule4atimestamp, mule4a, joincol = \"1\";\r\nlet mule4btable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-II97134B_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, mule4btimestamp = timestamp, mule4b = toreal(value)\r\n    | summarize arg_max(mule4btimestamp, *) by sensor_id\r\n    | project mule4btimestamp, mule4b, joincol = \"1\";\r\nlet mule6atable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-II97136A_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, mule6atimestamp = timestamp, mule6a = toreal(value)\r\n    | summarize arg_max(mule6atimestamp, *) by sensor_id\r\n    | project mule6atimestamp, mule6a, joincol = \"1\";\r\nlet mule6btable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-II97136B_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, mule6btimestamp = timestamp, mule6b = toreal(value)\r\n    | summarize arg_max(mule6btimestamp, *) by sensor_id\r\n    | project mule6btimestamp, mule6b, joincol = \"1\";\r\nlet mule7atable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-II97137A_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, mule7atimestamp = timestamp, mule7a = toreal(value)\r\n    | summarize arg_max(mule7atimestamp, *) by sensor_id\r\n    | project mule7atimestamp, mule7a, joincol = \"1\";\r\nlet mule7btable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-II97137B_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, mule7btimestamp = timestamp, mule7b = toreal(value)\r\n    | summarize arg_max(mule7btimestamp, *) by sensor_id\r\n    | project mule7btimestamp, mule7b, joincol = \"1\";\r\nlet water1table = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-LI0590_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, water1timestamp = timestamp, water1 = toreal(value)\r\n    | summarize arg_max(water1timestamp, *) by sensor_id\r\n    | project water1timestamp, water1, joincol = \"1\";\r\nlet water2table = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-LI0690_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, water2timestamp = timestamp, water2 = toreal(value)\r\n    | summarize arg_max(water2timestamp, *) by sensor_id\r\n    | project water2timestamp, water2, joincol = \"1\";\r\nlet water3table = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-LI0790_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, water3timestamp = timestamp, water3 = toreal(value)\r\n    | summarize arg_max(water3timestamp, *) by sensor_id\r\n    | project water3timestamp, water3, joincol = \"1\";\r\nlet water4table = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-FI0490_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, altitudewatertimestamp = timestamp, altitudewater = toreal(value)\r\n    | summarize arg_max(altitudewatertimestamp, *) by sensor_id\r\n    | project altitudewatertimestamp, altitudewater, joincol = \"1\";\r\nlet altitudewatertable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-LI0890_PV\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, water4timestamp = timestamp, water4 = toreal(value)\r\n    | summarize arg_max(water4timestamp, *) by sensor_id\r\n    | project water4timestamp, water4, joincol = \"1\";\r\nlet fourbelttotaltable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-MS02_LIC21200_PV_TOT\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, fourbelttotaltimestamp = timestamp, fourbelttotal = toreal(value)\r\n    | summarize arg_max(fourbelttotaltimestamp, *) by sensor_id\r\n    | project fourbelttotaltimestamp, fourbelttotal, joincol = \"1\";\r\nlet fourabelttotaltable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (\"MOR-MS03_LIC22200_PV_TOT\")\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, fourabelttotaltimestamp = timestamp, fourabelttotal = toreal(value)\r\n    | summarize arg_max(fourabelttotaltimestamp, *) by sensor_id\r\n    | project fourabelttotaltimestamp, fourabelttotal, joincol = \"1\";\r\nlet millotottable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (millotottags)\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, millotottimestamp = timestamp, millotot = toreal(value)\r\n    | summarize arg_max(millotottimestamp, *) by sensor_id\r\n    | project millotottimestamp, millotot, sensor_id\r\n    | summarize millotot = sum(millotot), millotottimestamp = max(millotottimestamp)\r\n    | extend joincol = \"1\";\r\nlet milletottable = database(\"Morenci\").FCTS\r\n    | where sensor_id in~ (milletottags)\r\n    | where timestamp > ago(3h)\r\n    | project sensor_id, milletottimestamp = timestamp, milletot = toreal(value)\r\n    | summarize arg_max(milletottimestamp, *) by sensor_id\r\n    | project milletottimestamp, milletot, sensor_id\r\n    | summarize milletot = sum(milletot), milletottimestamp = max(milletottimestamp)\r\n    | extend joincol = \"1\";\r\nlet result = binleveltableo\r\n    | join kind = leftouter binleveltablee on $left.joincol == $right.joincol\r\n    | join kind = leftouter fourconveyortable on $left.joincol == $right.joincol\r\n    | join kind = leftouter fouraconveyortable on $left.joincol == $right.joincol\r\n    | join kind = leftouter binlevel1table on $left.joincol == $right.joincol\r\n    | join kind = leftouter binlevel2table on $left.joincol == $right.joincol\r\n    | join kind = leftouter binlevel3table on $left.joincol == $right.joincol\r\n    | join kind = leftouter binlevel4table on $left.joincol == $right.joincol\r\n    | join kind = leftouter cleanerotable on $left.joincol == $right.joincol\r\n    | join kind = leftouter cleaneretable on $left.joincol == $right.joincol\r\n    | join kind = leftouter roconcotable on $left.joincol == $right.joincol\r\n    | join kind = leftouter roconcetable on $left.joincol == $right.joincol\r\n    | join kind = leftouter asilotable on $left.joincol == $right.joincol\r\n    | join kind = leftouter tank1table on $left.joincol == $right.joincol\r\n    | join kind = leftouter tank2table on $left.joincol == $right.joincol\r\n    | join kind = leftouter tank3table on $left.joincol == $right.joincol\r\n    | join kind = leftouter tank4table on $left.joincol == $right.joincol\r\n    | join kind = leftouter tank5table on $left.joincol == $right.joincol\r\n    | join kind = leftouter regrind1table on $left.joincol == $right.joincol\r\n    | join kind = leftouter regrind2table on $left.joincol == $right.joincol\r\n    | join kind = leftouter regrind3table on $left.joincol == $right.joincol\r\n    | join kind = leftouter regrind4table on $left.joincol == $right.joincol\r\n    | join kind = leftouter regrind5table on $left.joincol == $right.joincol\r\n    | join kind = leftouter regrind6table on $left.joincol == $right.joincol\r\n    | join kind = leftouter column40otable on $left.joincol == $right.joincol\r\n    | join kind = leftouter column48otable on $left.joincol == $right.joincol\r\n    | join kind = leftouter column40etable on $left.joincol == $right.joincol\r\n    | join kind = leftouter column48etable on $left.joincol == $right.joincol\r\n    | join kind = leftouter mule1atable on $left.joincol == $right.joincol\r\n    | join kind = leftouter mule1btable on $left.joincol == $right.joincol\r\n    | join kind = leftouter mule2atable on $left.joincol == $right.joincol\r\n    | join kind = leftouter mule2btable on $left.joincol == $right.joincol\r\n    | join kind = leftouter mule3atable on $left.joincol == $right.joincol\r\n    | join kind = leftouter mule3btable on $left.joincol == $right.joincol\r\n    | join kind = leftouter mule4atable on $left.joincol == $right.joincol\r\n    | join kind = leftouter mule4btable on $left.joincol == $right.joincol\r\n    | join kind = leftouter mule6atable on $left.joincol == $right.joincol\r\n    | join kind = leftouter mule6btable on $left.joincol == $right.joincol\r\n    | join kind = leftouter mule7atable on $left.joincol == $right.joincol\r\n    | join kind = leftouter mule7btable on $left.joincol == $right.joincol\r\n    | join kind = leftouter water1table on $left.joincol == $right.joincol\r\n    | join kind = leftouter water2table on $left.joincol == $right.joincol\r\n    | join kind = leftouter water3table on $left.joincol == $right.joincol\r\n    | join kind = leftouter water4table on $left.joincol == $right.joincol\r\n    | join kind = leftouter altitudewatertable on $left.joincol == $right.joincol\r\n    | join kind = leftouter fourbelttotaltable on $left.joincol == $right.joincol\r\n    | join kind = leftouter fourabelttotaltable on $left.joincol == $right.joincol\r\n    | join kind = leftouter millotottable on $left.joincol == $right.joincol\r\n    | join kind = leftouter milletottable on $left.joincol == $right.joincol\r\n    | project\r\n        binlevelo = round(binlevelo, 2),\r\n        blotimestamp,\r\n        binlevele = round(binlevele, 2),\r\n        bletimestamp,\r\n        fourconveyor = round(fourconveyor, 2),\r\n        fourtimestamp,\r\n        fouraconveyor = round(fouraconveyor, 2),\r\n        fouratimestamp,\r\n        binlevelsec1 = round(binlevelsec1, 2),\r\n        bls1timestamp,\r\n        binlevelsec2 = round(binlevelsec2, 2),\r\n        bls2timestamp,\r\n        binlevelsec3 = round(binlevelsec3, 2),\r\n        bls3timestamp,\r\n        binlevelsec4 = round(binlevelsec4, 2),\r\n        bls4timestamp,\r\n        cleanero = round(cleanero, 2),\r\n        cleanerotimestamp,\r\n        cleanere = round(cleanere, 2),\r\n        cleaneretimestamp,\r\n        roconco = round(roconco, 2),\r\n        roconcotimestamp,\r\n        roconce = round(roconce, 2),\r\n        roconcetimestamp,\r\n        asilo = round(asilo, 2),\r\n        asilotimestamp,\r\n        limetank1 = round(limetank1, 2),\r\n        limetank1timestamp,\r\n        limetank2 = round(limetank2, 2),\r\n        limetank2timestamp,\r\n        limetank3 = round(limetank3, 2),\r\n        limetank3timestamp,\r\n        limetank4 = round(limetank4, 2),\r\n        limetank4timestamp,\r\n        limetank5 = round(limetank5, 2),\r\n        limetank5timestamp,\r\n        regrind1 = round(regrind1, 2),\r\n        regrind1timestamp,\r\n        regrind2 = round(regrind2, 2),\r\n        regrind2timestamp,\r\n        regrind3 = round(regrind3, 2),\r\n        regrind3timestamp,\r\n        regrind4 = round(regrind4, 2),\r\n        regrind4timestamp,\r\n        regrind5 = round(regrind5, 2),\r\n        regrind5timestamp,\r\n        regrind6 = round(regrind6, 2),\r\n        regrind6timestamp,\r\n        column40o = round(column40o, 2),\r\n        column40otimestamp,\r\n        column48o = round(column48o, 2),\r\n        column48otimestamp,\r\n        column40e = round(column40e, 2),\r\n        column40etimestamp,\r\n        column48e = round(column48e, 2),\r\n        column48etimestamp,\r\n        mule1a = round(mule1a, 2),\r\n        mule1atimestamp,\r\n        mule1b = round(mule1b, 2),\r\n        mule1btimestamp,\r\n        mule2a = round(mule2a, 2),\r\n        mule2atimestamp,\r\n        mule2b = round(mule2b, 2),\r\n        mule2btimestamp,\r\n        mule3a = round(mule3a, 2),\r\n        mule3atimestamp,\r\n        mule3b = round(mule3b, 2),\r\n        mule3btimestamp,\r\n        mule4a = round(mule4a, 2),\r\n        mule4atimestamp,\r\n        mule4b = round(mule4b, 2),\r\n        mule4btimestamp,\r\n        mule6a = round(mule6a, 2),\r\n        mule6atimestamp,\r\n        mule6b = round(mule6b, 2),\r\n        mule6btimestamp,\r\n        mule7a = round(mule7a, 2),\r\n        mule7atimestamp,\r\n        mule7b = round(mule7b, 2),\r\n        mule7btimestamp,\r\n        water1 = round(water1, 2),\r\n        water1timestamp,\r\n        water2 = round(water2, 2),\r\n        water2timestamp,\r\n        water3 = round(water3, 2),\r\n        water3timestamp,\r\n        water4 = round(water4, 2),\r\n        water4timestamp,\r\n        altitudewater = round(altitudewater, 2),\r\n        altitudewatertimestamp,\r\n        fourbelttotal = round(fourbelttotal, 2),\r\n        fourbelttotaltimestamp,\r\n        fourabelttotal = round(fourabelttotal, 2),\r\n        fourabelttotaltimestamp,\r\n        millotot = round(millotot, 2),\r\n        millotottimestamp,\r\n        milletot = round(milletot, 2),\r\n        milletottimestamp\r\n    | extend json = pack_all()\r\n    | summarize result = make_list(json);\r\nresult | project TimestampUtc=now(), Value=tostring(result)\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetCastingSpeed",
+          "parameters": "(T:(total_batch_id:int,id:string,calculated_year:int,start_date_time:datetime,end_date_time:datetime), site_name:string, site_code:string)",
+          "body": "{\n    //Change History\n    //Date\t\t\tChange by\t\tDescription\n    //2024-11-29\t\tSamuel Xavier\t\tInitial\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\n    //2025-01-20\t\tPutu Ananda\t\tCode review\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\n    let sensor_R1 = strcat(site_code, '-FMM200:W_001');\n    let sensor_R2 = strcat(site_code, '-FMM300:W_001');\n    database(site_name).FCTS\n    | where sensor_id in~ (sensor_R1, sensor_R2 ) and timestamp between (min_start_date_time .. max_end_date_time)\n    | project value = todecimal(value), sensor_name = case (\n    sensor_id == sensor_R1, \"R1\",\n    sensor_id == sensor_R2, \"R2\",\n    sensor_id\n    ), sensor_id, timestamp\n    | join kind=rightouter T on $left.sensor_name == $right.id\n    | where timestamp between (start_date_time .. end_date_time)\n    | summarize total_value = round(avg(value),2) by total_batch_id,id,calculated_year\n    | project total_batch_id, id, calculated_year, total_value\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "AcidTankLevels_BACKUP_20251031",
+          "parameters": "()",
+          "body": "{\nlet sensors = toscalar(\n    database('Global').RegistryStreamsPivot_MV\n    | where Workflow contains \"AcidTanks\"\n    | summarize make_list(sensor_id)\n);\ndatabase('Global').FCTS_CURRENT_VALUE()\n| where sensor_id in (sensors)\n| project site_code, data_source, sensor_id, timestamp, value\n| order by site_code asc, sensor_id asc \n}",
+          "folder": null,
+          "doc_string": null
+        }
+      ],
+      "external_tables": [],
+      "materialized_views": []
+    },
+    "Bagdad": {
+      "name": "Bagdad",
+      "tables": [
+        {
+          "name": "FCTS_INGEST",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 88,
+          "total_original_size": 164557061448.0,
+          "total_row_count": 761521551
+        }
+      ],
+      "functions": [
+        {
+          "name": "FCTS",
+          "parameters": "()",
+          "body": "{ \r\n    FCTS_DEDUP\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id, timestamp\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "FCTSCURRENT",
+          "parameters": "()",
+          "body": "{\r\n    FCTS_CURRENT_VALUE\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        }
+      ],
+      "external_tables": [
+        {
+          "name": "FctsAdlsExportBAG",
+          "table_type": "Blob"
+        },
+        {
+          "name": "AdxArchive",
+          "table_type": "Blob"
+        }
+      ],
+      "materialized_views": [
+        {
+          "name": "FCTS_DEDUP",
+          "source_table": "FCTS_INGEST"
+        },
+        {
+          "name": "FCTS_CURRENT_VALUE",
+          "source_table": "FCTS_INGEST"
+        }
+      ]
+    },
+    "Climax": {
+      "name": "Climax",
+      "tables": [
+        {
+          "name": "FCTS_INGEST",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 65,
+          "total_original_size": 86716400625.0,
+          "total_row_count": 425219704
+        }
+      ],
+      "functions": [
+        {
+          "name": "FCTS",
+          "parameters": "()",
+          "body": "{ \r\n    FCTS_DEDUP\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id, timestamp\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "FCTSCURRENT",
+          "parameters": "()",
+          "body": "{\r\n    FCTS_CURRENT_VALUE\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        }
+      ],
+      "external_tables": [
+        {
+          "name": "FctsAdlsExportCMX",
+          "table_type": "Blob"
+        },
+        {
+          "name": "AdxArchive",
+          "table_type": "Blob"
+        }
+      ],
+      "materialized_views": [
+        {
+          "name": "FCTS_DEDUP",
+          "source_table": "FCTS_INGEST"
+        },
+        {
+          "name": "FCTS_CURRENT_VALUE",
+          "source_table": "FCTS_INGEST"
+        }
+      ]
+    },
+    "Stowmarket": {
+      "name": "Stowmarket",
+      "tables": [
+        {
+          "name": "FCTS_INGEST",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 33,
+          "total_original_size": 4862075273.0,
+          "total_row_count": 23417982
+        }
+      ],
+      "functions": [
+        {
+          "name": "FCTS",
+          "parameters": "()",
+          "body": "{ \r\n    FCTS_DEDUP\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id, timestamp\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "FCTSCURRENT",
+          "parameters": "()",
+          "body": "{\r\n    FCTS_CURRENT_VALUE\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        }
+      ],
+      "external_tables": [
+        {
+          "name": "FctsAdlsExport",
+          "table_type": "Blob"
+        },
+        {
+          "name": "AdxArchive",
+          "table_type": "Blob"
+        }
+      ],
+      "materialized_views": [
+        {
+          "name": "FCTS_DEDUP",
+          "source_table": "FCTS_INGEST"
+        },
+        {
+          "name": "FCTS_CURRENT_VALUE",
+          "source_table": "FCTS_INGEST"
+        }
+      ]
+    },
+    "NAMEM": {
+      "name": "NAMEM",
+      "tables": [
+        {
+          "name": "FCTS_INGEST",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 1405,
+          "total_original_size": 2844888797211.0,
+          "total_row_count": 15986773043
+        }
+      ],
+      "functions": [
+        {
+          "name": "FCTS",
+          "parameters": "()",
+          "body": "{ \r\n    FCTS_DEDUP\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id, timestamp\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "FCTSCURRENT",
+          "parameters": "()",
+          "body": "{\r\n    FCTS_CURRENT_VALUE\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        }
+      ],
+      "external_tables": [
+        {
+          "name": "FctsAdlsExportNAMEM",
+          "table_type": "Blob"
+        },
+        {
+          "name": "AdxArchive",
+          "table_type": "Blob"
+        }
+      ],
+      "materialized_views": [
+        {
+          "name": "FCTS_DEDUP",
+          "source_table": "FCTS_INGEST"
+        },
+        {
+          "name": "FCTS_CURRENT_VALUE",
+          "source_table": "FCTS_INGEST"
+        }
+      ]
+    },
+    "ElPaso": {
+      "name": "ElPaso",
+      "tables": [
+        {
+          "name": "FCTS_INGEST",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 27,
+          "total_original_size": 3034031490.0,
+          "total_row_count": 16575906
+        }
+      ],
+      "functions": [
+        {
+          "name": "FCTS",
+          "parameters": "()",
+          "body": "{ \r\n    FCTS_DEDUP\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id, timestamp\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "FCTSCURRENT",
+          "parameters": "()",
+          "body": "{\r\n    FCTS_CURRENT_VALUE\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        }
+      ],
+      "external_tables": [
+        {
+          "name": "FctsAdlsExportELP",
+          "table_type": "Blob"
+        },
+        {
+          "name": "AdxArchive",
+          "table_type": "Blob"
+        }
+      ],
+      "materialized_views": [
+        {
+          "name": "FCTS_DEDUP",
+          "source_table": "FCTS_INGEST"
+        },
+        {
+          "name": "FCTS_CURRENT_VALUE",
+          "source_table": "FCTS_INGEST"
+        }
+      ]
+    },
+    "CerroVerde": {
+      "name": "CerroVerde",
+      "tables": [
+        {
+          "name": "FCTS_INGEST",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 181,
+          "total_original_size": 325858829086.0,
+          "total_row_count": 1785201631
+        }
+      ],
+      "functions": [
+        {
+          "name": "FCTS",
+          "parameters": "()",
+          "body": "{ \r\n    FCTS_DEDUP\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id, timestamp\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "FCTSCURRENT",
+          "parameters": "()",
+          "body": "{\r\n    FCTS_CURRENT_VALUE\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        }
+      ],
+      "external_tables": [
+        {
+          "name": "FctsAdlsExportCVE",
+          "table_type": "Blob"
+        },
+        {
+          "name": "AdxArchive",
+          "table_type": "Blob"
+        }
+      ],
+      "materialized_views": [
+        {
+          "name": "FCTS_DEDUP",
+          "source_table": "FCTS_INGEST"
+        },
+        {
+          "name": "FCTS_CURRENT_VALUE",
+          "source_table": "FCTS_INGEST"
+        }
+      ]
+    },
+    "Miami": {
+      "name": "Miami",
+      "tables": [
+        {
+          "name": "FCTS_INGEST",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 61,
+          "total_original_size": 65412327486.0,
+          "total_row_count": 370111292
+        }
+      ],
+      "functions": [
+        {
+          "name": "FCTS",
+          "parameters": "()",
+          "body": "{ \r\n    FCTS_DEDUP\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id, timestamp\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "FCTSCURRENT",
+          "parameters": "()",
+          "body": "{\r\n    FCTS_CURRENT_VALUE\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        }
+      ],
+      "external_tables": [
+        {
+          "name": "FctsAdlsExportMIA",
+          "table_type": "Blob"
+        },
+        {
+          "name": "AdxArchive",
+          "table_type": "Blob"
+        }
+      ],
+      "materialized_views": [
+        {
+          "name": "FCTS_DEDUP",
+          "source_table": "FCTS_INGEST"
+        },
+        {
+          "name": "FCTS_CURRENT_VALUE",
+          "source_table": "FCTS_INGEST"
+        }
+      ]
+    },
+    "Huelva": {
+      "name": "Huelva",
+      "tables": [
+        {
+          "name": "FCTS_INGEST",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 37,
+          "total_original_size": 22339565097.0,
+          "total_row_count": 123339731
+        }
+      ],
+      "functions": [
+        {
+          "name": "FCTS",
+          "parameters": "()",
+          "body": "{ \r\n    FCTS_DEDUP\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id, timestamp\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "FCTSCURRENT",
+          "parameters": "()",
+          "body": "{\r\n    FCTS_CURRENT_VALUE\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        }
+      ],
+      "external_tables": [
+        {
+          "name": "AdxArchive",
+          "table_type": "Blob"
+        },
+        {
+          "name": "FctsAdlsExportHUE2",
+          "table_type": "Blob"
+        }
+      ],
+      "materialized_views": [
+        {
+          "name": "FCTS_DEDUP",
+          "source_table": "FCTS_INGEST"
+        },
+        {
+          "name": "FCTS_CURRENT_VALUE",
+          "source_table": "FCTS_INGEST"
+        }
+      ]
+    },
+    "ElAbra": {
+      "name": "ElAbra",
+      "tables": [
+        {
+          "name": "FCTS_INGEST",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 137,
+          "total_original_size": 229890238787.0,
+          "total_row_count": 1248256186
+        }
+      ],
+      "functions": [
+        {
+          "name": "FCTS",
+          "parameters": "()",
+          "body": "{ \r\n    FCTS_DEDUP\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id, timestamp\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "FCTSCURRENT",
+          "parameters": "()",
+          "body": "{\r\n    FCTS_CURRENT_VALUE\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        }
+      ],
+      "external_tables": [
+        {
+          "name": "FctsAdlsExportABR",
+          "table_type": "Blob"
+        },
+        {
+          "name": "AdxArchive",
+          "table_type": "Blob"
+        }
+      ],
+      "materialized_views": [
+        {
+          "name": "FCTS_DEDUP",
+          "source_table": "FCTS_INGEST"
+        },
+        {
+          "name": "FCTS_CURRENT_VALUE",
+          "source_table": "FCTS_INGEST"
+        }
+      ]
+    },
+    "NewMexico": {
+      "name": "NewMexico",
+      "tables": [
+        {
+          "name": "FCTS_INGEST",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 34,
+          "total_original_size": 21259549934.0,
+          "total_row_count": 108732021
+        }
+      ],
+      "functions": [
+        {
+          "name": "FCTS",
+          "parameters": "()",
+          "body": "{ \r\n    FCTS_DEDUP\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id, timestamp\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "FCTSCURRENT",
+          "parameters": "()",
+          "body": "{\r\n    FCTS_CURRENT_VALUE\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        }
+      ],
+      "external_tables": [
+        {
+          "name": "FctsAdlsExportNMO",
+          "table_type": "Blob"
+        },
+        {
+          "name": "AdxArchive",
+          "table_type": "Blob"
+        }
+      ],
+      "materialized_views": [
+        {
+          "name": "FCTS_DEDUP",
+          "source_table": "FCTS_INGEST"
+        },
+        {
+          "name": "FCTS_CURRENT_VALUE",
+          "source_table": "FCTS_INGEST"
+        }
+      ]
+    },
+    "Sierrita": {
+      "name": "Sierrita",
+      "tables": [
+        {
+          "name": "FCTS_INGEST",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 68,
+          "total_original_size": 81824093642.0,
+          "total_row_count": 398279094
+        }
+      ],
+      "functions": [
+        {
+          "name": "FCTS",
+          "parameters": "()",
+          "body": "{ \r\n    FCTS_DEDUP\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id, timestamp\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "FCTSCURRENT",
+          "parameters": "()",
+          "body": "{\r\n    FCTS_CURRENT_VALUE\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        }
+      ],
+      "external_tables": [
+        {
+          "name": "FctsAdlsExportSIE",
+          "table_type": "Blob"
+        },
+        {
+          "name": "AdxArchive",
+          "table_type": "Blob"
+        }
+      ],
+      "materialized_views": [
+        {
+          "name": "FCTS_DEDUP",
+          "source_table": "FCTS_INGEST"
+        },
+        {
+          "name": "FCTS_CURRENT_VALUE",
+          "source_table": "FCTS_INGEST"
+        }
+      ]
+    },
+    "FtMadison": {
+      "name": "FtMadison",
+      "tables": [
+        {
+          "name": "FCTS_INGEST",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 35,
+          "total_original_size": 19969956040.0,
+          "total_row_count": 97301524
+        }
+      ],
+      "functions": [
+        {
+          "name": "FCTS",
+          "parameters": "()",
+          "body": "{ \r\n    FCTS_DEDUP\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id, timestamp\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "FCTSCURRENT",
+          "parameters": "()",
+          "body": "{\r\n    FCTS_CURRENT_VALUE\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        }
+      ],
+      "external_tables": [
+        {
+          "name": "FctsAdlsExportFTM",
+          "table_type": "Blob"
+        },
+        {
+          "name": "AdxArchive",
+          "table_type": "Blob"
+        }
+      ],
+      "materialized_views": [
+        {
+          "name": "FCTS_DEDUP",
+          "source_table": "FCTS_INGEST"
+        },
+        {
+          "name": "FCTS_CURRENT_VALUE",
+          "source_table": "FCTS_INGEST"
+        }
+      ]
+    },
+    "Rotterdam": {
+      "name": "Rotterdam",
+      "tables": [
+        {
+          "name": "FCTS_INGEST",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 38,
+          "total_original_size": 31271499474.0,
+          "total_row_count": 133676910
+        }
+      ],
+      "functions": [
+        {
+          "name": "FCTS",
+          "parameters": "()",
+          "body": "{ \r\n    FCTS_DEDUP\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id, timestamp\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "FCTSCURRENT",
+          "parameters": "()",
+          "body": "{\r\n    FCTS_CURRENT_VALUE\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        }
+      ],
+      "external_tables": [
+        {
+          "name": "FctsAdlsExportROT",
+          "table_type": "Blob"
+        },
+        {
+          "name": "AdxArchive",
+          "table_type": "Blob"
+        }
+      ],
+      "materialized_views": [
+        {
+          "name": "FCTS_DEDUP",
+          "source_table": "FCTS_INGEST"
+        },
+        {
+          "name": "FCTS_CURRENT_VALUE",
+          "source_table": "FCTS_INGEST"
+        }
+      ]
+    },
+    "Morenci": {
+      "name": "Morenci",
+      "tables": [
+        {
+          "name": "FCTS_INGEST",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 70,
+          "total_original_size": 94154972916.0,
+          "total_row_count": 525915805
+        }
+      ],
+      "functions": [
+        {
+          "name": "FCTS",
+          "parameters": "()",
+          "body": "{ \r\n    FCTS_DEDUP\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id, timestamp\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "FCTSCURRENT",
+          "parameters": "()",
+          "body": "{\r\n    FCTS_CURRENT_VALUE\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        }
+      ],
+      "external_tables": [
+        {
+          "name": "FctsAdlsExportMOR",
+          "table_type": "Blob"
+        },
+        {
+          "name": "AdxArchive",
+          "table_type": "Blob"
+        }
+      ],
+      "materialized_views": [
+        {
+          "name": "FCTS_DEDUP",
+          "source_table": "FCTS_INGEST"
+        },
+        {
+          "name": "FCTS_CURRENT_VALUE",
+          "source_table": "FCTS_INGEST"
+        }
+      ]
+    },
+    "Global": {
+      "name": "Global",
+      "tables": [
+        {
+          "name": "FaeLogsIngest",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 5659,
+          "total_original_size": 2810750588976.0,
+          "total_row_count": 445163146
+        },
+        {
+          "name": "RegistryIngest",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 8,
+          "total_original_size": 5362631.0,
+          "total_row_count": 6790
+        },
+        {
+          "name": "JobsIngest",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 10,
+          "total_original_size": 1729961960.0,
+          "total_row_count": 279979
+        }
+      ],
+      "functions": [
+        {
+          "name": "FCTS_CURRENT_VALUE",
+          "parameters": "()",
+          "body": "{\r\n(database('Bagdad').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('CerroVerde').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('Climax').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('ElAbra').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('ElPaso').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('FtMadison').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('Henderson').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('Huelva').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('Miami').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('Morenci').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('NewMexico').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('Rotterdam').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('Safford').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('Sierrita').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('Stowmarket').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('NAMEM').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('SAMEM').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('TechCenter').materialized_view('FCTS_CURRENT_VALUE')\r\n)\r\n| summarize arg_max(timestamp,*) by sensor_id\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "FCTS",
+          "parameters": "()",
+          "body": "{\r\n(\r\ndatabase('Bagdad').materialized_view('FCTS_DEDUP')\r\n| union database('CerroVerde').materialized_view('FCTS_DEDUP')\r\n| union database('Climax').materialized_view('FCTS_DEDUP')\r\n| union database('ElAbra').materialized_view('FCTS_DEDUP')\r\n| union database('ElPaso').materialized_view('FCTS_DEDUP')\r\n| union database('FtMadison').materialized_view('FCTS_DEDUP')\r\n| union database('Henderson').materialized_view('FCTS_DEDUP')\r\n| union database('Huelva').materialized_view('FCTS_DEDUP')\r\n| union database('Miami').materialized_view('FCTS_DEDUP')\r\n| union database('Morenci').materialized_view('FCTS_DEDUP')\r\n| union database('NewMexico').materialized_view('FCTS_DEDUP')\r\n| union database('Rotterdam').materialized_view('FCTS_DEDUP')\r\n| union database('Safford').materialized_view('FCTS_DEDUP')\r\n| union database('Sierrita').materialized_view('FCTS_DEDUP')\r\n| union database('Stowmarket').materialized_view('FCTS_DEDUP')\r\n| union database('TechCenter').materialized_view('FCTS_DEDUP')\r\n)\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "RegistryStreams",
+          "parameters": "()",
+          "body": "{\n    RegistryStreamsPivot_MV\n    | where status == \"active\"\n}",
+          "folder": "Registry",
+          "doc_string": null
+        },
+        {
+          "name": "RegistryDevices",
+          "parameters": "()",
+          "body": "{\nRegistryDevices_MV\n| where status == \"active\"\n}",
+          "folder": "Registry",
+          "doc_string": null
+        },
+        {
+          "name": "RegistryConstants",
+          "parameters": "()",
+          "body": "{\nRegistryConstants_MV\n| where status == \"active\"\n}",
+          "folder": "Registry",
+          "doc_string": null
+        },
+        {
+          "name": "FaeJobLogs",
+          "parameters": "()",
+          "body": "{\r\nFaeLogs_MV\r\n| project \r\n    id, \r\n    jobId, \r\n    siteCode,\r\n    job_name, \r\n    job_start, \r\n    job_end, \r\n    job_status,\r\n    job_errors,\r\n    action_name,\r\n    action_type,\r\n    action_start,\r\n    action_end,\r\n    action_status,\r\n    action_message,\r\n    parent_name,\r\n    parent_type\r\n    }",
+          "folder": "Registry",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetCopperAssay",
+          "parameters": "(site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime)",
+          "body": "{\n    //Change History\n    //Date          Change by       Description\n    //2024-07-19    Samuel Xavier   Initial\n    //2024-11-05    Putu Ananda     Code review\n    //2025-06-04    Putu Ananda     Make series in one hour interval\n    //2025-07-11    Putu Ananda     Task 279597\n\n    database(site_name).FCTS_DEDUP \n    | where sensor_id == strcat(site_code, '-FFH:A_024') and timestamp between (start_date_time .. end_date_time)\n    | project value = round(todecimal(value), 2) , timestamp\n    | distinct timestamp, value\n    | sort by timestamp asc \n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetCopperAssayByTotalBatchId",
+          "parameters": "(T:(total_batch_id:int,start_date_time:datetime,end_date_time:datetime,name:string,year:int), site_name:string, site_code:string)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-07-25\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\tCode review\r\n    //2025-01-09\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let temp_table = materialize (database(site_name).FCTS_DEDUP \r\n    | where sensor_id == strcat(site_code, '-FFH:A_024') and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), name = 'Copper Assay', sensor_id, timestamp);\r\n    temp_table\r\n    | join kind=rightouter T on $left.name == $right.name\r\n    | where timestamp between (start_date_time .. end_date_time)\r\n    | summarize total_value = round(avg(value),2) by total_batch_id,year\r\n    | project total_batch_id, year, total_value\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetCopperBlowProtocolExecution",
+          "parameters": "(T:(unique_batch_id:guid,id:string,start_date_time:datetime,end_date_time:datetime), site_name:string, site_code:string)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-07-15\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\tCode review\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let c1 = strcat(site_code, '-FC1:O_010');\r\n    let c2 = strcat(site_code, '-FC2:O_010');\r\n    let c3 = strcat(site_code, '-FC3:O_010');\r\n    let c4 = strcat(site_code, '-FC4:O_010');\r\n    database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (c1, c2, c3, c4) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), sensor_name = case (\r\n    sensor_id == c1, \"C1\",\r\n    sensor_id == c2, \"C2\",\r\n    sensor_id == c3, \"C3\",\r\n    sensor_id == c4, \"C4\",\r\n    sensor_id\r\n    ), sensor_id, greater = todecimal(value) >= 22.5, timestamp\r\n    | where greater == true\r\n    | join kind=rightouter T on $left.sensor_name == $right.id \r\n    | where timestamp between (start_date_time .. end_date_time)\r\n    | project total_time = case (datetime_diff('minute',end_date_time,start_date_time) < 90, datetime_diff('minute',end_date_time,start_date_time) ,90), \r\n        timestamp, sensor_name, unique_batch_id\r\n    | summarize time_count = datetime_diff('minute',max(timestamp),min(timestamp)) by unique_batch_id, total_time\r\n    | project  unique_batch_id, O2_time = round((todecimal(time_count)/todecimal(total_time))*100,2)\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetFlashFurnaceStatus",
+          "parameters": "(site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\t\tChange by\t\t\tDescription\r\n    //2024-07-19\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\t    Code review\r\n    //2025-06-04        Putu Ananda         Set timestamp lower bound to be (start_date_time - 3 days)\r\n\r\n    database(site_name).FCTS_DEDUP \r\n    | where sensor_id == strcat(site_code, '-FFH:B_005') and timestamp between ((start_date_time-3d) .. end_date_time)\r\n    | top 1 by timestamp desc \r\n    | project value\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetFlashFurnaceTHRate",
+          "parameters": "(site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\t\tChange by\t\t\tDescription\r\n    //2024-07-19\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\t    Code review\r\n    //2025-06-04        Putu Ananda         Make series in one hour interval\r\n\r\n    let end_date_time2 = min_of(end_date_time, bin(now(), 15m));\r\n\r\n    let latest_value_before_start = database(site_name).FCTS_DEDUP\r\n        | where sensor_id == strcat(site_code, '-FFC:W_004') and timestamp between ((start_date_time - 30d) .. start_date_time)\r\n        | summarize arg_max(timestamp, value)\r\n        | project timestamp = start_date_time, value = round(todecimal(value), 2);\r\n\r\n    let in_range_values = database(site_name).FCTS_DEDUP \r\n        | where sensor_id == strcat(site_code, '-FFC:W_004') and timestamp between (start_date_time .. end_date_time2)\r\n        | project timestamp, value = round(todecimal(value), 2);\r\n\r\n    let combined = union latest_value_before_start, in_range_values\r\n        | distinct timestamp, value\r\n        | sort by timestamp asc;\r\n\r\n    combined\r\n        | make-series value = max(value)               \r\n                    default = real(null)             \r\n                    on timestamp                     \r\n                    from start_date_time to end_date_time2+15m\r\n                    step 15m                          \r\n        | extend value = series_fill_forward(value)    \r\n        | extend timestamp = range(start_date_time, end_date_time2, 15m)   \r\n        | mv-expand timestamp, value                   \r\n        | project timestamp, value\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetHalfTimeKpi",
+          "parameters": "(site_name:string, site_code:string, id:string, date_time:datetime)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-07-14\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\tCode review\r\n    let crushed_material_C1 = strcat(site_code, '-FC1:W_038');\r\n    let crushed_material_C2 = strcat(site_code, '-FC2:W_038');\r\n    let crushed_material_C3 = strcat(site_code, '-FC3:W_038');\r\n    let crushed_material_C4 = strcat(site_code, '-FC4:W_038');\r\n    let silica_C1 = strcat(site_code, '-FCQ:W_001');\r\n    let silica_C2 = strcat(site_code, '-FCQ:W_003');\r\n    let silica_C3 = strcat(site_code, '-FCQ:W_005');\r\n    let silica_C4 = strcat(site_code, '-FCQ:W_007');\r\n    let chip_C1 = strcat(site_code, '-FC1:W_043');\r\n    let chip_C2 = strcat(site_code, '-FC2:W_043');\r\n    let chip_C3 = strcat(site_code, '-FC3:W_043');\r\n    let chip_C4 = strcat(site_code, '-FC4:W_043');\r\n    let crushed_material = case (\r\n        id == 'C1', crushed_material_C1,\r\n        id == 'C2', crushed_material_C2,\r\n        id == 'C3', crushed_material_C3,\r\n        id == 'C4', crushed_material_C4,\r\n        ''\r\n    );\r\n    let silica = case (\r\n        id == 'C1', silica_C1,\r\n        id == 'C2', silica_C2,\r\n        id == 'C3', silica_C3,\r\n        id == 'C4', silica_C4,\r\n        ''\r\n    );\r\n    let chip = case (\r\n        id == 'C1', chip_C1,\r\n        id == 'C2', chip_C2,\r\n        id == 'C3', chip_C3,\r\n        id == 'C4', chip_C4,\r\n        ''\r\n    );\r\n    let temp_table = database(site_name).FCTS_DEDUP\r\n    | where sensor_id in (crushed_material,silica,chip) and timestamp <= (date_time-7d)\r\n    | project sensor_id, round(todecimal(value),2), timestamp;\r\n    datatable(value:decimal) [1] \r\n    | project crushed_material_hopper = toscalar (temp_table | where  sensor_id  == crushed_material  |top 1 by timestamp desc | project value)\r\n    ,silica_hopper = toscalar (temp_table | where  sensor_id  == silica |top 1 by timestamp desc | project value)\r\n    ,chip_hopper = toscalar (temp_table | where  sensor_id  == chip |top 1 by timestamp desc | project value) \r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetMaterialInputTons",
+          "parameters": "(site_name:string, site_code:string, id:string, material:string, date_time:datetime)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-07-19\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\tCode review\r\n    let crushed_material_C1 = strcat(site_code, '-FC1:W_007');\r\n    let crushed_material_C2 = strcat(site_code, '-FC2:W_020');\r\n    let crushed_material_C3 = strcat(site_code, '-FC3:W_003');\r\n    let crushed_material_C4 = strcat(site_code, '-FC4:W_008');\r\n    let silica_C1 = strcat(site_code, '-FC1:W_020');\r\n    let silica_C2 = strcat(site_code, '-FC2:W_026');\r\n    let silica_C3 = strcat(site_code, '-FC3:W_024');\r\n    let silica_C4 = strcat(site_code, '-FC4:W_006');\r\n    let chip_C1 = strcat(site_code, '-FC1:W_025');\r\n    let chip_C2 = strcat(site_code, '-FC2:W_013');\r\n    let chip_C3 = strcat(site_code, '-FC3:W_011');\r\n    let chip_C4 = strcat(site_code, '-FC4:W_002');\r\n    let crushed_material = case (\r\n        id == 'C1', crushed_material_C1,\r\n        id == 'C2', crushed_material_C2,\r\n        id == 'C3', crushed_material_C3,\r\n        id == 'C4', crushed_material_C4,\r\n        ''\r\n    );\r\n    let silica = case (\r\n        id == 'C1', silica_C1,\r\n        id == 'C2', silica_C2,\r\n        id == 'C3', silica_C3,\r\n        id == 'C4', silica_C4,\r\n        ''\r\n    );\r\n    let chip = case (\r\n        id == 'C1', chip_C1,\r\n        id == 'C2', chip_C2,\r\n        id == 'C3', chip_C3,\r\n        id == 'C4', chip_C4,\r\n        ''\r\n    );\r\n    let selected_material = case (\r\n        toupper(material) == 'CRUSHMAT', crushed_material,\r\n        toupper(material) == 'SILICA', silica,\r\n        toupper(material) == 'CHIP', chip,\r\n        ''\r\n    );\r\n    database(site_name).FCTS_DEDUP\r\n    | where sensor_id == selected_material and timestamp <= (date_time-7d)\r\n    | project sensor_id, round(todecimal(value),2), timestamp | top 1 by timestamp desc | project value;\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetRefiningBurnerMinMax",
+          "parameters": "(T:(total_batch_id:int,id:string,start_date_time:datetime,end_date_time:datetime,year:int), site_name:string, site_code:string)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-09-26\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\tCode review\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let h1 = strcat(site_code, '-FM3:G_008');\r\n    let h2 = strcat(site_code, '-FM4:G_008');\r\n    database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (h1, h2) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), sensor_name = case (\r\n    sensor_id == h1, \"H1\",\r\n    sensor_id == h2, \"H2\",\r\n    sensor_id\r\n    ), sensor_id, timestamp\r\n    | join kind=rightouter T on $left.sensor_name == $right.id \r\n    | where timestamp between (start_date_time .. end_date_time)\r\n    | summarize min_burner = min(value), max_burner = max(value) by total_batch_id,year\r\n    | project total_batch_id, year, min_burner, max_burner\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetRefiningNaturalGasRatio",
+          "parameters": "(T:(total_batch_id:int,id:string,start_date_time:datetime,end_date_time:datetime,tons:decimal,year:int), site_name:string, site_code:string)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-09-26\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\tCode review\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let h1 = strcat(site_code, '-FMZ:F_002');\r\n    let h2 = strcat(site_code, '-FMZ:F_007');\r\n    let h3 = strcat(site_code, '-FM2:F_002');\r\n    database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (h1, h2, h3) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), sensor_name = case (\r\n    (sensor_id == h1 or sensor_id == h2), \"H1H2\",\r\n    sensor_id == h3, \"H3\",\r\n    sensor_id\r\n    ), sensor_id, timestamp\r\n    | join kind=rightouter T on $left.sensor_name == $right.id \r\n    | where timestamp between (start_date_time .. end_date_time)\r\n    | summarize total_value = sum(value) by total_batch_id, tons, year\r\n    | project total_batch_id, year, ratio = round(total_value/tons,2);\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetRefiningTuyereAirFlow",
+          "parameters": "(T:(total_batch_id:int,refining_id:string,task_id:string,tuyere_id:string,start_date_time:datetime,end_date_time:datetime,year:int), site_name:string, site_code:string)",
+          "body": "{\n    //Change History\n    //Date\t\t\tChange by\t\tDescription\n    //2024-09-30\t\tSamuel Xavier\t\tInitial\n    //2024-11-05\t\tPutu Ananda\t\tCode review\n    let tag1 = strcat(site_code, '-FMZ:G_001');\n    let tag2 = strcat(site_code, '-FMZ:G_003');\n    let tuyere1 = strcat(site_code, '-FMZ:F_001');\n    let tuyere2 = strcat(site_code, '-FMZ:F_008');\n    let datatableValue = database(site_name).FCTS_DEDUP \n    | where sensor_id in (tuyere1, tuyere2)\n    | project value = todecimal(value), sensor_name = case (\n    sensor_id == tuyere1, \"1\",\n    sensor_id == tuyere2, \"2\",\n    sensor_id\n    ), sensor_id, timestamp, name = \"Gas Flow\"\n    | join kind=rightouter T on $left.sensor_name == $right.tuyere_id \n    | where timestamp between (start_date_time .. end_date_time) \n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, name, year;\n    let datatableTag1 = database(site_name).FCTS_DEDUP \n    | where sensor_id in (tag1)\n    | project valueTag1 = value, sensor_id, timestampTag1 = timestamp, name = \"Gas Flow\"\n    | join kind=rightouter datatableValue on $left.name == $right.name \n    | where timestampTag1 <= timestamp\n    | partition hint.strategy=native by timestamp\n    (\n        top 1 by timestampTag1 desc\n    ) \n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, valueTag1, name, year;\n    let datatableTag2 = database(site_name).FCTS_DEDUP \n    | where sensor_id in (tag2)\n    | project valueTag2 = value, sensor_id, timestampTag2 = timestamp, name = \"Gas Flow\"\n    | join kind=rightouter datatableTag1 on $left.name == $right.name \n    | where timestampTag2 <= timestamp\n    | partition hint.strategy=native by timestamp\n    (\n        top 1 by timestampTag2 desc\n    ) \n    | project total_batch_id, refining_id, task_id, tuyere_id, value, valueTag1, valueTag2, year;\n    datatableTag2\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetRefiningTuyereGasFlow",
+          "parameters": "(T:(total_batch_id:int,refining_id:string,task_id:string,tuyere_id:string,start_date_time:datetime,end_date_time:datetime,year:int), site_name:string, site_code:string)",
+          "body": "{\n    //Change History\n    //Date\t\t\tChange by\t\tDescription\n    //2024-09-30\t\tSamuel Xavier\t\tInitial\n    //2024-11-05\t\tPutu Ananda\t\tCode review\n    let tag1 = strcat(site_code, '-FMZ:G_001');\n    let tag2 = strcat(site_code, '-FMZ:G_003');\n    let tuyere1 = strcat(site_code, '-FMZ:F_002');\n    let tuyere2 = strcat(site_code, '-FMZ:F_007');\n    let datatableValue = database(site_name).FCTS_DEDUP \n    | where sensor_id in (tuyere1, tuyere2)\n    | project value = todecimal(value), sensor_name = case (\n    sensor_id == tuyere1, \"1\",\n    sensor_id == tuyere2, \"2\",\n    sensor_id\n    ), sensor_id, timestamp, name = \"Gas Flow\"\n    | join kind=rightouter T on $left.sensor_name == $right.tuyere_id \n    | where timestamp between (start_date_time .. end_date_time) \n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, name, year;\n    let datatableTag1 = database(site_name).FCTS_DEDUP \n    | where sensor_id in (tag1)\n    | project valueTag1 = value, sensor_id, timestampTag1 = timestamp, name = \"Gas Flow\"\n    | join kind=rightouter datatableValue on $left.name == $right.name \n    | where timestampTag1 <= timestamp\n    | partition hint.strategy=native by timestamp\n    (\n        top 1 by timestampTag1 desc\n    ) \n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, valueTag1, name, year;\n    let datatableTag2 = database(site_name).FCTS_DEDUP \n    | where sensor_id in (tag2)\n    | project valueTag2 = value, sensor_id, timestampTag2 = timestamp, name = \"Gas Flow\"\n    | join kind=rightouter datatableTag1 on $left.name == $right.name \n    | where timestampTag2 <= timestamp\n    | partition hint.strategy=native by timestamp\n    (\n        top 1 by timestampTag2 desc\n    ) \n    | project total_batch_id, refining_id, task_id, tuyere_id, value, valueTag1, valueTag2, year;\n    datatableTag2\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetSlagBlowProtocolExecutionFirstHalf",
+          "parameters": "(T:(unique_batch_id:guid,id:string,start_date_time:datetime,end_date_time:datetime), site_name:string, site_code:string)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-07-15\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\tCode review\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let c1 = strcat(site_code, '-FC1:O_010');\r\n    let c2 = strcat(site_code, '-FC2:O_010');\r\n    let c3 = strcat(site_code, '-FC3:O_010');\r\n    let c4 = strcat(site_code, '-FC4:O_010');\r\n    database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (c1, c2, c3, c4) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), sensor_name = case (\r\n    sensor_id == c1, \"C1\",\r\n    sensor_id == c2, \"C2\",\r\n    sensor_id == c3, \"C3\",\r\n    sensor_id == c4, \"C4\",\r\n    sensor_id\r\n    ), sensor_id, greater = todecimal(value) >= 25, timestamp\r\n    | where greater == true\r\n    | join kind=rightouter T on $left.sensor_name == $right.id \r\n    | where timestamp between (start_date_time .. end_date_time)\r\n    | project total_time = datetime_diff('minute',end_date_time,start_date_time), timestamp, sensor_name, unique_batch_id\r\n    | summarize time_count = datetime_diff('minute',max(timestamp),min(timestamp)) by unique_batch_id, total_time\r\n    | project  unique_batch_id, O2_time = round((todecimal(time_count)/todecimal(total_time))*100,2)\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetSlagBlowProtocolExecutionSecondHalf",
+          "parameters": "(T:(unique_batch_id:guid,id:string,start_date_time:datetime,end_date_time:datetime), site_name:string, site_code:string)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-07-15\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\tCode review\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let c1 = strcat(site_code, '-FC1:O_010');\r\n    let c2 = strcat(site_code, '-FC2:O_010');\r\n    let c3 = strcat(site_code, '-FC3:O_010');\r\n    let c4 = strcat(site_code, '-FC4:O_010');\r\n    database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (c1, c2, c3, c4) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), sensor_name = case (\r\n    sensor_id == c1, \"C1\",\r\n    sensor_id == c2, \"C2\",\r\n    sensor_id == c3, \"C3\",\r\n    sensor_id == c4, \"C4\",\r\n    sensor_id\r\n    ), sensor_id, greater = todecimal(value) >= 24, timestamp\r\n    | where greater == true\r\n    | join kind=rightouter T on $left.sensor_name == $right.id \r\n    | where timestamp between (start_date_time .. end_date_time)\r\n    | project total_time = datetime_diff('minute',end_date_time,start_date_time), timestamp, sensor_name, unique_batch_id\r\n    | summarize time_count = datetime_diff('minute',max(timestamp),min(timestamp)) by unique_batch_id, total_time\r\n    | project  unique_batch_id, O2_time = round((todecimal(time_count)/todecimal(total_time))*100,2)\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetSlagCopperBlowAvgFlowRate",
+          "parameters": "(T:(task_id:guid,start_date_time:datetime,end_date_time:datetime,name:string), site_name:string, site_code:string, id:string)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-07-16\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\tCode review\r\n    //2025-01-17\t\tSamuel Xavier\t\tFix new logic\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let converter = case (\r\n        id == \"C1\", strcat(site_code, \"-FC1:F_002\"),\r\n        id == \"C2\", strcat(site_code, \"-FC2:F_002\"),\r\n        id == \"C3\", strcat(site_code, \"-FC3:F_002\"),\r\n        id == \"C4\", strcat(site_code, \"-FC4:F_002\"),\r\n        \"\"\r\n    );\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    database(site_name).FCTS_DEDUP \r\n    | where sensor_id == converter and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), name = 'FlowRate', sensor_id, timestamp\r\n    | join kind=rightouter T on $left.name == $right.name\r\n    | where timestamp between (start_date_time .. end_date_time)\r\n    | summarize avg_value = round(avg(value),2) by task_id\r\n    | project task_id, avg_value\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetSO2Peaks",
+          "parameters": "(site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime, is_shiftly:bool)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-07-16\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\tCode review\r\n    //2025-01-16\t\tSamuel Xavier\t\tUse between for where condition\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    //2025-10-30        Adhi Arivianto  Task 308126: Fix logic when the date time is +1 offset\r\n\r\n    let peaks1500 = strcat(site_code, '-FCB:B_051');\r\n    let peaks3000 = strcat(site_code, '-FCB:B_052');\r\n\r\n    let temp_table = materialize(database(site_name).FCTS_DEDUP\r\n        | where sensor_id in (peaks1500,peaks3000) and timestamp between ((start_date_time-7d) .. end_date_time)\r\n        | project sensor_id, round(todecimal(value),2), timestamp);\r\n\r\n    let peaks1500AtStartOfShift = toscalar(\r\n        temp_table\r\n            | where sensor_id == peaks1500 and timestamp between ((start_date_time-7d) .. start_date_time)\r\n            | top 1 by timestamp desc\r\n            | project value\r\n    );\r\n    let peaks1500AtEndOfShift = toscalar(\r\n        temp_table\r\n            | where sensor_id == peaks1500\r\n            | top 1 by timestamp desc\r\n            | project value\r\n    );\r\n\r\n    let peaks3000AtStartOfShift = toscalar(\r\n        temp_table\r\n            | where sensor_id == peaks3000 and timestamp between ((start_date_time-7d) .. start_date_time)\r\n            | top 1 by timestamp desc\r\n            | project value\r\n    );\r\n    let peaks3000AtEndOfShift = toscalar(\r\n        temp_table\r\n            | where sensor_id == peaks3000\r\n            | top 1 by timestamp desc\r\n            | project value\r\n    );\r\n\r\n\r\n    let peaks1500AtStartOfShift2 = case(\r\n        datetime_part('hour', start_date_time) in (4, 5), 0.0,\r\n        peaks1500AtStartOfShift    \r\n    );\r\n\r\n    let peaks3000AtStartOfShift2 = case(\r\n        datetime_part('hour', start_date_time) in (4, 5), 0.0,\r\n        peaks3000AtStartOfShift    \r\n    );\r\n\r\n    datatable(value:decimal) [1]\r\n        | project\r\n        so2peaks1500 = case(\r\n            is_shiftly == true, (peaks1500AtEndOfShift - peaks1500AtStartOfShift2),\r\n            peaks1500AtEndOfShift\r\n        ),\r\n        so2peaks3000 = case(\r\n            is_shiftly == true, (peaks3000AtEndOfShift - peaks3000AtStartOfShift2),\r\n            peaks3000AtEndOfShift\r\n        )\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "MillOps_GetKpisValue",
+          "parameters": "(T:(sensor:string), TN:(sensor:string), site_name:string)",
+          "body": "{\n    //Change History\n    //Date\t\t\tChange by\t\tDescription\n    //2024-09-16\t\tSamuel Xavier\t\tInitial\n    //2024-11-18\t\tPutu Ananda\t\tCode review\n    let list_sensor_id = T | project sensor;\n    let list_negative_sensor =  TN | project sensor;\n    database(site_name).FCTS_DEDUP \n    | where sensor_id in~ (list_sensor_id)\n    | where timestamp >= ago(1h)\n    | project sensor_id, value_ = todecimal(value), timestamp, \n        is_valid_value = case(sensor_id in~ (list_negative_sensor), true, case(todecimal(value) >= 0, true, false))\n    | where is_valid_value == true\n    | summarize avg_val = round(avg(value_),2) by sensor_id\n    | project sensor_id, avg_val\n}",
+          "folder": "ConOpsMill",
+          "doc_string": null
+        },
+        {
+          "name": "MillOps_GetKpiDetailValue",
+          "parameters": "(sensor:string, site_name:string, is_allow_negative:bool=false)",
+          "body": "{\n    //Change History\n    //Date\t\t\tChange by\t\tDescription\n    //2024-10-17\t\tSamuel Xavier\t\tInitial\n    //2024-11-18\t\tPutu Ananda\t\tCode review\n    //2024-11-26\t\tSamuel Xavier\t\tAdd Is Allow Negative\n    database(site_name).FCTS_DEDUP \n    | where sensor_id =~ sensor\n    | where timestamp >= ago(24h) and case(is_allow_negative, true, todecimal(value) >= 0)\n    | project sensor_id, value_ = todecimal(value), timestamp\n    | extend date_time_by_bin = bin(timestamp, 1h)\n    | summarize avg_val = round(avg(value_),2) by date_time_by_bin\n    | sort by date_time_by_bin asc\n    | project datetime_add('hour', 1, date_time_by_bin), avg_val\n}",
+          "folder": "ConOpsMill",
+          "doc_string": null
+        },
+        {
+          "name": "MillOps_GetKpisColumnNpsWater",
+          "parameters": "(site_name:string, site_code:string)",
+          "body": "{\n    //Change History\n    //Date\t\t\tChange by\t\tDescription\n    //2024-09-16\t\tSamuel Xavier\t\tInitial\n    //2024-11-18\t\tPutu Ananda\t\tCode review\n    let tag1 = strcat(site_code, '-MM51_FI5155A_PV');\n    let tag2 = strcat(site_code, '-TD11_FI0812_PV');\n    database(site_name).FCTS_DEDUP\n    | where sensor_id in~ (tag1, tag2)\n    | where timestamp >= ago(1h) and todecimal(value) > 0\n    | project sensor_id, value_ = todecimal(value), timestamp, name = 'Kpi'\n    | extend Sensor1 = case(sensor_id =~ tag1, value_, todecimal(0)),\n    Sensor2 = case(sensor_id =~ tag2, value_, todecimal(0))\n    | summarize Sensor1 = max(Sensor1), Sensor2 = max(Sensor2) by name\n    | extend column_NPS_Water = (Sensor1 + Sensor2)\n    | project column_NPS_Water\n}",
+          "folder": "ConOpsMill",
+          "doc_string": null
+        },
+        {
+          "name": "MillOps_GetKpisRougherRecovery",
+          "parameters": "(site_name:string, site_code:string)",
+          "body": "{\n    //Change History\n    //Date\t\t\tChange by\t\tDescription\n    //2024-09-16\t\tSamuel Xavier\t\tInitial\n    //2024-11-18\t\tPutu Ananda\t\tCode review\n    let tag1 = strcat(site_code, '-SU02_AI3330_CU');\n    let tag2 = strcat(site_code, '-SU02_AI3278_CU');\n    let tag3 = strcat(site_code, '-SU02_AI3435A_CU');\n    database(site_name).FCTS_DEDUP\n    | where sensor_id in~ (tag1,tag2,tag3)\n    | where timestamp >= ago(1h) and todecimal(value) > 0\n    | project sensor_id, value_ = todecimal(value), timestamp, name = 'Kpi'\n    | extend Sensor1 = case(sensor_id =~ tag1, value_, todecimal(0)),\n    Sensor2 = case(sensor_id =~ tag2, value_, todecimal(0)),\n    Sensor3 = case(sensor_id =~ tag3, value_, todecimal(0))\n    | summarize Sensor1 = max(Sensor1), Sensor2 = max(Sensor2), Sensor3 = max(Sensor3) by name\n    | extend rougher_recov = (Sensor1 / Sensor2) * ((Sensor2 - Sensor3) / (Sensor1 - Sensor3)) * 100\n    | project rougher_recov\n}",
+          "folder": "ConOpsMill",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetOperationalParametersFollowUps",
+          "parameters": "(site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-11-28\t\tAdhi Arivianto\t\tInitial\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let wetEfAvgVoltageTag = strcat(site_code, '-FME:E_002');\r\n    let phScrubbersWaterTag = strcat(site_code, '-FML200:H_001');\r\n    let scrubWaterConductTag = strcat(site_code, '-FML:A_007');\r\n    database(site_name).FCTS_DEDUP\r\n    | where sensor_id in (wetEfAvgVoltageTag, phScrubbersWaterTag, scrubWaterConductTag) and timestamp between (start_date_time .. end_date_time)\r\n    | summarize\r\n        wetEfAvgVoltage = round(avgif(todecimal(value), sensor_id == wetEfAvgVoltageTag), 2),\r\n        phScrubbersWater = round(avgif(todecimal(value), sensor_id == phScrubbersWaterTag), 2),\r\n        scrubWaterConduct = round(avgif(todecimal(value), sensor_id == scrubWaterConductTag), 2)\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetCastingLadleHeating",
+          "parameters": "(T:(total_batch_id:int,id:string,calculated_year:int,start_date_time:datetime,end_date_time:datetime,name:string), site_name:string, site_code:string)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-11-29\t\tSamuel Xavier\t\tInitial\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let sensor = strcat(site_code, '-FMG330:F_001');\r\n    database(site_name).FCTS_DEDUP \r\n    | where sensor_id in~ (sensor) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), name = 'CLH', sensor_id, timestamp\r\n    | join kind=rightouter T on $left.name == $right.name\r\n    | where timestamp between (start_date_time .. end_date_time)\r\n    | extend duration = datetime_diff('minute', end_date_time, start_date_time)\r\n    | summarize total_value = avg(value) by total_batch_id,id,calculated_year,duration\r\n    | summarize avg_value = avg(total_value), total_duration = todouble(sum(duration))/60 by total_batch_id, id, calculated_year\r\n    | project total_batch_id, id, calculated_year, round(avg_value * total_duration,2)\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetCastingSpeed",
+          "parameters": "(T:(total_batch_id:int,id:string,calculated_year:int,start_date_time:datetime,end_date_time:datetime), site_name:string, site_code:string)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-11-29\t\tSamuel Xavier\t\tInitial\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let sensor_R1 = strcat(site_code, '-FMM200:W_001');\r\n    let sensor_R2 = strcat(site_code, '-FMM300:W_001');\r\n    database(site_name).FCTS_DEDUP \r\n    | where sensor_id in~ (sensor_R1, sensor_R2 ) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), sensor_name = case (\r\n    sensor_id == sensor_R1, \"R1\",\r\n    sensor_id == sensor_R2, \"R2\",\r\n    sensor_id\r\n    ), sensor_id, timestamp\r\n    | join kind=rightouter T on $left.sensor_name == $right.id\r\n    | where timestamp between (start_date_time .. end_date_time)\r\n    | summarize total_value = round(avg(value),2) by total_batch_id,id,calculated_year\r\n    | project total_batch_id, id, calculated_year, total_value\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetCastingTaskDefaultValueByStartEnd",
+          "parameters": "(furnaceId:string, start_or_end_time:datetime, site:string)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2025-12-18\t\tElbert      \t\tInitial\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n let sensorId =case(furnaceId==\"H1\", strcat(site, '-FM3:G_001'),  furnaceId==\"H2\" , strcat(site, '-FM4:G_001'), furnaceId==\"H3\",strcat(site, '-FM2:G_001'),\r\n    \"\");\r\ndatabase('Huelva').FCTS_DEDUP\r\n| where sensor_id in(sensorId) and bin(timestamp,1m)==start_or_end_time\r\n| project value = todecimal(value),sensor_id,timestamp\r\n| sort by timestamp desc \r\n| extend Rank=row_number(1, prev(sensor_id) != sensor_id)\r\n|where Rank==1\r\n| summarize sum(value) by sensor_id\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetHalfTimeKpi_Chip",
+          "parameters": "(site_name:string, site_code:string, id:string, start_date_time:datetime, end_date_time:datetime)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-12-24\t\tSamuel Xavier\t\tInitial\r\n    //2025-01-16\t\tSamuel Xavier\t\tUse between for where condition\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let chip_C1 = strcat(site_code, '-FC1:W_043');\r\n    let chip_C2 = strcat(site_code, '-FC2:W_043');\r\n    let chip_C3 = strcat(site_code, '-FC3:W_043');\r\n    let chip_C4 = strcat(site_code, '-FC4:W_043');\r\n    let chip = case (\r\n        id == 'C1', chip_C1,\r\n        id == 'C2', chip_C2,\r\n        id == 'C3', chip_C3,\r\n        id == 'C4', chip_C4,\r\n        ''\r\n    );\r\n    database(site_name).FCTS_DEDUP\r\n    | where sensor_id in (chip) and timestamp between ((start_date_time-7d) .. end_date_time)\r\n    | top 1 by timestamp desc\r\n    | project round(todecimal(value),2);\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetHalfTimeKpi_CrushedMaterial",
+          "parameters": "(site_name:string, site_code:string, id:string, start_date_time:datetime, end_date_time:datetime)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-12-24\t\tSamuel Xavier\t\tInitial\r\n    //2025-01-16\t\tSamuel Xavier\t\tUse between for where condition\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let crushed_material_C1 = strcat(site_code, '-FC1:W_038');\r\n    let crushed_material_C2 = strcat(site_code, '-FC2:W_038');\r\n    let crushed_material_C3 = strcat(site_code, '-FC3:W_038');\r\n    let crushed_material_C4 = strcat(site_code, '-FC4:W_038');\r\n    let crushed_material = case (\r\n        id == 'C1', crushed_material_C1,\r\n        id == 'C2', crushed_material_C2,\r\n        id == 'C3', crushed_material_C3,\r\n        id == 'C4', crushed_material_C4,\r\n        ''\r\n    );\r\n    database(site_name).FCTS_DEDUP\r\n    | where sensor_id in (crushed_material) and timestamp between ((start_date_time-7d) .. end_date_time)\r\n    | top 1 by timestamp desc\r\n    | project round(todecimal(value),2);\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetHalfTimeKpi_Silica",
+          "parameters": "(site_name:string, site_code:string, id:string, start_date_time:datetime, end_date_time:datetime)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-12-24\t\tSamuel Xavier\t\tInitial\r\n    //2025-01-16\t\tSamuel Xavier\t\tUse between for where condition\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let silica_C1 = strcat(site_code, '-FCQ:W_001');\r\n    let silica_C2 = strcat(site_code, '-FCQ:W_003');\r\n    let silica_C3 = strcat(site_code, '-FCQ:W_005');\r\n    let silica_C4 = strcat(site_code, '-FCQ:W_007');\r\n    let silica = case (\r\n        id == 'C1', silica_C1,\r\n        id == 'C2', silica_C2,\r\n        id == 'C3', silica_C3,\r\n        id == 'C4', silica_C4,\r\n        ''\r\n    );\r\n   database(site_name).FCTS_DEDUP\r\n    | where sensor_id in (silica) and timestamp between ((start_date_time-7d) .. end_date_time)\r\n    | top 1 by timestamp desc\r\n    | project round(todecimal(value),2);\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetRefiningTuyere1AirFlow",
+          "parameters": "(T:(total_batch_id:int,refining_id:string,task_id:string,tuyere_id:string,start_date_time:datetime,end_date_time:datetime,year:int), site_name:string, site_code:string)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-12-26\t\tSamuel Xavier\t\tInitial\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let tag1 = strcat(site_code, '-FMZ:G_001');\r\n    let tag2 = strcat(site_code, '-FMZ:G_003');\r\n    let tuyere1 = strcat(site_code, '-FMZ:F_001');\r\n    let datatableValue = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tuyere1) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), sensor_name = case (\r\n    sensor_id == tuyere1, \"1\",\r\n    sensor_id\r\n    ), sensor_id, timestamp, name = \"Gas Flow\"\r\n    | join kind=rightouter T on $left.sensor_name == $right.tuyere_id \r\n    | where timestamp between (start_date_time .. end_date_time) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, name, year, start_date_time, end_date_time);\r\n    let datatableTag1 = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tag1) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project valueTag1 = value, sensor_id, timestampTag1 = timestamp, name = \"Gas Flow\"\r\n    | join kind=inner datatableValue on $left.name == $right.name \r\n    | where timestampTag1 between (start_date_time .. end_date_time)\r\n    | extend partition_key = strcat(timestamp, task_id)\r\n    | partition hint.strategy=native by partition_key\r\n    (\r\n        top 1 by timestampTag1 desc\r\n    ) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, valueTag1, name, year, start_date_time, end_date_time);\r\n    let datatableTag2 = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tag2) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project valueTag2 = value, sensor_id, timestampTag2 = timestamp, name = \"Gas Flow\"\r\n    | join kind=inner datatableTag1 on $left.name == $right.name\r\n    | where timestampTag2 between (start_date_time .. end_date_time)\r\n    | extend partition_key = strcat(timestamp, task_id)\r\n    | partition hint.strategy=native by partition_key\r\n    (\r\n        top 1 by timestampTag2 desc\r\n    ) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, value, valueTag1, valueTag2, year);\r\n    datatableTag2\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetRefiningTuyere1GasFlow",
+          "parameters": "(T:(total_batch_id:int,refining_id:string,task_id:string,tuyere_id:string,start_date_time:datetime,end_date_time:datetime,year:int), site_name:string, site_code:string)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-12-26\t\tSamuel Xavier\t\tInitial\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let tag1 = strcat(site_code, '-FMZ:G_001');\r\n    let tag2 = strcat(site_code, '-FMZ:G_003');\r\n    let tuyere1 = strcat(site_code, '-FMZ:F_002');\r\n    let datatableValue = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tuyere1) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), sensor_name = case (\r\n    sensor_id == tuyere1, \"1\",\r\n    sensor_id\r\n    ), sensor_id, timestamp, name = \"Gas Flow\"\r\n    | join kind=rightouter T on $left.sensor_name == $right.tuyere_id \r\n    | where timestamp between (start_date_time .. end_date_time) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, name, year, start_date_time, end_date_time);\r\n    let datatableTag1 = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tag1) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project valueTag1 = value, sensor_id, timestampTag1 = timestamp, name = \"Gas Flow\"\r\n    | join kind=inner datatableValue on $left.name == $right.name \r\n    | where timestampTag1 between (start_date_time .. end_date_time)\r\n    | extend partition_key = strcat(timestamp, task_id)\r\n    | partition hint.strategy=native by partition_key\r\n    (\r\n        top 1 by timestampTag1 desc\r\n    ) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, valueTag1, name, year, start_date_time, end_date_time);\r\n    let datatableTag2 = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tag2) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project valueTag2 = value, sensor_id, timestampTag2 = timestamp, name = \"Gas Flow\"\r\n    | join kind=inner datatableTag1 on $left.name == $right.name\r\n    | where timestampTag2 between (start_date_time .. end_date_time)\r\n    | extend partition_key = strcat(timestamp, task_id)\r\n    | partition hint.strategy=native by partition_key\r\n    (\r\n        top 1 by timestampTag2 desc\r\n    ) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, value, valueTag1, valueTag2, year);\r\n    datatableTag2\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetRefiningTuyere2AirFlow",
+          "parameters": "(T:(total_batch_id:int,refining_id:string,task_id:string,tuyere_id:string,start_date_time:datetime,end_date_time:datetime,year:int), site_name:string, site_code:string)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-12-26\t\tSamuel Xavier\t\tInitial\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let tag1 = strcat(site_code, '-FMZ:G_001');\r\n    let tag2 = strcat(site_code, '-FMZ:G_003');\r\n    let tuyere2 = strcat(site_code, '-FMZ:F_008');\r\n    let datatableValue = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tuyere2) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), sensor_name = case (\r\n    sensor_id == tuyere2, \"2\",\r\n    sensor_id\r\n    ), sensor_id, timestamp, name = \"Gas Flow\"\r\n    | join kind=rightouter T on $left.sensor_name == $right.tuyere_id \r\n    | where timestamp between (start_date_time .. end_date_time) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, name, year, start_date_time, end_date_time);\r\n    let datatableTag1 = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tag1) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project valueTag1 = value, sensor_id, timestampTag1 = timestamp, name = \"Gas Flow\"\r\n    | join kind=inner datatableValue on $left.name == $right.name \r\n    | where timestampTag1 between (start_date_time .. end_date_time)\r\n    | extend partition_key = strcat(timestamp, task_id)\r\n    | partition hint.strategy=native by partition_key\r\n    (\r\n        top 1 by timestampTag1 desc\r\n    ) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, valueTag1, name, year, start_date_time, end_date_time);\r\n    let datatableTag2 = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tag2) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project valueTag2 = value, sensor_id, timestampTag2 = timestamp, name = \"Gas Flow\"\r\n    | join kind=inner datatableTag1 on $left.name == $right.name\r\n    | where timestampTag2 between (start_date_time .. end_date_time)\r\n    | extend partition_key = strcat(timestamp, task_id)\r\n    | partition hint.strategy=native by partition_key\r\n    (\r\n        top 1 by timestampTag2 desc\r\n    ) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, value, valueTag1, valueTag2, year);\r\n    datatableTag2\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetRefiningTuyere2GasFlow",
+          "parameters": "(T:(total_batch_id:int,refining_id:string,task_id:string,tuyere_id:string,start_date_time:datetime,end_date_time:datetime,year:int), site_name:string, site_code:string)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-12-26\t\tSamuel Xavier\t\tInitial\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let tag1 = strcat(site_code, '-FMZ:G_001');\r\n    let tag2 = strcat(site_code, '-FMZ:G_003');\r\n    let tuyere2 = strcat(site_code, '-FMZ:F_007');\r\n    let datatableValue = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tuyere2) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), sensor_name = case (\r\n    sensor_id == tuyere2, \"2\",\r\n    sensor_id\r\n    ), sensor_id, timestamp, name = \"Gas Flow\"\r\n    | join kind=rightouter T on $left.sensor_name == $right.tuyere_id \r\n    | where timestamp between (start_date_time .. end_date_time) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, name, year, start_date_time, end_date_time);\r\n    let datatableTag1 = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tag1) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project valueTag1 = value, sensor_id, timestampTag1 = timestamp, name = \"Gas Flow\"\r\n    | join kind=inner datatableValue on $left.name == $right.name \r\n    | where timestampTag1 between (start_date_time .. end_date_time)\r\n    | extend partition_key = strcat(timestamp, task_id)\r\n    | partition hint.strategy=native by partition_key\r\n    (\r\n        top 1 by timestampTag1 desc\r\n    ) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, valueTag1, name, year, start_date_time, end_date_time);\r\n    let datatableTag2 = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tag2) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project valueTag2 = value, sensor_id, timestampTag2 = timestamp, name = \"Gas Flow\"\r\n    | join kind=inner datatableTag1 on $left.name == $right.name\r\n    | where timestampTag2 between (start_date_time .. end_date_time)\r\n    | extend partition_key = strcat(timestamp, task_id)\r\n    | partition hint.strategy=native by partition_key\r\n    (\r\n        top 1 by timestampTag2 desc\r\n    ) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, value, valueTag1, valueTag2, year);\r\n    datatableTag2\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetUpperBottomTempPreparation",
+          "parameters": "(T:(template_preparation_id:string,end_date_time:datetime,preparation_id:string), site:string)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2025-12-18\t\tElbert      \t\tInitial\r\n    //2025-01-16        \tElbert              \tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let upper1 = strcat(site, '-FMM:T_102');\r\n    let lower1 = strcat(site, '-FMM:T_101');\r\n    let upper2 = strcat(site, '-FMM:T_104');\r\n    let lower2 = strcat(site, '-FMM:T_103');\r\n    let upper3 = strcat(site, '-FMM:T_106');\r\n    let lower3 = strcat(site, '-FMM:T_105');\r\n    let upper4 = strcat(site, '-FMM:T_108');\r\n    let lower4 = strcat(site, '-FMM:T_107');\r\n    let min_start_date_time = toscalar (T | summarize min(end_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\ndatabase('Huelva').FCTS_DEDUP\r\n| where sensor_id in (upper1, lower1,upper2, lower2,upper3, lower3,upper4, lower4) and bin(timestamp,1m) between (min_start_date_time .. max_end_date_time)\r\n| project value = todecimal(value),timestamp, sensor_name = case (\r\n    sensor_id == upper1, \"1\",\r\n    sensor_id == lower1, \"1\",\r\n    sensor_id == upper2, \"2\",\r\n    sensor_id == lower2, \"2\",\r\n    sensor_id == upper3, \"3\",\r\n    sensor_id == lower3, \"3\",\r\n    sensor_id == upper4, \"4\",\r\n    sensor_id == lower4, \"4\",\r\n    sensor_id\r\n    ),sensor_id\r\n| join kind=rightouter T on $left.sensor_name ==$right.template_preparation_id\r\n| where bin(timestamp,1m) ==end_date_time\r\n| project value=todecimal(value), template_preparation_id, type = case (\r\n    sensor_id == upper1, \"Upper 1\",\r\n    sensor_id == lower1, \"Bottom 1\",\r\n    sensor_id == upper2, \"Upper 2\",\r\n    sensor_id == lower2, \"Bottom 2\",\r\n    sensor_id == upper3, \"Upper 3\",\r\n    sensor_id == lower3, \"Bottom 3\",\r\n    sensor_id == upper4, \"Upper 4\",\r\n    sensor_id == lower4, \"Bottom 4\",\r\n    sensor_id\r\n    ),timestamp,preparation_id\r\n| summarize sum(value) by type,template_preparation_id,timestamp,preparation_id\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "FaeJobLog",
+          "parameters": "(Site:string, Job:string)",
+          "body": "{\nlet site = Site;\nlet job = Job;\nlet mostRecentRun = materialize(database('Global').FaeJobLogs\n| where siteCode == site\n  and job_start > ago(8h)\n  and job_name == job\n| order by job_start desc\n| take 1\n| summarize make_list(id));\n//mostRecentRun\ndatabase('Global').FaeJobLogs\n| where id in (mostRecentRun)\n| project action_name, action_type, action_start, action_status, action_message\n| order by action_start asc\n}",
+          "folder": "Registry",
+          "doc_string": null
+        },
+        {
+          "name": "FaeJobsStatus",
+          "parameters": "(Site:string)",
+          "body": "{\nlet starttime = ago(1h);\ndatabase('Global').FaeLogsIngest\n| where siteCode == Site\n  and start > starttime\n| extend age_seconds = round((now() - start)/1s,0)\n| summarize arg_max(start,*) by jobId\n| mv-expand actionLogs\n| extend\n    action_name = tostring(actionLogs.name),\n    action_type = tostring(actionLogs.type),\n    action_message = tostring(actionLogs.message)\n| where\n    (action_type == \"Step\" and action_name contains \"grafana\")\n    or (action_type == \"Step\" and action_name contains \"payload\")\n| extend action_name = case(action_name contains \"payload\", \"payload\", action_name contains \"grafana\", \"grafana_link\", \"\")\n| project siteCode, name, start, age_seconds, status, action_name, action_type, action_message\n| order by name asc\n| evaluate pivot(action_name, take_any(action_message))\n| project-away action_type\n}",
+          "folder": "Registry",
+          "doc_string": null
+        },
+        {
+          "name": "FaeUi_GetRecentJobLogs",
+          "parameters": "(JobId:string, JobStatus:string)",
+          "body": "{\n    database('Global').FaeLogs_MV\n    | where jobId == JobId\n    and job_status == JobStatus\n    and job_start > ago(7d)\n    and action_type == \"Trigger\"\n    | order by job_start desc\n    | take 20\n    | extend trigger_sensor_id = action_name\n    | extend duration_seconds = round((job_end-job_start)/1s,3)\n    | project jobId, id, start=job_start, duration_seconds, trigger_sensor_id\n}",
+          "folder": "FAEUI",
+          "doc_string": null
+        },
+        {
+          "name": "FaeUi_GetJobInvocationLog",
+          "parameters": "(RunId:string)",
+          "body": "{\ndatabase('Global').FaeJobLogs\n| where id == RunId\n| extend duration_seconds = round((action_end-action_start)/1s,3)\n| order by action_start asc\n| project action_name, action_type, action_start, duration_seconds, action_message, action_status, parent_name, parent_type\n}",
+          "folder": "FAEUI",
+          "doc_string": null
+        },
+        {
+          "name": "UDETripLogs",
+          "parameters": "(Site:string, Job:string, SAPID:string, StartTime:datetime)",
+          "body": "{\r\n//let Site = \"SIE\";\r\n//let StartTime = ago(24h);\r\n//let Job = \"SI_NORTH_BEARING_VIB_ZAXIS_HI\";\r\ndatabase('Global').FaeJobLogs\r\n| where siteCode == Site\r\n| where job_name == Job\r\n| where job_start >= StartTime\r\n| where action_name == \"UDE_Payload\"\r\n| order by job_start asc\r\n| project id, job_name, job_start, job_end, action_message\r\n| extend \r\n    TriggeredOn = todatetime(todynamic(action_message).TriggeredOn),\r\n    UDEValue = toint(todynamic(action_message).Value),\r\n    SAPEquipmentID = tostring(todynamic(action_message).Number)\r\n| project-away action_message\r\n| order by TriggeredOn asc\r\n| where SAPEquipmentID == SAPID\r\n| where UDEValue == 1\r\n}",
+          "folder": "Registry",
+          "doc_string": null
+        },
+        {
+          "name": "FaeRunIDLog",
+          "parameters": "(RunID:string)",
+          "body": "{\r\ndatabase('Global').FaeLogs_MV\r\n| where id == RunID\r\n| project action_name, action_type, action_start, action_status, parent_name, parent_type, action_message\r\n| order by action_start asc\r\n}",
+          "folder": "Registry",
+          "doc_string": null
+        },
+        {
+          "name": "AllUDETripLogs",
+          "parameters": "(Site:string, StartTime:datetime)",
+          "body": "{\ndatabase('Global').FaeJobLogs\n| where siteCode == Site\n| where job_start >= StartTime\n| where action_name == \"UDE_Payload\"\n| order by job_start asc\n| project id, job_name, job_start, action_message\n| extend \n    TriggeredOn = todatetime(todynamic(action_message).TriggeredOn),\n    UDEValue = toint(todynamic(action_message).Value),\n    SAPEquipmentID = tostring(todynamic(action_message).Number)\n| project-away action_message\n| order by TriggeredOn desc\n| where UDEValue == 1\n}",
+          "folder": "Registry",
+          "doc_string": null
+        },
+        {
+          "name": "MillOps_GetKpisCanyonRecycle",
+          "parameters": "(site_name:string, site_code:string)",
+          "body": "{\n    //Change History\n    //Date\t\t\tChange by\t\tDescription\n    //2025-03-11\t\tSamuel Xavier\t\tInitial\n    let tag1 = strcat(site_code, '-CF02_WI1201_PV');\n    let tag2 = strcat(site_code, '-MM22_WI2150_PV');\n    database(site_name).FCTS_DEDUP\n    | where sensor_id in~ (tag1, tag2)\n    | where timestamp >= ago(1h) and todecimal(value) > 0\n    | project sensor_id, value_ = todecimal(value), timestamp\n    | extend sensor_name = case(sensor_id =~ tag1, \"1\", \"2\")\n    | summarize avg_sensor = avg(value_) by sensor_name\n    | extend canyon_recycle = round(avg_sensor, 2)\n    | project canyon_recycle\n}",
+          "folder": "ConOpsMill",
+          "doc_string": null
+        },
+        {
+          "name": "MillOps_GetKpis5010Densinometer",
+          "parameters": "(site_name:string, site_code:string)",
+          "body": "{\n    //Change History\n    //Date\t\t\t\tChange by\t\t\tDescription\n    //2025-03-20\t\tElbert\t\t        Initial\n    let tag1 = strcat(site_code, '-MD_MOR_CONMET_5010_Tail_Thickener_U');\n    let tag2 = strcat(site_code, '-F_Density');\n    database(site_name).FCTS_DEDUP\n    | where sensor_id in~ (tag1, tag2)\n    | where timestamp >= ago(1h) and todecimal(value) > 0\n    | project sensor_id, value_ = todecimal(value), timestamp\n    | extend sensor_name = case(sensor_id =~ tag1, \"1\", \"2\")\n    | summarize avg_sensor = avg(value_) by sensor_name\n    | extend densinometer = round(avg_sensor, 2)\n    | project densinometer\n}",
+          "folder": "ConOpsMill",
+          "doc_string": null
+        },
+        {
+          "name": "MillOps_GetKpis5011Densinometer",
+          "parameters": "(site_name:string, site_code:string)",
+          "body": "{\n    //Change History\n    //Date\t\t\t\tChange by\t\t\tDescription\n    //2025-03-20\t\tElbert\t\t        Initial\n    let tag1 = strcat(site_code, '-MD_MOR_CONMET_5011_Tail_Thickener_U');\n    let tag2 = strcat(site_code, '-F_Density');\n    database(site_name).FCTS_DEDUP\n    | where sensor_id in~ (tag1, tag2)\n    | where timestamp >= ago(1h) and todecimal(value) > 0\n    | project sensor_id, value_ = todecimal(value), timestamp\n    | extend sensor_name = case(sensor_id =~ tag1, \"1\", \"2\")\n    | summarize avg_sensor = avg(value_) by sensor_name\n    | extend densinometer = round(avg_sensor, 2)\n    | project densinometer\n}",
+          "folder": "ConOpsMill",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetFlashFurnaceMatteAssayManualReader",
+          "parameters": "(site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime)",
+          "body": "{\n    //Change History\n    //Date          Change by       Description\n    //2025-01-22    Samuel Xavier   Initial\n    //2025-06-04    Putu Ananda     Make series in one hour interval\n    //2025-07-11    Putu Ananda     Task 279597\n\n    database(site_name).FCTS_DEDUP \n    | where sensor_id == strcat(site_code, '-FFH:A_002') and timestamp between (start_date_time .. end_date_time)\n    | project value = round(todecimal(value), 2) , timestamp\n    | distinct timestamp, value\n    | sort by timestamp asc \n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetFlashFurnaceTargetAssay",
+          "parameters": "(site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime)",
+          "body": "{\r\n    //Change History\r\n    //Date\t\t\t\tChange by\t\t\tDescription\r\n    //2025-01-22\t\tSamuel Xavier\t\tInitial\r\n    //2025-06-04        Putu Ananda         Make series in one hour interval\r\n\r\n    let end_date_time2 = min_of(end_date_time, bin(now(), 15m));\r\n\r\n    let latest_value_before_start = database(site_name).FCTS_DEDUP\r\n        | where sensor_id == strcat(site_code, '-FFH:A_240') and timestamp between ((start_date_time - 30d) .. start_date_time)\r\n        | summarize arg_max(timestamp, value)\r\n        | project timestamp = start_date_time, value = round(todecimal(value), 2);\r\n\r\n    let in_range_values = database(site_name).FCTS_DEDUP \r\n        | where sensor_id == strcat(site_code, '-FFH:A_240') and timestamp between (start_date_time .. end_date_time2)\r\n        | project timestamp, value = round(todecimal(value), 2);\r\n\r\n    let combined = union latest_value_before_start, in_range_values\r\n        | distinct timestamp, value\r\n        | sort by timestamp asc;\r\n\r\n    combined\r\n        | make-series value = max(value)               \r\n                    default = real(null)             \r\n                    on timestamp                     \r\n                    from start_date_time to end_date_time2+15m\r\n                    step 15m                          \r\n        | extend value = series_fill_forward(value)    \r\n        | extend timestamp = range(start_date_time, end_date_time2, 15m)   \r\n        | mv-expand timestamp, value                   \r\n        | project timestamp, value\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "ConSmelter_GetPisDefaultValue",
+          "parameters": "(equipmentId:string, site:string, taskStartDateTime:datetime)",
+          "body": "{\r\n    let sensorId = case(\r\n        equipmentId==\"C1\", strcat(site, '-FC1:G_001'),  \r\n        equipmentId==\"C2\", strcat(site, '-FC2:G_001'), \r\n        equipmentId==\"C3\", strcat(site, '-FC3:G_001'),\r\n        equipmentId==\"C4\", strcat(site, '-FC4:G_001'),\r\n    \"\");\r\n        \r\n    database('Huelva').FCTS_DEDUP\r\n    | where sensor_id in (sensorId) and timestamp between ((taskStartDateTime-30d) .. taskStartDateTime)\r\n    | top 1 by timestamp desc\r\n    | project value = todecimal(value), sensor_id, timestamp\r\n}",
+          "folder": "ConSmelter",
+          "doc_string": null
+        },
+        {
+          "name": "GetDynamicHierarchy",
+          "parameters": "(HierachyName:string)",
+          "body": "{\n    // example record table - replace with real table once developed\n    let DynamicHierarchies = datatable (name:string,sites:string,processes:string,tags:dynamic) [\n        \"my dynamic hierarchy view\", \n        \"SAM\",\n        \"TCLW\",\n        dynamic([\n            { \"name\":\"EquipmentMeasurement\", \"value\":\"Digits\"},\n            { \"name\":\"EquipmentComponent\", \"value\":\"Piezometer\"},\n            { \"name\":\"EquipmentType\", \"value\":\"cr1000\"}\n        ])\n    ];\n    let T = DynamicHierarchies | where name==HierachyName | mv-expand tags;\n    let sites = toscalar(DynamicHierarchies | extend sites=case(strlen(sites)>0,split(sites,\",\"),\"\") | project todynamic(sites));\n    let processes = toscalar(DynamicHierarchies | extend processes=case(strlen(processes)>0,split(processes,\",\"),\"\") | project todynamic(processes));\n    let equipment_measurement = toscalar(T | where tags.name == \"EquipmentMeasurement\" | project name=tostring(tags.value));\n    let equipment_component = toscalar(T | where tags.name == \"EquipmentComponent\" | project name=tostring(tags.value));\n    let equipment_type = toscalar(T | where tags.name == \"EquipmentType\" | project name=tostring(tags.value));\n    //\n    // print processes;\n    database('Global').RegistryStreamsPivot_MV\n    | where status == \"active\"\n    | where case(array_length(sites)>0, site_code, \"\") in (sites)\n    | where case(array_length(processes)>0, process, \"\") in (processes)\n    | where case(isnotempty(equipment_measurement), EquipmentMeasurement, \"\") contains equipment_measurement\n    | where case(isnotempty(equipment_component), EquipmentComponent, \"\") contains equipment_component\n    | where case(isnotempty(equipment_type), EquipmentType, \"\") contains equipment_type\n}",
+          "folder": "Registry",
+          "doc_string": null
+        },
+        {
+          "name": "PI_Integration_DataSources",
+          "parameters": "()",
+          "body": "{\r\n    let DataSources = datatable (data_source:string)\r\n    [\r\n        \"LoRaLeach\",\r\n        \"Contrail\",\r\n        \"FAE\",\r\n        \"LevelCon\",\r\n        \"LoRaVibe\",\r\n        \"LoRaColumns\"\r\n    ];\r\n    DataSources | project data_source\r\n}",
+          "folder": "PISystem",
+          "doc_string": null
+        },
+        {
+          "name": "PISystem_MOR_Raw_Data",
+          "parameters": "()",
+          "body": "{\r\n    let start = ago(7d);\r\n    let DataSources = database('Global').PI_Integration_DataSources;\r\n    database('MOR').materialized_view('FCTS_CURRENT_VALUE')\r\n    | where timestamp > start\r\n    | where data_source in (DataSources)\r\n    | join kind=inner (\r\n        database('MOR').FCTS\r\n        | where timestamp > start\r\n    ) on sensor_id\r\n    | project sensor_id, timestamp=timestamp1, value=value1\r\n}",
+          "folder": "PISystem",
+          "doc_string": null
+        },
+        {
+          "name": "PISystem_MOR_Daily_Averages",
+          "parameters": "()",
+          "body": "{\n    let start = ago(90d);\n    let DataSources = database('Global').PI_Integration_DataSources;\n    database('MOR').materialized_view('FCTS_CURRENT_VALUE')\n    | where timestamp > start\n    | where data_source in (DataSources)\n    | join kind=inner (\n        database('MOR').FCTS\n        | where timestamp > start\n        | extend value=toreal(value)\n        | summarize value1=avg(value) by sensor_id, bin(timestamp, 1d)\n    ) on sensor_id\n    | project sensor_id, timestamp=timestamp1, value=value1\n}",
+          "folder": "PISystem",
+          "doc_string": null
+        },
+        {
+          "name": "time_weighted_avg_fl",
+          "parameters": "(tbl:(*), t_col:string, y_col:string, key_col:string, stime:datetime, etime:datetime, dt:timespan)",
+          "body": "{\r\n    let tbl_ex = tbl | extend timestamp = column_ifexists(t_col, datetime(null)), value = column_ifexists(y_col, 0.0), key = column_ifexists(key_col, '');\r\n    let gridTimes = range timestamp from stime to etime step dt | extend value=real(null), dummy=1;\r\n    let keys = materialize(tbl_ex | summarize by key | extend dummy=1);\r\n    gridTimes\r\n    | join kind=fullouter keys on dummy\r\n    | project-away dummy, dummy1\r\n    | union tbl_ex\r\n    | where timestamp between (stime..etime)\r\n    | partition hint.strategy=native by key (\r\n        order by timestamp asc, value nulls last\r\n        | scan declare(f_value:real=0.0) with (step s: true => f_value = iff(isnull(value), s.f_value, value);)    // fill forward null values\r\n        | extend diff_t=(next(timestamp)-timestamp)/1m\r\n    )\r\n    | where isnotnull(diff_t)\r\n    | summarize tw_sum=sum(f_value*diff_t), t_sum =sum(diff_t) by bin_at(timestamp, dt, stime), key\r\n    | where t_sum > 0\r\n    | extend tw_avg = tw_sum/t_sum\r\n    | project-away tw_sum, t_sum\r\n}",
+          "folder": "Helpers",
+          "doc_string": "Time weighted average of a metric"
+        },
+        {
+          "name": "PISystem_NMO_Raw_Data",
+          "parameters": "()",
+          "body": "{\r\n    let start = ago(7d);\r\n    let DataSources = database('Global').PI_Integration_DataSources;\r\n    database('NMO').materialized_view('FCTS_CURRENT_VALUE')\r\n    | where timestamp > start\r\n    | where data_source in (DataSources)\r\n    | join kind=inner (\r\n        database('NMO').FCTS\r\n        | where timestamp > start\r\n    ) on sensor_id\r\n    | project sensor_id, timestamp=timestamp1, value=value1\r\n}",
+          "folder": "PISystem",
+          "doc_string": null
+        },
+        {
+          "name": "PISystem_NMO_Daily_Averages",
+          "parameters": "()",
+          "body": "{\r\n    let start = ago(90d);\r\n    let DataSources = database('Global').PI_Integration_DataSources;\r\n    database('NMO').materialized_view('FCTS_CURRENT_VALUE')\r\n    | where timestamp > start\r\n    | where data_source in (DataSources)\r\n    | join kind=inner (\r\n        database('NMO').FCTS\r\n        | where timestamp > start\r\n        | extend value=toreal(value)\r\n        | summarize value1=avg(value) by sensor_id, bin(timestamp, 1d)\r\n    ) on sensor_id\r\n    | project sensor_id, timestamp=timestamp1, value=value1\r\n}",
+          "folder": "PISystem",
+          "doc_string": null
+        },
+        {
+          "name": "TimeEq",
+          "parameters": "(site:string, sensor:string, start:datetime, end:datetime, target_value:string)",
+          "body": "{\n    // TimeEq Function\n    // Returns the total time (in seconds) that a sensor matched the target value within\n    // the provided time window.\n    // TimeEq(site, sensor, start, end, target_value)\n    /////////////////////////////////////////////////////\n    // site = ADX Database Site Code\n    // sensor = Sensor ID of interest\n    // start = Lookup window start time\n    // end = Lookup window end time\n    // target_value = Target sensor value to filter on\n    //////////////////////////////////////////////////////\n    // Query the raw sensor data\n    database(site).FCTS\n    | where timestamp between (start .. end)\n    and sensor_id == sensor\n    // order ascending\n    | order by timestamp asc\n    // calculate the delta time between the next value and this value\n    | extend time_in_value = next(timestamp) - timestamp\n    // filter for only values that match the target\n    | where value == target_value\n    // calculate the sum of time in the target value\n    | summarize total_time_in_value = floor(sum(time_in_value),1s) by sensor_id\n    // convert the sum of time into total seconds\n    | extend seconds_in_value = round(total_time_in_value / 1s, 0)\n    | project timestamp=now(), sensor_id, total_time_in_value, seconds_in_value\n}",
+          "folder": "Helpers",
+          "doc_string": null
+        }
+      ],
+      "external_tables": [
+        {
+          "name": "FctsAdlsExportRegistry",
+          "table_type": "Blob"
+        },
+        {
+          "name": "EnrichmentDeadLetters",
+          "table_type": "Blob"
+        }
+      ],
+      "materialized_views": [
+        {
+          "name": "RegistryStreams_MV",
+          "source_table": "RegistryIngest"
+        },
+        {
+          "name": "FaeJobs_MV",
+          "source_table": "JobsIngest"
+        },
+        {
+          "name": "RegistryDevices_MV",
+          "source_table": "RegistryIngest"
+        },
+        {
+          "name": "RegistryConstants_MV",
+          "source_table": "RegistryIngest"
+        },
+        {
+          "name": "FaeLogs_MV",
+          "source_table": "FaeLogsIngest"
+        },
+        {
+          "name": "RegistryStreamsPivot_MV",
+          "source_table": "RegistryIngest"
+        }
+      ]
+    },
+    "Safford": {
+      "name": "Safford",
+      "tables": [
+        {
+          "name": "FCTS_INGEST",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 36,
+          "total_original_size": 16711050868.0,
+          "total_row_count": 87348247
+        }
+      ],
+      "functions": [
+        {
+          "name": "FCTS",
+          "parameters": "()",
+          "body": "{ \r\n    FCTS_DEDUP\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id, timestamp\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "FCTSCURRENT",
+          "parameters": "()",
+          "body": "{\r\n    FCTS_CURRENT_VALUE\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        }
+      ],
+      "external_tables": [
+        {
+          "name": "FctsAdlsExportSAM",
+          "table_type": "Blob"
+        },
+        {
+          "name": "AdxArchive",
+          "table_type": "Blob"
+        }
+      ],
+      "materialized_views": [
+        {
+          "name": "FCTS_DEDUP",
+          "source_table": "FCTS_INGEST"
+        },
+        {
+          "name": "FCTS_CURRENT_VALUE",
+          "source_table": "FCTS_INGEST"
+        }
+      ]
+    },
+    "Henderson": {
+      "name": "Henderson",
+      "tables": [
+        {
+          "name": "FCTS_INGEST",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 71,
+          "total_original_size": 102535436142.0,
+          "total_row_count": 497673708
+        }
+      ],
+      "functions": [
+        {
+          "name": "FCTS",
+          "parameters": "()",
+          "body": "{ \r\n    FCTS_DEDUP\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id, timestamp\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "FCTSCURRENT",
+          "parameters": "()",
+          "body": "{\r\n    FCTS_CURRENT_VALUE\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        }
+      ],
+      "external_tables": [
+        {
+          "name": "FctsAdlsExportHEN",
+          "table_type": "Blob"
+        },
+        {
+          "name": "AdxArchive",
+          "table_type": "Blob"
+        }
+      ],
+      "materialized_views": [
+        {
+          "name": "FCTS_DEDUP",
+          "source_table": "FCTS_INGEST"
+        },
+        {
+          "name": "FCTS_CURRENT_VALUE",
+          "source_table": "FCTS_INGEST"
+        }
+      ]
+    },
+    "SAMEM": {
+      "name": "SAMEM",
+      "tables": [
+        {
+          "name": "FCTS_INGEST",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 1051,
+          "total_original_size": 2233627220487.0,
+          "total_row_count": 11888472882
+        }
+      ],
+      "functions": [
+        {
+          "name": "FCTS",
+          "parameters": "()",
+          "body": "{ \r\n    FCTS_DEDUP\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id, timestamp\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "FCTSCURRENT",
+          "parameters": "()",
+          "body": "{\r\n    FCTS_CURRENT_VALUE\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        }
+      ],
+      "external_tables": [
+        {
+          "name": "FctsAdlsExportSAMEM",
+          "table_type": "Blob"
+        },
+        {
+          "name": "AdxArchive",
+          "table_type": "Blob"
+        }
+      ],
+      "materialized_views": [
+        {
+          "name": "FCTS_DEDUP",
+          "source_table": "FCTS_INGEST"
+        },
+        {
+          "name": "FCTS_CURRENT_VALUE",
+          "source_table": "FCTS_INGEST"
+        }
+      ]
+    },
+    "TechCenter": {
+      "name": "TechCenter",
+      "tables": [
+        {
+          "name": "FCTS_INGEST",
+          "folder": null,
+          "doc_string": null,
+          "total_extents": 14,
+          "total_original_size": 23141582.0,
+          "total_row_count": 70662
+        }
+      ],
+      "functions": [
+        {
+          "name": "FCTS",
+          "parameters": "()",
+          "body": "{ \r\n    FCTS_DEDUP\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id, timestamp\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        },
+        {
+          "name": "FCTSCURRENT",
+          "parameters": "()",
+          "body": "{\r\n    FCTS_CURRENT_VALUE\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}",
+          "folder": null,
+          "doc_string": null
+        }
+      ],
+      "external_tables": [
+        {
+          "name": "AdxArchive",
+          "table_type": "Blob"
+        }
+      ],
+      "materialized_views": [
+        {
+          "name": "FCTS_DEDUP",
+          "source_table": "FCTS_INGEST"
+        },
+        {
+          "name": "FCTS_CURRENT_VALUE",
+          "source_table": "FCTS_INGEST"
+        }
+      ]
+    }
+  }
+}
