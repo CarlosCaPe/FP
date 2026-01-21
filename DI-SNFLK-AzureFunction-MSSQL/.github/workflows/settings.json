@@ -1,0 +1,128 @@
+{
+  "dev":
+  [
+    {
+      "name": "FUNCTIONS_WORKER_PROCESS_COUNT",
+      "value": "2",
+      "slotSetting": false
+    },
+    {
+      "name": "AZURE_TENANT_ID",
+      "value": "5f229ce1-773c-46ed-a6fa-974006fae097",
+      "slotSetting": false
+    },
+    {
+      "name": "APP_REG_ID",
+      "value": "5615bb96-a4ba-4b42-b834-7cdc678cf7a7",
+      "slotSetting": false
+    },
+    {
+      "name": "FUNC_APP_KEYVAULT",
+      "value": "bifuncappnadevlkeyvlt04",
+      "slotSetting": false
+    },
+    {
+      "name": "SVC_ACCT_USER",
+      "value": "svc-azw-de-scr-dev@fmi.com",
+      "slotSetting": false
+    },
+    {
+      "name": "SVC_ACCT_KEY",
+      "value": "DE-SCR-DEV-SECRET",
+      "slotSetting": false
+    },
+    {
+      "name": "APP_REG_SECRET",
+      "value": "SFLKSQL-DEV-APPREG-SFLK-OAUTH-SECRET",
+      "slotSetting": false
+    },
+    {
+      "name": "APP_RES_SCOPE",
+      "value": "api://28adde43-d5b2-470c-b15f-619fe5f6b84d/.default"
+    }
+  ],
+  "test":
+  [
+    {
+      "name": "FUNCTIONS_WORKER_PROCESS_COUNT",
+      "value": "2",
+      "slotSetting": false
+    },
+    {
+      "name": "AZURE_TENANT_ID",
+      "value": "5f229ce1-773c-46ed-a6fa-974006fae097",
+      "slotSetting": false
+    },
+    {
+      "name": "APP_REG_ID",
+      "value": "a007f6b2-c8d7-4692-ae9c-13888aa1d80e",
+      "slotSetting": false
+    },
+    {
+      "name": "FUNC_APP_KEYVAULT",
+      "value": "bifuncappnatestkeyvlt04",
+      "slotSetting": false
+    },
+    {
+      "name": "SVC_ACCT_USER",
+      "value": "svc-azw-de-scr-tst@fmi.com",
+      "slotSetting": false
+    },
+    {
+      "name": "SVC_ACCT_KEY",
+      "value": "DE-SCR-TEST-SECRET",
+      "slotSetting": false
+    },
+    {
+      "name": "APP_REG_SECRET",
+      "value": "SFLKSQL-TEST-APPREG-SFLK-OAUTH-SECRET",
+      "slotSetting": false
+    },
+    {
+      "name": "APP_RES_SCOPE",
+      "value": "api://28adde43-d5b2-470c-b15f-619fe5f6b84d/.default"
+    }
+  ],
+  "prod":
+  [
+    {
+      "name": "FUNCTIONS_WORKER_PROCESS_COUNT",
+      "value": "10",
+      "slotSetting": false
+    },
+    {
+      "name": "AZURE_TENANT_ID",
+      "value": "5f229ce1-773c-46ed-a6fa-974006fae097",
+      "slotSetting": false
+    },
+    {
+      "name": "APP_REG_ID",
+      "value": "71572e0a-5c0c-4c12-93d2-56ae92a0147c",
+      "slotSetting": false
+    },
+    {
+      "name": "FUNC_APP_KEYVAULT",
+      "value": "bifuncappnaprodkeyvlt04",
+      "slotSetting": false
+    },
+    {
+      "name": "SVC_ACCT_USER",
+      "value": "svc-azw-de-scr-prd@fmi.com",
+      "slotSetting": false
+    },
+    {
+      "name": "SVC_ACCT_KEY",
+      "value": "DE-SCR-PROD-SECRET",
+      "slotSetting": false
+    },
+    {
+      "name": "APP_REG_SECRET",
+      "value": "SFLKSQL-PROD-APPREG-SFLK-OAUTH-SECRET",
+      "slotSetting": false
+    },
+    {
+      "name": "APP_RES_SCOPE",
+      "value": "api://7c2b593e-600b-440f-a3b3-c1e88ec047fd/.default"
+    }
+  ]
+}

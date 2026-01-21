@@ -1,0 +1,19 @@
+{
+    "scriptFile": "__init__.py",
+    "bindings": [
+        {
+            "schedule": "0 */5 * * * *",
+            "name": "myTimer",
+            "type": "timerTrigger",
+            "direction": "in",
+            "useMonitor": false
+        }
+    ],
+    "sf_conn_params": "CONOPS_WG_DRILL_BLAST_SF_CONN_PARAMS",
+    "sf_query": "SELECT * FROM SITE_PRODUCT_BLASTING_MAP_V ",
+    "sql_conn_str": "CONOPS_WG_DRILL_BLAST_SQL_CONN_STR",
+    "sql_pre_cmd": "TRUNCATE TABLE [DBO].[SITE_PRODUCT_BLASTING_MAP]",
+    "sql_table_type": "[dbo].[SITE_PRODUCT_BLASTING_MAP_IMO]",
+    "sql_table": "[dbo].[SITE_PRODUCT_BLASTING_MAP]",
+    "sql_post_cmd": ""
+}

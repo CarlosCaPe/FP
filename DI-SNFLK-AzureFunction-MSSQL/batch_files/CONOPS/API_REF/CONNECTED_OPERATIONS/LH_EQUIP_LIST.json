@@ -1,0 +1,19 @@
+{
+    "scriptFile": "__init__.py",
+    "bindings": [
+        {
+            "schedule": "0 */5 * * * *",
+            "name": "myTimer",
+            "type": "timerTrigger",
+            "direction": "in",
+            "useMonitor": false
+        }
+    ],
+    "sf_conn_params": "CONOPS_API_REF_CONNECTED_OPERATIONS_SF_CONN_PARAMS",
+    "sf_query": "SELECT * FROM LH_EQUIP_LIST",
+    "sql_conn_str": "CONOPS_API_REF_CONNECTED_OPERATIONS_SQL_CONN_STR",
+    "sql_pre_cmd": "TRUNCATE TABLE [dbo].[LH_EQUIP_LIST_STG_2]",
+    "sql_table_type": "[dbo].[LH_EQUIP_LIST_STG_2_IMO]",
+    "sql_table": "[dbo].[LH_EQUIP_LIST_STG_2]",
+    "sql_post_cmd": "EXEC [dbo].[UPSERT_CONOPS_LH_EQUIP_LIST_2]"
+}

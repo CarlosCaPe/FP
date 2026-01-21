@@ -1,0 +1,19 @@
+{
+    "scriptFile": "__init__.py",
+    "bindings": [
+        {
+            "schedule": "0 */5 * * * *",
+            "name": "myTimer",
+            "type": "timerTrigger",
+            "direction": "in",
+            "useMonitor": false
+        }
+    ],
+    "sf_conn_params": "CONOPS_API_REF_CONNECTED_OPERATIONS_SF_CONN_PARAMS",
+    "sf_query": "SELECT * FROM TABLE(EQUIPMENT_HOURLY_STATUS_NEW_GET('SAF'))",
+    "sql_conn_str": "CONOPS_API_REF_CONNECTED_OPERATIONS_SQL_CONN_STR",
+    "sql_pre_cmd": "TRUNCATE TABLE [SAF].[EQUIPMENT_HOURLY_STATUS_STG_2]",
+    "sql_table_type": "[SAF].[EQUIPMENT_HOURLY_STATUS_STG_2_IMO]",
+    "sql_table": "[SAF].[EQUIPMENT_HOURLY_STATUS_STG_2]",
+    "sql_post_cmd": "EXEC [dbo].[UPSERT_CONOPS_EQUIPMENT_HOURLY_STATUS_2] 'SAF'"
+}

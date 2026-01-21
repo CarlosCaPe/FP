@@ -1,0 +1,14 @@
+# DO NOT include azure-functions-worker in this file
+# The Python Worker is managed by Azure Functions platform
+# Manually managing azure-functions-worker may cause unexpected issues
+
+pyyaml
+aiohttp
+aioodbc
+azure-functions
+azure-keyvault-secrets
+azure-monitor-opentelemetry
+azure-data-tables
+azure-storage-blob
+azure-eventhub
+azure-storage-queue

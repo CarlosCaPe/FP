@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "snow2sql"
+version = "0.1.0"
+description = ""
+authors = ["Bruno <bgarciat@fmi.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pyyaml = "^6.0.2"
+aiohttp = "^3.12.15"
+aioodbc = "^0.5.0"
+azure-functions = "^1.23.0"
+azure-keyvault-secrets = "^4.10.0"
+azure-monitor-opentelemetry = "^1.7.0"
+azure-data-tables = "^12.7.0"
+azure-storage-blob = "^12.26.0"
+azure-eventhub = "^5.15.0"
+azure-storage-queue = "^12.13.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

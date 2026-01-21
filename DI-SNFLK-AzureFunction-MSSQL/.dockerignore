@@ -1,0 +1,6 @@
+local.settings.json
+.env
+.vscode
+.github
+__pycache__
+__queuestorage__

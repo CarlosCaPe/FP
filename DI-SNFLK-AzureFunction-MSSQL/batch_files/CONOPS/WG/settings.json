@@ -1,0 +1,47 @@
+{
+    "dev":
+    [
+        {
+            "name": "CONOPS_WG_DRILL_BLAST_DISABLED",
+            "value": false
+        },
+        {
+            "name": "CONOPS_WG_DRILL_BLAST_SF_CONN_PARAMS",
+            "value": "{\"database\":\"DEV_WG\",\"schema\":\"DRILL_BLAST\",\"warehouse\":\"WH_BATCH_FUSE_NONPROD\",\"role\":\"APP_ROLE_SFLKSQL_DEV\"}"
+        },
+        {
+            "name": "CONOPS_WG_DRILL_BLAST_SQL_CONN_STR",
+            "value": "Driver={ODBC Driver 18 for SQL Server};Server=azwd22midbx02.eb8a77f2eea6.database.windows.net;Database=SNOWFLAKE_WG;Authentication=ActiveDirectoryMSI;MARS_Connection=yes;LongAsMax=yes;"
+        }
+    ],
+    "test":
+    [
+        {
+            "name": "CONOPS_WG_DRILL_BLAST_DISABLED",
+            "value": false
+        },
+        {
+            "name": "CONOPS_WG_DRILL_BLAST_SF_CONN_PARAMS",
+            "value": "{\"database\":\"TEST_WG\",\"schema\":\"DRILL_BLAST\",\"warehouse\":\"WH_BATCH_FUSE_NONPROD\",\"role\":\"APP_ROLE_SFLKSQL_TEST\"}"
+        },
+        {
+            "name": "CONOPS_WG_DRILL_BLAST_SQL_CONN_STR",
+            "value": "Driver={ODBC Driver 18 for SQL Server};Server=azwt22midbx02.9959d3e6fe6e.database.windows.net;Database=SNOWFLAKE_WG;Authentication=ActiveDirectoryMSI;MARS_Connection=yes;LongAsMax=yes;"
+        }
+    ],
+    "prod":
+    [
+        {
+            "name": "CONOPS_WG_DRILL_BLAST_DISABLED",
+            "value": false
+        },
+        {
+            "name": "CONOPS_WG_DRILL_BLAST_SF_CONN_PARAMS",
+            "value": "{\"database\":\"PROD_WG\",\"schema\":\"DRILL_BLAST\",\"warehouse\":\"WH_BATCH_FUSE\",\"role\":\"APP_ROLE_SFLKSQL_PROD\"}"
+        },
+        {
+            "name": "CONOPS_WG_DRILL_BLAST_SQL_CONN_STR",
+            "value": "Driver={ODBC Driver 18 for SQL Server};Server=azwp22midbx02.8232c56adfdf.database.windows.net;Database=SNOWFLAKE_WG;Authentication=ActiveDirectoryMSI;MARS_Connection=yes;LongAsMax=yes;"
+        }
+    ]
+}

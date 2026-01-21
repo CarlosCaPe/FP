@@ -1,0 +1,38 @@
+{
+  "version": "2.0",
+  "extensions": {
+      "Sql": {
+        "MaxBatchSize": 1000,
+        "PollingIntervalMs": 10000,
+        "MaxChangesPerWorker": 1000
+      },
+      "queues": {
+        "maxPollingInterval": "00:00:30",
+        "visibilityTimeout" : "00:00:10",
+        "batchSize": 4,
+        "maxDequeueCount": 5,
+        "newBatchThreshold": 8,
+        "messageEncoding": "none"
+      }
+  },
+  "extensionBundle": {
+    "id": "Microsoft.Azure.Functions.ExtensionBundle",
+    "version": "[4.*, 5.0.0)"
+  },
+  "functionTimeout": "06:00:00",
+  "logging": {
+    "logLevel": {
+      "default": "Warning",
+      "Host.Results": "Information",
+      "Host.Aggregator": "Information",
+      "Function": "Information",
+      "Microsoft": "Warning"
+    },
+    "applicationInsights": {
+      "samplingSettings": {
+        "isEnabled": true,
+        "excludedTypes": "Exception;Request;Trace"
+      }
+    }
+  }
+}

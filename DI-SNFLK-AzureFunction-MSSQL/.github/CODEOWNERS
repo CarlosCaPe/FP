@@ -1,0 +1,5 @@
+# General code owners
+* @bgarciat_FMI
+
+# Code owners for config files
+/batch_files/ @bgarciat_FMI @jrios2_FMI @vuttam_FMI

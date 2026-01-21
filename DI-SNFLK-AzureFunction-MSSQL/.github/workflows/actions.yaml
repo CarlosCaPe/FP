@@ -1,0 +1,90 @@
+name: DI-SNFLK-AzureFunction-MSSQL Workflow
+on:
+  pull_request:
+    types: [opened]
+    branches:
+      - main
+      - test
+  push:
+    branches:
+      - main
+      - test
+      - dev
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  run-checks:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check source branch
+      run: |
+        if [[ "${{ github.ref_name }}" == "main" && "${{ github.head_ref }}" != "test" ]]; then
+          echo 'Pull requests to "main" are only allowed from "test"'
+          exit 1
+        elif [[ "${{ github.ref_name }}" == "test" && "${{ github.head_ref }}" != "dev" ]]; then
+          echo 'Pull requests to "test" are only allowed from "dev"'
+          exit 1
+        fi
+
+  deploy-function-app:
+    if: github.event_name == 'push'
+    environment: ${{ github.ref_name == 'main' && 'prod' || github.ref_name == 'test' && 'test' || 'dev' }}
+    runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: ${{ github.ref_name == 'main' && 'prod' || github.ref_name == 'test' && 'test' || 'dev' }}
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Prepare variables
+      run: |
+        echo "REPO=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+        echo "AZURE_CREDENTIALS={\"clientId\":\"${{ vars.AZURE_CLIENT_ID }}\", \"clientSecret\":\"${{ secrets.AZURE_CLIENT_SECRET }}\", \"subscriptionId\":\"${{ vars.AZURE_SUBSCRIPTION_ID }}\", \"tenantId\":\"${{ vars.AZURE_TENANT_ID }}\"}" >> $GITHUB_ENV
+        echo "FILES_FOLDER=batch_files" >> ${GITHUB_ENV}
+        echo "TEMPLATE_FOLDER=batch_template" >> ${GITHUB_ENV}
+    
+    - name: Set up Batch Functions
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const script = require('${{ github.workspace }}/.github/workflows/functions_setup.js')
+          script({github, context, core})
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ vars.REGISTRY }}
+        username: ${{ vars.AZURE_CLIENT_ID }}
+        password: ${{ secrets.AZURE_CLIENT_SECRET }}
+    
+    - name: Build and push
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        push: true
+        tags: '${{ vars.REGISTRY }}/${{ env.ENVIRONMENT }}/${{ env.REPO }}/${{ vars.FUNCTION_APP }}:${{ github.sha }}'
+        file: ./Dockerfile
+
+    - uses: azure/login@v2
+      with:
+        creds: ${{ env.AZURE_CREDENTIALS }}
+
+    - name: Add Settings
+      uses: Azure/appservice-settings@v1
+      with:
+        app-name: ${{ vars.FUNCTION_APP }}
+        app-settings-json: ${{ env.SETTINGS }}
+    
+    - name: Deploy Web App
+      uses: azure/functions-container-action@v1
+      with:
+        app-name: ${{ vars.FUNCTION_APP }}
+        image: '${{ vars.REGISTRY }}/${{ env.ENVIRONMENT }}/${{ env.REPO }}/${{ vars.FUNCTION_APP }}:${{ github.sha }}'
