@@ -1,0 +1,112 @@
+// ============================================================================
+// VERSION 3: ADX FUNCTION - SENSOR_SNAPSHOT_GET
+// ============================================================================
+// Firma equivalente a Snowflake:
+//   SENSOR_SNAPSHOT_GET(site_code, is_af_path_flag, attribute_paths, pi_points)
+//
+// Output columns (mismas que Snowflake):
+//   TAG_NAME, VALUE_UTC_TS, SENSOR_VALUE, UOM, QUALITY
+//
+// Cluster: fctsnaproddatexp02.westus2.kusto.windows.net
+// ============================================================================
+
+// -----------------------------------------------------------------------------
+// STEP 1: Crear la función en ADX (ejecutar en Azure Data Explorer)
+// -----------------------------------------------------------------------------
+// Nota: Ejecutar este comando en el database "Global" o en cada site database
+
+.create-or-alter function with (folder = "FCTS", docstring = "Equivalent to Snowflake SENSOR_SNAPSHOT_GET") 
+SENSOR_SNAPSHOT_GET(
+    site_code: string,
+    is_af_path_flag: bool,
+    sensor_ids: dynamic
+) {
+    // Mapear site_code a database name
+    let db_name = case(
+        site_code == "SAM", "Miami",
+        site_code == "MOR", "Morenci",
+        site_code == "CMX", "Climax",
+        site_code == "SIE", "Sierrita",
+        site_code == "NMO", "NewMexico",
+        site_code == "BAG", "Bagdad",
+        site_code == "CVE", "CerroVerde",
+        "Unknown"
+    );
+    // Query FCTSCURRENT del database correspondiente
+    // Nota: database() dinámico no funciona directamente, 
+    // ver alternativa abajo con union
+    database(db_name).FCTSCURRENT
+    | where sensor_id in (sensor_ids)
+    | project 
+        TAG_NAME = sensor_id,
+        VALUE_UTC_TS = timestamp,
+        SENSOR_VALUE = tostring(value),
+        UOM = unit,
+        QUALITY = quality
+}
+
+// -----------------------------------------------------------------------------
+// ALTERNATIVA: Si database() dinámico no funciona, usar UNION explícito
+// -----------------------------------------------------------------------------
+.create-or-alter function with (folder = "FCTS", docstring = "Equivalent to Snowflake SENSOR_SNAPSHOT_GET - Union version") 
+SENSOR_SNAPSHOT_GET_V2(
+    site_code: string,
+    is_af_path_flag: bool,
+    sensor_ids: dynamic
+) {
+    union
+        (database('Miami').FCTSCURRENT | where site_code == "SAM"),
+        (database('Morenci').FCTSCURRENT | where site_code == "MOR"),
+        (database('Climax').FCTSCURRENT | where site_code == "CMX"),
+        (database('Sierrita').FCTSCURRENT | where site_code == "SIE"),
+        (database('NewMexico').FCTSCURRENT | where site_code == "NMO"),
+        (database('Bagdad').FCTSCURRENT | where site_code == "BAG"),
+        (database('CerroVerde').FCTSCURRENT | where site_code == "CVE")
+    | where sensor_id in (sensor_ids)
+    | project 
+        TAG_NAME = sensor_id,
+        VALUE_UTC_TS = timestamp,
+        SENSOR_VALUE = tostring(value),
+        UOM = unit,
+        QUALITY = quality
+}
+
+// -----------------------------------------------------------------------------
+// STEP 2: Llamada de ejemplo (para testing)
+// -----------------------------------------------------------------------------
+
+// Ejemplo 1: Snapshot de MOR con PI Points
+let sensor_list = dynamic([
+    'BLNKPNTRCHR_OPC.SMOHYD.PI_SLP_RATE',
+    'BLNKPNTRCHR_OPC.SMOHYD.PI_MAN_HOIST_FLTRTE',
+    'BLNKPNTRCHR_OPC.SMOHYD.PI_SLP_RATE_CHNG',
+    'BLNKPNTRCHR_OPC.SMOHYD.PI_SEL_PUMPING_RATE'
+]);
+database('Morenci').FCTSCURRENT
+| where sensor_id in (sensor_list)
+| project 
+    TAG_NAME = sensor_id,
+    VALUE_UTC_TS = timestamp,
+    SENSOR_VALUE = tostring(value),
+    UOM = unit,
+    QUALITY = quality
+
+// -----------------------------------------------------------------------------
+// STEP 3: Query para comparar con Snowflake (regression test)
+// -----------------------------------------------------------------------------
+// Ejecutar y exportar a CSV para comparar columnas con Snowflake output
+
+let sensor_list = dynamic([
+    'CR03_CRUSH_OUT_TIME',
+    'PE_MOR_CC_MflPileTonnage',
+    'PE_MOR_CC_MillPileTonnage'
+]);
+database('Morenci').FCTSCURRENT
+| where sensor_id in (sensor_list)
+| project 
+    TAG_NAME = sensor_id,
+    VALUE_UTC_TS = timestamp,
+    SENSOR_VALUE = tostring(value),
+    UOM = unit,
+    QUALITY = quality
+| order by TAG_NAME asc
