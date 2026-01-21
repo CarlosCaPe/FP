@@ -131,3 +131,73 @@ También hay soporte para functions:
 ## Reportes
 
 Por defecto (si ejecutas desde `SQLRefactoring/`), los reportes se escriben en `reports/` y se generan como `.md` / `.json` / `.txt` según el comando.
+
+---
+
+## 🔌 Conexiones y Credenciales
+
+### Snowflake (.env)
+
+El archivo `.env` en la raíz de `SQLRefactoring/` contiene las credenciales de Snowflake:
+
+```bash
+# Required
+CONN_LIB_SNOWFLAKE_ACCOUNT=FCX-NA
+CONN_LIB_SNOWFLAKE_USER=CCARRILL2@FMI.COM
+
+# Recommended
+CONN_LIB_SNOWFLAKE_ROLE=SG-AZW-SFLK-ENG-GENERAL
+CONN_LIB_SNOWFLAKE_WAREHOUSE=WH_FCTS
+CONN_LIB_SNOWFLAKE_DATABASE=SANDBOX_DATA_ENGINEER
+CONN_LIB_SNOWFLAKE_SCHEMA=CCARRILL2
+
+# Auth (SSO via browser)
+CONN_LIB_SNOWFLAKE_AUTHENTICATOR=externalbrowser
+```
+
+> ⚠️ **NOTA**: Este archivo está en `.gitignore` y NO se commitea.
+
+### SQL Azure (Scripts Python)
+
+Los scripts en `../SQLAzure/scripts/` usan Azure AD authentication:
+
+```python
+from azure.identity import InteractiveBrowserCredential
+import pyodbc, struct
+
+# DEV
+server = "azwd22midbx02.eb8a77f2eea6.database.windows.net"
+# TEST  
+server = "azwt22midbx02.78e6dac10b16.database.windows.net"
+# PROD
+server = "azwp22midbx02.2a5d8efd6e55.database.windows.net"
+
+# Databases disponibles:
+# - ConnectedOperations  (para CONNECTED_OPERATIONS functions)
+# - SNOWFLAKE_WG         (para DRILL_BLAST y LOAD_HAUL functions)
+```
+
+### Databases por Función
+
+| Domain | Database | Connection String |
+|--------|----------|-------------------|
+| CONNECTED_OPERATIONS | ConnectedOperations | `CONOPS_CO_*_SQL_CONN_STR` |
+| DRILL_BLAST | SNOWFLAKE_WG | `CONOPS_WG_DRILL_BLAST_SQL_CONN_STR` |
+| LOAD_HAUL | SNOWFLAKE_WG | `CONOPS_WG_LOAD_HAUL_SQL_CONN_STR` |
+
+### Notas Importantes
+
+1. **Python 3.12 para Snowflake**: El connector `snowflake-connector-python` no tiene wheels para Python 3.14. Usar el venv312:
+   ```powershell
+   C:\Users\ccarrill2\Documents\repos\FP\.venv312\Scripts\python.exe <script.py>
+   ```
+
+2. **Python 3.14 para SQL Azure**: Los scripts de Azure funcionan con cualquier Python si tienen `azure-identity` y `pyodbc`.
+
+3. **Autenticación**: Ambas plataformas usan browser SSO (externalbrowser para Snowflake, InteractiveBrowserCredential para Azure).
+
+4. **Memory Optimized Tables (Vikas Uttam)**:
+   - **DEV**: `MEMORY_OPTIMIZED = OFF` ❌
+   - **PROD**: `MEMORY_OPTIMIZED = ON` ✅
+   
+   Al crear tablas en DEV, NO usar memory optimized. Solo habilitarlo en PROD.

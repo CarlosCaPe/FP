@@ -1,19 +1,19 @@
 {
-    "scriptFile": "__init__.py",
-    "bindings": [
-        {
-            "schedule": "0 */5 * * * *",
-            "name": "myTimer",
-            "type": "timerTrigger",
-            "direction": "in",
-            "useMonitor": false
-        }
-    ],
-    "sf_conn_params": "CONOPS_WG_DRILL_BLAST_SF_CONN_PARAMS",
-    "sf_query": "SELECT * FROM DRILL_CYCLE WHERE plan_creation_ts_local >= dateadd('day',-30,current_date()) and site_code='MOR'",
-    "sql_conn_str": "CONOPS_WG_DRILL_BLAST_SQL_CONN_STR",
-    "sql_pre_cmd": "TRUNCATE TABLE [DBO].[DRILL_CYCLE]",
-    "sql_table_type": "[dbo].[DRILL_CYCLE_IMO]",
-    "sql_table": "[dbo].[DRILL_CYCLE]",
-    "sql_post_cmd": ""
+    "scriptFile":  "__init__.py",
+    "bindings":  [
+                     {
+                         "schedule":  "0 */5 * * * *",
+                         "name":  "myTimer",
+                         "type":  "timerTrigger",
+                         "direction":  "in",
+                         "useMonitor":  false
+                     }
+                 ],
+    "sf_conn_params":  "CONOPS_WG_DRILL_BLAST_SF_CONN_PARAMS",
+    "sf_query":  "SELECT * FROM DRILL_CYCLE WHERE plan_creation_ts_local \u003e= dateadd(\u0027day\u0027,-30,current_date()) and site_code=\u0027MOR\u0027",
+    "sql_conn_str":  "CONOPS_WG_DRILL_BLAST_SQL_CONN_STR",
+    "sql_pre_cmd":  "TRUNCATE TABLE [DBO].[DRILL_CYCLE]",
+    "sql_table_type":  "[dbo].[DRILL_BLAST__DRILL_CYCLE_IMO]",
+    "sql_table":  "[dbo].[DRILL_CYCLE]",
+    "sql_post_cmd":  ""
 }

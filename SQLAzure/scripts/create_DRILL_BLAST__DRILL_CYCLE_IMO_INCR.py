@@ -1,0 +1,187 @@
+"""
+Script para crear DRILL_BLAST__DRILL_CYCLE_IMO en SNOWFLAKE_WG (DEV)
+Basado en la nueva estructura INCR: DEV_API_REF.FUSE.DRILLBLAST_DRILL_CYCLE_INCR
+
+Naming convention: {DOMAIN}__{TABLE}_IMO (igual que LOAD_HAUL__LH_*)
+Total: 108 columnas
+"""
+from azure.identity import InteractiveBrowserCredential
+import pyodbc
+import struct
+
+server = "azwd22midbx02.eb8a77f2eea6.database.windows.net"
+database = "SNOWFLAKE_WG"
+
+# Columnas de DRILLBLAST_DRILL_CYCLE_INCR (108 columnas)
+columns = """
+    [ORIG_SRC_ID] FLOAT,
+    [SITE_CODE] NVARCHAR(MAX),
+    [BENCH] NVARCHAR(MAX),
+    [PUSHBACK] NVARCHAR(MAX),
+    [PATTERN_NAME] NVARCHAR(MAX),
+    [ORIGINAL_PATTERN_NAME] NVARCHAR(MAX),
+    [DRILL_CYCLE_SK] FLOAT,
+    [DRILL_HOLE_SHIFT_ID] NVARCHAR(MAX),
+    [DRILL_ID] FLOAT,
+    [DRILL_BIT_ID] NVARCHAR(MAX),
+    [SYSTEM_OPERATOR_ID] NVARCHAR(MAX),
+    [DRILL_HOLE_ID] NVARCHAR(MAX),
+    [DRILL_HOLE_NAME] NVARCHAR(MAX),
+    [DRILL_PLAN_SK] FLOAT,
+    [DRILL_HOLE_STATUS] FLOAT,
+    [IS_HOLE_PLANNED_FLAG] FLOAT,
+    [START_HOLE_TS_UTC] DATETIME2,
+    [END_HOLE_TS_UTC] DATETIME2,
+    [START_HOLE_TS_LOCAL] DATETIME2,
+    [END_HOLE_TS_LOCAL] DATETIME2,
+    [DRILL_HOLE_DURATION_SECONDS] FLOAT,
+    [ACTUAL_DRILL_HOLE_DEPTH_FEET] FLOAT,
+    [ACTUAL_DRILL_HOLE_DEPTH_METERS] FLOAT,
+    [GPS_ACCURACY] FLOAT,
+    [ACTUAL_DRILL_HOLE_START_FEET_X] FLOAT,
+    [ACTUAL_DRILL_HOLE_START_FEET_Y] FLOAT,
+    [ACTUAL_DRILL_HOLE_START_FEET_Z] FLOAT,
+    [ACTUAL_DRILL_HOLE_END_FEET_X] FLOAT,
+    [ACTUAL_DRILL_HOLE_END_FEET_Y] FLOAT,
+    [ACTUAL_DRILL_HOLE_END_FEET_Z] FLOAT,
+    [ACTUAL_DRILL_HOLE_LONGITUDE] FLOAT,
+    [ACTUAL_DRILL_HOLE_LATITUDE] FLOAT,
+    [ACTUAL_DRILL_HOLE_START_METERS_X] FLOAT,
+    [ACTUAL_DRILL_HOLE_START_METERS_Y] FLOAT,
+    [ACTUAL_DRILL_HOLE_START_METERS_Z] FLOAT,
+    [ACTUAL_DRILL_HOLE_END_METERS_X] FLOAT,
+    [ACTUAL_DRILL_HOLE_END_METERS_Y] FLOAT,
+    [ACTUAL_DRILL_HOLE_END_METERS_Z] FLOAT,
+    [AUTODRILL_DURATION_SECONDS] FLOAT,
+    [AUTODRILL_USAGE_PCT] FLOAT,
+    [DRILL_HOLE_PENETRATION_RATE_AVG_FEET_HOUR] FLOAT,
+    [OPERATOR_LOGIN_TS_UTC] DATETIME2,
+    [OPERATOR_LOGOUT_TS_UTC] DATETIME2,
+    [OPERATOR_LOGIN_TS_LOCAL] DATETIME2,
+    [OPERATOR_LOGOUT_TS_LOCAL] DATETIME2,
+    [BEARING] FLOAT,
+    [DRILL_TOWER_ANGLE_DEGREE_CALCULATED] FLOAT,
+    [DRILL_TOWER_ANGLE_DEGREE_SYSTEM] FLOAT,
+    [DRILL_HOLE_DUPLICATED_FLAG] FLOAT,
+    [DRILL_HOLE_UPSIDE_DOWN_FLAG] FLOAT,
+    [DRILL_HOLE_START_END_TIME_INVALID_FLAG] FLOAT,
+    [DRILL_HOLE_START_END_TIME_OVERLAP_FLAG] FLOAT,
+    [DRILL_HOLE_DEPTH_INVALID_FLAG] FLOAT,
+    [DRILL_HOLE_ANGLE_INVALID_FLAG] FLOAT,
+    [DRILL_HOLE_POSITION_INVALID_FLAG] FLOAT,
+    [TIME_BETWEEN_DRILL_HOLES_SECONDS] FLOAT,
+    [AIR_PRESSURE_PSI] FLOAT,
+    [FEED_FORCE_NEWTONS] FLOAT,
+    [ROTATION_TORQUE_NM] FLOAT,
+    [BIT_SPEED_RPM] FLOAT,
+    [WATER_FLOW_GPM] FLOAT,
+    [INSTANTANOUS_PENRATE_MWD_METERS_HOUR] FLOAT,
+    [INSTANTANOUS_PENRATE_MWD_FEET_HOUR] FLOAT,
+    [DRILL_HOLE_OFF_TARGET_FEET] FLOAT,
+    [DRILL_HOLE_OFF_TARGET_METERS] FLOAT,
+    [DRILL_HOLE_HORIZONTAL_ACCURACY_PCT] FLOAT,
+    [DRILL_HOLE_VERTICAL_ACCURACY_PCT] FLOAT,
+    [OVERDRILL_UNDERDRILL_FLAG] FLOAT,
+    [OVERDRILL_UNDERDRILL_FEET] FLOAT,
+    [OVERDRILL_UNDERDRILL_METERS] FLOAT,
+    [DRILLING_STOPS_COUNT] FLOAT,
+    [DRILL_HOLE_REDRILL_FLAG] FLOAT,
+    [PROPEL_START_TS_UTC] DATETIME2,
+    [PROPEL_END_TS_UTC] DATETIME2,
+    [PARK_POSITION_START_TS_UTC] DATETIME2,
+    [PARK_POSITION_END_TS_UTC] DATETIME2,
+    [LEVEL_START_TS_UTC] DATETIME2,
+    [LEVEL_END_TS_UTC] DATETIME2,
+    [DRILL_START_TS_UTC] DATETIME2,
+    [DRILL_END_TS_UTC] DATETIME2,
+    [RETRACT_START_TS_UTC] DATETIME2,
+    [RETRACT_END_TS_UTC] DATETIME2,
+    [PROPEL_START_TS_LOCAL] DATETIME2,
+    [PROPEL_END_TS_LOCAL] DATETIME2,
+    [PARK_POSITION_START_TS_LOCAL] DATETIME2,
+    [PARK_POSITION_END_TS_LOCAL] DATETIME2,
+    [LEVEL_START_TS_LOCAL] DATETIME2,
+    [LEVEL_END_TS_LOCAL] DATETIME2,
+    [DRILL_START_TS_LOCAL] DATETIME2,
+    [DRILL_END_TS_LOCAL] DATETIME2,
+    [RETRACT_START_TS_LOCAL] DATETIME2,
+    [RETRACT_END_TS_LOCAL] DATETIME2,
+    [PROPEL_DURATION] FLOAT,
+    [PARK_POSITION_DURATION] FLOAT,
+    [LEVEL_DURATION] FLOAT,
+    [DRILL_DURATION] FLOAT,
+    [RETRACT_DURATION] FLOAT,
+    [SYSTEM_DRILL_STATE_DURATION_SECONDS] FLOAT,
+    [SYSTEM_SETUP_STATE_DURATION_SECONDS] FLOAT,
+    [SYSTEM_AUTO_LEVEL_DURATION_SECONDS] FLOAT,
+    [SYSTEM_AUTO_DELEVEL_DURATION_SECONDS] FLOAT,
+    [PLAN_CREATION_TS_LOCAL] DATETIME2,
+    [SYSTEM_VERSION] NVARCHAR(MAX),
+    [ACTUAL_MCF_BLOCK_ID] NVARCHAR(MAX),
+    [DESIGN_MCF_BLOCK_ID] NVARCHAR(MAX),
+    [DW_LOGICAL_DELETE_FLAG] NVARCHAR(MAX),
+    [DW_LOAD_TS] DATETIME2,
+    [DW_MODIFY_TS] DATETIME2
+"""
+
+create_type_sql = f"""
+CREATE TYPE [dbo].[DRILL_BLAST__DRILL_CYCLE_IMO] AS TABLE (
+{columns}
+)
+"""
+
+print("=" * 70)
+print("Creando DRILL_BLAST__DRILL_CYCLE_IMO basado en DRILLBLAST_DRILL_CYCLE_INCR")
+print("=" * 70)
+
+credential = InteractiveBrowserCredential()
+token = credential.get_token("https://database.windows.net/.default")
+token_bytes = token.token.encode("utf-16-le")
+token_struct = struct.pack(f"<I{len(token_bytes)}s", len(token_bytes), token_bytes)
+
+conn_str = f"Driver={{ODBC Driver 17 for SQL Server}};Server={server};Database={database}"
+conn = pyodbc.connect(conn_str, attrs_before={1256: token_struct})
+cursor = conn.cursor()
+
+# Eliminar si existe (tanto el viejo nombre como el nuevo)
+for type_name in ['DRILL_CYCLE_IMO', 'DRILL_BLAST__DRILL_CYCLE_IMO']:
+    cursor.execute(f"SELECT name FROM sys.table_types WHERE name = '{type_name}'")
+    if cursor.fetchone():
+        cursor.execute(f"DROP TYPE [dbo].[{type_name}]")
+        conn.commit()
+        print(f"  ✅ Eliminado {type_name} existente")
+
+# Crear el nuevo
+cursor.execute(create_type_sql)
+conn.commit()
+print(f"  ✅ Creado DRILL_BLAST__DRILL_CYCLE_IMO (108 columnas)")
+
+# Verificación
+print("\n" + "=" * 70)
+print("VERIFICACIÓN - Table Types en SNOWFLAKE_WG:")
+print("=" * 70)
+
+cursor.execute("""
+    SELECT '[' + SCHEMA_NAME(schema_id) + '].[' + name + ']' as full_name 
+    FROM sys.table_types 
+    ORDER BY name
+""")
+for row in cursor.fetchall():
+    print(f"  - {row[0]}")
+
+# Contar columnas del tipo creado
+cursor.execute("""
+    SELECT COUNT(*) 
+    FROM sys.columns c
+    JOIN sys.table_types tt ON c.object_id = tt.type_table_object_id
+    WHERE tt.name = 'DRILL_BLAST__DRILL_CYCLE_IMO'
+""")
+col_count = cursor.fetchone()[0]
+print(f"\n  Columnas en DRILL_BLAST__DRILL_CYCLE_IMO: {col_count}")
+
+conn.close()
+
+print("\n" + "=" * 70)
+print("✅ ¡COMPLETADO!")
+print("=" * 70)
+print("\nEl Table Type ahora coincide con DEV_API_REF.FUSE.DRILLBLAST_DRILL_CYCLE_INCR")
