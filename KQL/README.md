@@ -1,48 +1,68 @@
 # KQL / Azure Data Explorer (ADX)
 
-Herramientas para consultar el cluster ADX de FCTS.
+Herramientas para consultar los clusters ADX de FCTS.
 
-## Cluster Info
+## Clusters
 
-| Propiedad | Valor |
-|-----------|-------|
-| **Cluster** | `fctsnaproddatexp01` |
-| **URL** | `https://fctsnaproddatexp01.westus2.kusto.windows.net` |
-| **Subscription** | NA Production |
-| **Acceso** | Contactar a **Chris Martin** para permisos |
+| Cluster | URL | Uso |
+|---------|-----|-----|
+| **fctsnaproddatexp02** | `https://fctsnaproddatexp02.westus2.kusto.windows.net` | ✅ Principal (App Integration) |
+| fctsnaproddatexp01 | `https://fctsnaproddatexp01.westus2.kusto.windows.net` | FCTS Raw Data (requiere permisos adicionales) |
 
-## Databases por Sitio
+## Databases en fctsnaproddatexp02
 
-| Sitio | Database | Tablas Principales |
-|-------|----------|-------------------|
-| Bagdad | `BAG` | FCTS, FCTSCURRENT |
-| Sierrita | `SIE` | FCTS, FCTSCURRENT |
-| Morenci | `MOR` | FCTS, FCTSCURRENT |
-| Safford/Miami | `SAM` | FCTS, FCTSCURRENT |
-| Cerro Verde | `CVE` | FCTS, FCTSCURRENT |
-| Chino/Cobre | `CMX` | FCTS, FCTSCURRENT |
-| Tyrone | `NMO` | FCTS, FCTSCURRENT |
-| Global | `Global` | RegistryStreams |
+| Database | Descripción |
+|----------|-------------|
+| **AppIntegration** | Funciones de integración |
+| **Global** | Registry global |
+| Bagdad | Sitio BAG |
+| Morenci | Sitio MOR |
+| Sierrita | Sitio SIE |
+| Miami | Sitio SAM |
+| Safford | Sitio |
+| CerroVerde | Sitio CVE |
+| NewMexico | Sitio NMO |
+| Climax | Sitio CMX |
+| Henderson | Sitio |
+| ElPaso | Sitio |
+| ElAbra | Sitio |
+| Huelva | Sitio |
+| Rotterdam | Sitio |
+| FtMadison | Sitio |
+| Stowmarket | Sitio |
+| NAMEM | Regional |
+| SAMEM | Regional |
+| TechCenter | Tech |
 
-## Tablas Principales
+## Funciones en AppIntegration
 
-| Tabla | Descripción | Uso |
-|-------|-------------|-----|
-| `FCTS` | Historical data (archive) | Datos históricos por timestamp |
-| `FCTSCURRENT` | Current value (snapshot) | Último valor por sensor |
-| `RegistryStreams` | Stream registry | Lookup de streams/sensors |
+| Función | Descripción |
+|---------|-------------|
+| `AcidTankLevels` | Niveles de tanques de ácido |
+| `HaulTruck` | Datos de camiones |
+| `HaulTruck_DEV` | Versión desarrollo |
+| `Morenci_Batman_BallMill_Aggregates` | Agregados Ball Mill |
+| `Morenci_Batman_Section_Aggregates` | Agregados por sección |
+| `Morenci_Batman_Mill_Overview` | Overview del mill |
+| `ConSmelter_GetCastingSpeed` | Velocidad de casting |
 
 ## Queries de Ejemplo
 
+### Llamar una función
+```kql
+AppIntegration.AcidTankLevels()
+| take 10
+```
+
 ### Current Value (Snapshot)
 ```kql
-database('BAG').FCTSCURRENT
+database('Bagdad').FCTSCURRENT
 | where sensor_id == "BAG-REPT_CLP_CYANEX_VOL"
 ```
 
-### Historical Data (últimos 180 días)
+### Historical Data
 ```kql
-database('BAG').FCTS
+database('Bagdad').FCTS
 | where timestamp > ago(180d)
 | where sensor_id == "BAG-REPT_CLP_CYANEX_VOL"
 ```
@@ -55,38 +75,34 @@ database('Global').RegistryStreams
 
 ## Scripts
 
-### `adx_browser.py` (Browser auth - recomendado)
 ```powershell
-cd KQL\scripts
-C:\Users\ccarrill2\Documents\repos\FP\.venv312\Scripts\python.exe adx_browser.py list-dbs
-C:\Users\ccarrill2\Documents\repos\FP\.venv312\Scripts\python.exe adx_browser.py list-tables --db BAG
-C:\Users\ccarrill2\Documents\repos\FP\.venv312\Scripts\python.exe adx_browser.py sample --db BAG --table FCTS --limit 5
-C:\Users\ccarrill2\Documents\repos\FP\.venv312\Scripts\python.exe adx_browser.py query --db BAG --kql "FCTSCURRENT | take 10"
+cd C:\Users\ccarrill2\Documents\repos\FP\KQL\scripts
+
+# Discovery del cluster
+C:\Users\ccarrill2\Documents\repos\FP\.venv312\Scripts\python.exe discover_cluster02.py
+
+# Query ad-hoc
+C:\Users\ccarrill2\Documents\repos\FP\.venv312\Scripts\python.exe adx_browser.py query --cluster https://fctsnaproddatexp02.westus2.kusto.windows.net --db AppIntegration --kql "AcidTankLevels() | take 5"
 ```
 
-### `adx_discovery.py` (Device code auth - legacy)
-```powershell
-C:\Users\ccarrill2\Documents\repos\FP\.venv312\Scripts\python.exe adx_discovery.py list-dbs
-```
+## Conexión desde Azure Data Explorer Web
+
+Abrir directamente en el navegador:
+- https://dataexplorer.azure.com/clusters/fctsnaproddatexp02.westus2/databases/AppIntegration
 
 ## Contexto: Migración FCTS
 
-Las tablas `SENSOR_READING_*_B` en Snowflake (`PROD_DATALAKE.FCTS`) están siendo reemplazadas por ADX:
+Las tablas `SENSOR_READING_*_B` en Snowflake (`PROD_DATALAKE.FCTS`) serán reemplazadas por ADX:
 
 | Snowflake (OLD) | ADX (NEW) |
 |-----------------|-----------|
-| `PROD_DATALAKE.FCTS.SENSOR_READING_BAG_B` | `database('BAG').FCTS` |
-| `PROD_DATALAKE.FCTS.SENSOR_READING_MOR_B` | `database('MOR').FCTS` |
-| `PROD_DATALAKE.FCTS.SENSOR_READING_SAM_B` | `database('SAM').FCTS` |
-| `PROD_DATALAKE.FCTS.SENSOR_READING_SIE_B` | `database('SIE').FCTS` |
-| `PROD_DATALAKE.FCTS.SENSOR_READING_NMO_B` | `database('NMO').FCTS` |
-| `PROD_DATALAKE.FCTS.SENSOR_READING_CMX_B` | `database('CMX').FCTS` |
-| `PROD_DATALAKE.FCTS.SENSOR_READING_CVE_B` | `database('CVE').FCTS` |
-
-### Beneficio
-Las tablas Snowflake tienen problemas de scan (sin clustering key):
-- `SENSOR_READING_MOR_B`: 3.16 TB / 292K partitions → ADX resuelve esto
-- `SENSOR_READING_NMO_B`: 269 GB / 34K partitions → ADX resuelve esto
+| `PROD_DATALAKE.FCTS.SENSOR_READING_BAG_B` | `database('Bagdad').FCTS` |
+| `PROD_DATALAKE.FCTS.SENSOR_READING_MOR_B` | `database('Morenci').FCTS` |
+| `PROD_DATALAKE.FCTS.SENSOR_READING_SAM_B` | `database('Miami').FCTS` |
+| `PROD_DATALAKE.FCTS.SENSOR_READING_SIE_B` | `database('Sierrita').FCTS` |
+| `PROD_DATALAKE.FCTS.SENSOR_READING_NMO_B` | `database('NewMexico').FCTS` |
+| `PROD_DATALAKE.FCTS.SENSOR_READING_CMX_B` | `database('Climax').FCTS` |
+| `PROD_DATALAKE.FCTS.SENSOR_READING_CVE_B` | `database('CerroVerde').FCTS` |
 
 ## Dependencias
 
@@ -94,15 +110,11 @@ Las tablas Snowflake tienen problemas de scan (sin clustering key):
 pip install azure-kusto-data azure-identity
 ```
 
-## Troubleshooting
+## Acceso
 
-### "No tienes acceso"
-1. Levanta ticket en [Application Access](https://login.microsoftonline.com/...)
-2. Contacta a **Chris Martin** para que asigne permisos al grupo correcto
-
-### "Timed out waiting for authentication"
-- Asegúrate de completar el login en el browser popup
-- Si no se abre, revisa bloqueadores de popups
+- **Grupo:** `SG-ENT-FCTS-ADX-Viewer`
+- **Ticket:** RITM0569765 (aprobado)
+- **Admin:** Chris Martin
 
 ## Contactos
 
