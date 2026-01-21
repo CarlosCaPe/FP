@@ -118,7 +118,7 @@ def run_adx_query(client, site_code: str, sensors: list[str]) -> tuple[pd.DataFr
         TAG_NAME = sensor_id,
         VALUE_UTC_TS = timestamp,
         SENSOR_VALUE = tostring(value),
-        UOM = unit,
+        UOM = uom,
         QUALITY = quality
     """
     
