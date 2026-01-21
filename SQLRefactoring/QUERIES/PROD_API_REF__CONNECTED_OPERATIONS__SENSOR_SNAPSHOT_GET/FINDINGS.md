@@ -48,6 +48,37 @@ Refactor:
 <!-- USER_NOTES_END -->
 
 ## Next steps
-- Main perf lever: stop scanning all 7 `SENSOR_READING_*_B` tables. Update the function to select only the site-specific table via `IDENTIFIER(CASE UPPER(PARAM_SITE_CODE) ...)`.
-- Re-run `snowrefactor analyze` and compare EXPLAIN scan footprints; expectation is a step-change reduction in bytes scanned.
-- ADX alignment: if the new source of truth is ADX, validate whether “snapshot” use-cases can use ADX `FCTSCURRENT` semantics (vs scanning archive lookback) and decide whether to query ADX directly or ingest a current-value table into Snowflake.
+- ✅ **DONE**: Refactor uses `IDENTIFIER(CASE UPPER(PARAM_SITE_CODE) ...)` to select only the site-specific table.
+- ✅ **DONE**: Uses `QUALIFY RANK()` instead of correlated subquery for MAX timestamp.
+- ✅ **DONE**: Added `PARAM_LOOKBACK_DAYS` parameter with 4-arg wrapper for backward compatibility.
+- 🔄 **PENDING**: Re-run `snowrefactor analyze` to measure bytes scanned reduction (expected ~85% reduction).
+- 🔄 **PENDING**: Regression test comparing baseline vs refactor output.
+- 📋 **FUTURE**: ADX migration - `FCTSCURRENT()` function in ADX already provides last value per sensor.
+
+## Refactor Details (2026-01-21)
+
+**Key optimizations in `refactor_ddl.sql`**:
+
+1. **Dynamic table selection** (lines 112-121):
+   ```sql
+   FROM IDENTIFIER(
+     CASE UPPER(PARAM_SITE_CODE)
+       WHEN 'SAM' THEN '...SENSOR_READING_SAM_B'
+       WHEN 'MOR' THEN '...SENSOR_READING_MOR_B'
+       ...
+     END
+   ) raw
+   ```
+
+2. **Single-pass snapshot** (line 130):
+   ```sql
+   QUALIFY RANK() OVER (PARTITION BY raw.sensor_id ORDER BY raw.value_utc_ts DESC) = 1
+   ```
+
+3. **Backward-compatible wrapper** (lines 165-196):
+   - 5-arg function: full control with `PARAM_LOOKBACK_DAYS`
+   - 4-arg function: wrapper that defaults lookback to 30 days
+
+**Expected performance**:
+- Bytes scanned: ~52 GB → ~7-8 GB (only 1 of 7 tables)
+- Execution time: ~40s → ~10s (estimated)

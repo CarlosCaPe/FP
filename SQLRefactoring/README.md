@@ -201,3 +201,126 @@ server = "azwp22midbx02.2a5d8efd6e55.database.windows.net"
    - **PROD**: `MEMORY_OPTIMIZED = ON` ✅
    
    Al crear tablas en DEV, NO usar memory optimized. Solo habilitarlo en PROD.
+
+---
+
+## 📋 Patrones de Refactoring (Copilot Memory)
+
+Esta sección documenta patrones comunes para que Copilot los recuerde en futuras sesiones.
+
+### Table Functions que escanean múltiples tablas por sitio
+
+**Problema típico**: Una table function recibe un parámetro `SITE_CODE` pero hace UNION de N tablas `*_SITE_B`, escaneando todas aunque solo una aplique.
+
+**Ejemplo**: `SENSOR_SNAPSHOT_GET` escaneaba 7 tablas `SENSOR_READING_*_B` (~52 GB) aunque solo necesitara una (~7 GB).
+
+**Solución Snowflake - IDENTIFIER() dinámico**:
+
+```sql
+-- Usar IDENTIFIER() con CASE para seleccionar dinámicamente la tabla
+FROM IDENTIFIER(
+  CASE UPPER(PARAM_SITE_CODE)
+    WHEN 'SAM' THEN 'PROD_DATALAKE.FCTS.SENSOR_READING_SAM_B'
+    WHEN 'MOR' THEN 'PROD_DATALAKE.FCTS.SENSOR_READING_MOR_B'
+    WHEN 'CMX' THEN 'PROD_DATALAKE.FCTS.SENSOR_READING_CMX_B'
+    -- ... etc
+  END
+) raw
+```
+
+**Beneficios**:
+- Solo escanea la tabla del sitio solicitado
+- Snowflake evalúa el CASE en tiempo de compilación
+- Reducción de ~85% en bytes escaneados
+
+### Obtener el último registro por entidad (snapshot)
+
+**Problema típico**: Subquery correlacionado `WHERE (id, ts) IN (SELECT id, MAX(ts) FROM ... GROUP BY id)` que fuerza doble escaneo.
+
+**Solución - QUALIFY con RANK/ROW_NUMBER**:
+
+```sql
+SELECT *
+FROM readings
+WHERE value_utc_ts > DATEADD('day', -30, CURRENT_TIMESTAMP())
+QUALIFY RANK() OVER (PARTITION BY sensor_id ORDER BY value_utc_ts DESC) = 1
+```
+
+**Notas**:
+- `RANK()` si hay ties y quieres todos los empates
+- `ROW_NUMBER()` si quieres exactamente 1 registro por partición
+- Una sola pasada sobre los datos vs doble escaneo
+
+### Wrapper para compatibilidad hacia atrás
+
+**Patrón**: Agregar parámetros opcionales sin romper callers existentes.
+
+```sql
+-- Función principal con nuevo parámetro
+CREATE OR REPLACE FUNCTION my_func(param1, param2, new_param NUMBER)
+RETURNS TABLE (...) AS '...';
+
+-- Wrapper que mantiene la firma original
+CREATE OR REPLACE FUNCTION my_func(param1, param2)
+RETURNS TABLE (...) AS '
+  SELECT * FROM TABLE(my_func(param1, param2, 30))  -- default value
+';
+```
+
+### Guía de estilo CTEs (dbt-like)
+
+```sql
+WITH 
+-- src_* : fuentes raw, parámetros parseados
+src_params AS (...),
+src_readings AS (...),
+
+-- int_* : transformaciones intermedias, joins, filtros
+int_filtered AS (...),
+int_latest AS (...),
+
+-- agg_* : agregaciones
+agg_summary AS (...),
+
+-- final : output limpio
+final AS (...)
+
+SELECT * FROM final;
+```
+
+---
+
+## 🔍 Casos de Estudio
+
+### SENSOR_SNAPSHOT_GET (PROD_API_REF.CONNECTED_OPERATIONS)
+
+**Ubicación**: `QUERIES/PROD_API_REF__CONNECTED_OPERATIONS__SENSOR_SNAPSHOT_GET/`
+
+**Baseline problems**:
+1. UNION de 7 tablas `SENSOR_READING_*_B` (~52 GB escaneados)
+2. Subquery correlacionado para `MAX(VALUE_UTC_TS)`
+3. Lookback hardcoded a 30 días
+
+**Refactor solutions**:
+1. `IDENTIFIER(CASE...)` para selección dinámica de tabla
+2. `QUALIFY RANK()` para snapshot en una pasada
+3. Parámetro `PARAM_LOOKBACK_DAYS` con wrapper 4-args para compatibilidad
+
+**Archivos**:
+- `baseline_ddl.sql` - DDL original de producción
+- `refactor_ddl.sql` - DDL refactorizado (sandbox)
+- `refactor_ddl_dev.sql` - Versión para deploy a SANDBOX_DATA_ENGINEER
+
+**Regression test**:
+```powershell
+# Comparar output de ambas funciones
+snowrefactor compare-views \
+  "TABLE(PROD_API_REF.CONNECTED_OPERATIONS.SENSOR_SNAPSHOT_GET('MOR', FALSE, ...))" \
+  "TABLE(SANDBOX_DATA_ENGINEER.CCARRILL2.SENSOR_SNAPSHOT_GET('MOR', FALSE, ...))"
+```
+
+**ADX Future Migration**:
+- Las tablas `SENSOR_READING_*_B` están siendo deprecadas
+- ADX cluster: `fctsnaproddatexp02.westus2.kusto.windows.net`
+- Cada sitio tiene su database (Morenci, Bagdad, etc.) con función `FCTSCURRENT()`
+- `FCTSCURRENT()` ya devuelve el último valor por sensor (no necesita ventana de 30 días)
