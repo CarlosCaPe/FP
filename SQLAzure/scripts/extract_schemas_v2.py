@@ -4,7 +4,7 @@ Uses azure-identity for authentication
 """
 import pyodbc
 import struct
-from azure.identity import AzureCliCredential, DefaultAzureCredential
+from azure.identity import AzureCliCredential, DefaultAzureCredential, InteractiveBrowserCredential
 import os
 from pathlib import Path
 from datetime import datetime
@@ -33,7 +33,7 @@ BASE_DIR = Path(__file__).parent
 # Get Azure AD token
 def get_token():
     """Get Azure AD access token for SQL using Azure CLI credential"""
-    credential = AzureCliCredential()
+    credential = InteractiveBrowserCredential()
     token = credential.get_token("https://database.windows.net/.default")
     return token.token
 
