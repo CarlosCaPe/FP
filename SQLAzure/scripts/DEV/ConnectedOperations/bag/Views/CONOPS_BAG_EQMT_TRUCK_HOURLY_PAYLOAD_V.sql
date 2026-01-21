@@ -1,0 +1,34 @@
+CREATE VIEW [bag].[CONOPS_BAG_EQMT_TRUCK_HOURLY_PAYLOAD_V] AS
+
+--SELECT * FROM [bag].[CONOPS_BAG_EQMT_TRUCK_HOURLY_PAYLOAD_V] WHERE shiftflag = 'curr' 
+CREATE VIEW [bag].[CONOPS_BAG_EQMT_TRUCK_HOURLY_PAYLOAD_V]
+AS
+
+WITH CTE AS(
+SELECT
+	SITE_CODE AS SITEFLAG,
+	SHIFT_ID AS SHIFTID,
+	TRUCK_NAME AS Equipment,
+	LOAD_HOS - 1 AS HOS,
+	AVG(MEASURED_PAYLOAD_SHORT_TONS) AS PAYLOAD
+FROM BAG.FLEET_SHOVEL_CYCLE_V a
+WHERE PayloadFilter = 1
+GROUP BY SITE_CODE, SHIFT_ID, TRUCK_NAME, LOAD_HOS
+)
+
+SELECT 
+	shiftflag,
+	a.siteflag,
+	Equipment,
+	avg(payload) as payload,
+	dateadd(hour,HOS,ShiftStartDateTime) as TimeinHour
+FROM BAG.CONOPS_BAG_SHIFT_INFO_V a
+LEFT JOIN CTE b
+	ON a.SHIFTID = b.SHIFTID
+GROUP BY shiftflag,
+	a.siteflag,
+	Equipment,
+	HOS,
+	SHIFTSTARTDATETIME
+
+

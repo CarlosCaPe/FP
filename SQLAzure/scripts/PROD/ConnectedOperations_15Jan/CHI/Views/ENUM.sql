@@ -1,0 +1,13 @@
+CREATE VIEW [CHI].[ENUM] AS
+
+
+--SELECT * FROM CHI.ENUM
+CREATE VIEW CHI.ENUM
+AS
+
+SELECT
+'CHI' AS SITEFLAG,
+*
+FROM CHNOperational.dbo.enum WITH(NOLOCK)
+
+

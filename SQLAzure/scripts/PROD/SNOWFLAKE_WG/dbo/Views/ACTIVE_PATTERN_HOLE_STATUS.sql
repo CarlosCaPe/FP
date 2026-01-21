@@ -1,0 +1,1 @@
+-- Unable to get definition for [dbo].[ACTIVE_PATTERN_HOLE_STATUS]

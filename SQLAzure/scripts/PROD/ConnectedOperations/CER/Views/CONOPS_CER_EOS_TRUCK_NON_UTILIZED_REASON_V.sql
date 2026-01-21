@@ -1,0 +1,31 @@
+CREATE VIEW [CER].[CONOPS_CER_EOS_TRUCK_NON_UTILIZED_REASON_V] AS
+
+--SELECT * FROM [CER].[CONOPS_CER_EOS_TRUCK_NON_UTILIZED_REASON_V] WHERE SHIFTFLAG = 'CURR'
+CREATE VIEW [CER].[CONOPS_CER_EOS_TRUCK_NON_UTILIZED_REASON_V]
+AS
+
+WITH AllReason AS(
+SELECT
+	s.shiftflag,
+	s.siteflag,
+	'Truck' AS unittype,
+	e.reasons AS Reason,
+	COALESCE(SUM(e.DURATION) / 3600.0, 0) AS DurationHours,
+	ROW_NUMBER() OVER(PARTITION BY s.shiftflag ORDER BY SUM(e.DURATION) / 3600.0 DESC) AS rn
+FROM CER.ASSET_EFFICIENCY e WITH (NOLOCK)
+INNER JOIN CER.CONOPS_CER_SHIFT_INFO_V s WITH (NOLOCK)
+	ON e.SHIFTID = s.shiftid
+WHERE e.UNITTYPE = 'Camion'
+	AND (e.categoryidx = 3 OR e.statusidx IN (3, 4))
+GROUP BY s.shiftflag, s.siteflag, e.reasons
+)
+
+SELECT
+	shiftflag,
+	siteflag,
+	unittype,
+	Reason,
+	DurationHours
+FROM AllReason
+WHERE rn <= 5
+

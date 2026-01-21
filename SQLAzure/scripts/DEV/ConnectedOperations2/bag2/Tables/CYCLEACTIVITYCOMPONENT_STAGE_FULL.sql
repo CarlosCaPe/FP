@@ -1,0 +1,10 @@
+CREATE TABLE [bag2].[CYCLEACTIVITYCOMPONENT_STAGE_FULL] (
+    [OID] bigint NOT NULL,
+    [NAME] nvarchar(254) NOT NULL,
+    [START_TIME_UTC] datetime2 NOT NULL,
+    [END_TIME_UTC] datetime2 NOT NULL,
+    [ESTIMATED_FUEL_USED] float NULL,
+    [CREATED_DATE_UTC] datetime2 NULL,
+    [LAST_MODIFIED_UTC] datetime2 NULL,
+    [UTC_CREATED_DATE] datetime NOT NULL
+);

@@ -1,0 +1,182 @@
+CREATE VIEW [dbo].[CONOPS_FR_DRILLING_SCORES_ETL_V] AS
+
+CREATE VIEW DBO.[CONOPS_FR_DRILLING_SCORES_ETL_V]    
+AS    
+  
+SELECT CASE WHEN SITE_CODE ='CER' THEN ( (datediff (day, cast('1970-01-01' as date) ,[date]))*2 +  (CASE WHEN shift_name ='Dia'   
+THEN CONCAT(RIGHT(REPLACE(CAST(LEFT(date, LEN(date) - CHARINDEX('/', REVERSE(date))) AS DATE),'-',''),6),'001')   
+ELSE CONCAT(RIGHT(REPLACE(CAST(LEFT(date, LEN(date) - CHARINDEX('/', REVERSE(date))) AS DATE),'-',''),6),'002')  END -1) % 2 ) *10  
+ELSE  
+( (datediff (day, cast('1970-01-01' as date) ,[date]))*2 +  (CASE WHEN shift_name ='Day Shift'   
+THEN CONCAT(RIGHT(REPLACE(CAST(LEFT(date, LEN(date) - CHARINDEX('/', REVERSE(date))) AS DATE),'-',''),6),'001')   
+ELSE CONCAT(RIGHT(REPLACE(CAST(LEFT(date, LEN(date) - CHARINDEX('/', REVERSE(date))) AS DATE),'-',''),6),'002')  END -1) % 2 )   
+END AS SHIFTINDEX,  
+SITE_CODE,  
+DATE,  
+SHIFT_NAME,  
+CREW_NAME,  
+OPERATORID,  
+OPERATORNAME,  
+PATTERN_NO,  
+SITE_HOLE_NAME,  
+HOLENUMBER,  
+START_HOLE_TS,  
+END_HOLE_TS,  
+HOLETIME,  
+DRILLED,  
+PENRATE,  
+GPS_QUALITY,  
+START_POINT_X,  
+START_POINT_Y,  
+START_POINT_Z,  
+ZACTUALEND,  
+DESIGN_X_START,  
+DESIGN_Y_START,  
+DESIGN_Z_START,  
+ZPLANEND,  
+BENCH,  
+HORIZDIFF,  
+DEPTH,  
+PLAN_DEPTH,  
+DEPTHDIFF,  
+OVER_DRILLED,  
+UNDER_DRILLED,  
+DEPTH_DIFF_FLAG,  
+HORIZ_DIFF_FLAG,  
+HORSCORE,  
+DEPTHSCORE,  
+OVERALLSCORE,  
+DRILL_HOLE,  
+DRILL_BIT_ID,  
+DRILL_ID,  
+SOURCE_DRILL_SERIAL_NO,  
+SOURCE_SYSTEM,  
+[RANK],  
+HOLEORD,  
+HOLEORDPATTERN,  
+WATER_DEPTH,  
+STEM_HEIGHT,  
+PROD_1_NAME,  
+PROD_1_WEIGHT,  
+UTC_CREATED_DATE   
+FROM  
+(   
+  
+  
+SELECT  
+SITE_CODE,  
+DATE,  
+SHIFT_NAME,  
+CREW_NAME,  
+OPERATORID,  
+OPERATORNAME,  
+PATTERN_NO,  
+SITE_HOLE_NAME,  
+HOLENUMBER,  
+START_HOLE_TS,  
+END_HOLE_TS,  
+HOLETIME,  
+DRILLED,  
+PENRATE,  
+GPS_QUALITY,  
+START_POINT_X,  
+START_POINT_Y,  
+START_POINT_Z,  
+ZACTUALEND,  
+DESIGN_X_START,  
+DESIGN_Y_START,  
+DESIGN_Z_START,  
+ZPLANEND,  
+BENCH,  
+HORIZDIFF,  
+DEPTH,  
+PLAN_DEPTH,  
+DEPTHDIFF,  
+OVER_DRILLED,  
+UNDER_DRILLED,  
+DEPTH_DIFF_FLAG,  
+HORIZ_DIFF_FLAG,  
+HORSCORE,  
+DEPTHSCORE,  
+OVERALLSCORE,  
+DRILL_HOLE,  
+DRILL_BIT_ID,  
+DRILL_ID,  
+SOURCE_DRILL_SERIAL_NO,  
+SOURCE_SYSTEM,  
+[RANK],  
+HOLEORD,  
+HOLEORDPATTERN,  
+WATER_DEPTH,  
+STEM_HEIGHT,  
+PROD_1_NAME,  
+PROD_1_WEIGHT,  
+UTC_CREATED_DATE   
+from [dbo].[FR_DRILLING_SCORES_STG] A (NOLOCK)  
+where A.shift_name is NOT NULL  
+  
+UNION  
+  
+-- Logic for shiftname is blank  
+  
+SELECT  
+SITE_CODE,  
+DATE,  
+Case When SITE_CODE ='CER' THEN (Case When B.shiftflag IS NULL then 'Noche' else 'Dia' end )  
+ELSE (Case When B.shiftflag IS NULL then 'Night Shift' else 'Day Shift' end ) END as SHIFT_NAME,  
+CREW_NAME,  
+OPERATORID,  
+OPERATORNAME,  
+PATTERN_NO,  
+SITE_HOLE_NAME,  
+HOLENUMBER,  
+START_HOLE_TS,  
+END_HOLE_TS,  
+HOLETIME,  
+DRILLED,  
+PENRATE,  
+GPS_QUALITY,  
+START_POINT_X,  
+START_POINT_Y,  
+START_POINT_Z,  
+ZACTUALEND,  
+DESIGN_X_START,  
+DESIGN_Y_START,  
+DESIGN_Z_START,  
+ZPLANEND,  
+BENCH,  
+HORIZDIFF,  
+DEPTH,  
+PLAN_DEPTH,  
+DEPTHDIFF,  
+OVER_DRILLED,  
+UNDER_DRILLED,  
+DEPTH_DIFF_FLAG,  
+HORIZ_DIFF_FLAG,  
+HORSCORE,  
+DEPTHSCORE,  
+OVERALLSCORE,  
+DRILL_HOLE,  
+DRILL_BIT_ID,  
+DRILL_ID,  
+SOURCE_DRILL_SERIAL_NO,  
+SOURCE_SYSTEM,  
+[RANK],  
+HOLEORD,  
+HOLEORDPATTERN,  
+WATER_DEPTH,  
+STEM_HEIGHT,  
+PROD_1_NAME,  
+PROD_1_WEIGHT,  
+UTC_CREATED_DATE   
+from [dbo].[FR_DRILLING_SCORES_STG] A  (NOLOCK)  
+left join   
+(  
+select distinct case when siteflag = 'CMX' then 'CLI' else siteflag end as siteflag,   
+cast(shiftstartdatetime as time(0)) as starttime,   
+cast(shiftenddatetime as time(0)) as endtime,  
+case when cast(shiftstartdatetime as time(0)) < cast(shiftenddatetime as time(0)) then 1 else 2 end as shiftflag  
+from DBO.shift_info_v  (NOLOCK)  
+) B on B.siteflag = A.site_code   
+AND cast(A.date as time(0)) between B.starttime and B.endtime    
+where A.shi

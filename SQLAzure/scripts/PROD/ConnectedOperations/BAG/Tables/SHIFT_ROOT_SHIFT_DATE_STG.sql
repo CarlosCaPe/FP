@@ -1,0 +1,18 @@
+CREATE TABLE [BAG].[SHIFT_ROOT_SHIFT_DATE_STG] (
+    [ID] decimal(19,0) NOT NULL,
+    [FIELDSTART] int NULL,
+    [FIELDTIME] int NULL,
+    [FIELDYEAR] int NULL,
+    [FIELDMONTH] decimal(19,0) NULL,
+    [FIELDDAY] int NULL,
+    [FIELDSHIFT] decimal(19,0) NULL,
+    [FIELDCREW] decimal(19,0) NULL,
+    [FIELDHOLIDAY] int NULL,
+    [FIELDUTCSTART] int NULL,
+    [FIELDUTCEND] int NULL,
+    [FIELDDSTSTATE] decimal(19,0) NULL,
+    [CHANGE_TYPE] varchar(1) NOT NULL,
+    [CHANGE_ID] decimal(19,0) NOT NULL,
+    [UTC_CREATED_DATE] datetime NOT NULL,
+    [UTC_LOGICAL_DELETED_DATE] datetime NULL
+);

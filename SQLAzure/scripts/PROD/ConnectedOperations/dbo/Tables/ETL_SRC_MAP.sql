@@ -1,0 +1,23 @@
+CREATE TABLE [dbo].[ETL_SRC_MAP] (
+    [ETL_JOB_NAME] varchar(100) NOT NULL,
+    [APP_NAME] varchar(100) NULL,
+    [APP_INSTANCE_NAME] varchar(100) NULL,
+    [SITE_CODE] varchar(100) NULL,
+    [SRC_DB_TYPE] varchar(100) NULL,
+    [SRC_SERVER_NAME] varchar(100) NULL,
+    [SRC_DB_NAME] varchar(100) NULL,
+    [SRC_SCHEMA_NAME] varchar(100) NULL,
+    [SRC_CONN_USER] varchar(100) NULL,
+    [SRC_CONN_MODE] varchar(100) NULL,
+    [SRC_CONN_KEYVAULT_NAME] varchar(250) NULL,
+    [SRC_CONN_KEYVAULT_SECRET] varchar(50) NULL,
+    [TABLE_STG_DB_NAME] varchar(100) NULL,
+    [TABLE_STG_SCHEMA_NAME] varchar(100) NULL,
+    [TGT_DB_NAME] varchar(100) NULL,
+    [TGT_SCHEMA_NAME] varchar(100) NULL,
+    [LAST_REQUESTED_BY] varchar(100) NULL,
+    [CREATED_BY] varchar(100) NULL,
+    [CREATED_TS] datetime NULL,
+    [LAST_UPDATED_BY] varchar(100) NULL,
+    [LAST_UPDATED_TS] datetime NULL
+);

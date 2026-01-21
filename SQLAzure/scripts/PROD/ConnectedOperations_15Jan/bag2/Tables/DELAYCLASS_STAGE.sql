@@ -1,0 +1,3 @@
+CREATE TABLE [bag2].[DELAYCLASS_STAGE] (
+    [SRC_JSON] nvarchar NULL
+);

@@ -1,0 +1,23 @@
+CREATE TYPE [dbo].[LOAD_HAUL__LH_EQUIPMENT_STATUS_EVENT_IMO] AS TABLE (
+    [SITE_CODE] varchar(4) NOT NULL,
+    [EQUIP_ID] numeric(19,0) NOT NULL,
+    [EQUIP_CATEGORY] varchar(64) NULL,
+    [ORIG_SRC_ID] numeric(38,0) NULL,
+    [EQUIP_STATUS_EVENT_SK] varchar(8000) NULL,
+    [SHIFT_ID] varchar(8000) NULL,
+    [CYCLE_ID] numeric(19,0) NULL,
+    [STATUS_EVENT_REASON_ID] numeric(19,0) NULL,
+    [START_TS_UTC] datetime2 NULL,
+    [END_TS_UTC] datetime2 NULL,
+    [START_TS_LOCAL] datetime2 NOT NULL,
+    [END_TS_LOCAL] datetime2 NULL,
+    [DURATION_MINS] numeric(38,12) NULL,
+    [EVENT_COMMENTS] varchar(8000) NULL,
+    [DISTINCT_STATUS_EVENT_FLAG] numeric(1,0) NULL,
+    [PREV_STATUS_EVENT_ID] varchar(8000) NULL,
+    [NEXT_STATUS_EVENT_ID] varchar(8000) NULL,
+    [SYSTEM_VERSION] varchar(50) NULL,
+    [DW_LOGICAL_DELETE_FLAG] varchar(1) NULL,
+    [DW_LOAD_TS] datetime2 NULL,
+    [DW_MODIFY_TS] datetime2 NULL
+);

@@ -1,0 +1,1 @@
+-- Unable to get definition for [dbo].[RCS_OPERATOR_AUTODRILLING_V]

@@ -1,0 +1,13 @@
+CREATE VIEW [SIE].[ENUM] AS
+
+
+--SELECT * FROM SIE.ENUM
+CREATE VIEW SIE.ENUM
+AS
+
+SELECT
+'SIE' AS SITEFLAG,
+*
+FROM SIEOperational.dbo.enum WITH(NOLOCK)
+
+

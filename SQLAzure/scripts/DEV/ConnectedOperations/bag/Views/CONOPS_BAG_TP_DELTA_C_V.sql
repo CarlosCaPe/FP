@@ -1,0 +1,104 @@
+CREATE VIEW [bag].[CONOPS_BAG_TP_DELTA_C_V] AS
+  
+    
+--select * FROm [bag].[CONOPS_BAG_TP_DELTA_C_V] where shiftflag = 'curr'    
+    
+CREATE VIEW [bag].[CONOPS_BAG_TP_DELTA_C_V]    
+AS    
+    
+WITH DELTAC AS (    
+SELECT    
+shiftindex,    
+site_code,    
+truck,    
+deltac,    
+idletime,    
+spottime,    
+loadtime,    
+DumpingTime,    
+EFH,    
+DumpingAtStockpile,    
+DumpingAtCrusher,    
+LoadedTravel,    
+EmptyTravel    
+FROM [bag].[CONOPS_BAG_TP_DELTA_C_AVG_V]),    
+    
+    
+STAT AS (    
+select shiftid,eqmt,reasonidx,reasons,[status] as eqmtcurrstatus,    
+ROW_NUMBER() OVER (PARTITION BY shiftid,eqmt ORDER BY startdatetime DESC) num    
+from [bag].[asset_efficiency] (NOLOCK)    
+where unittype = 'truck'),    
+    
+PIT AS (    
+select     
+site_code,    
+ldump.shiftindex,    
+ldump.truck,    
+case when ldump.dump_blast like '%WT%' THEN 'W COOPER 10'    
+when ldump.dump_blast like '%WF%' THEN 'W COOPER 14'    
+when ldump.dump_blast like '%SR%' THEN 'SUN RIDGE MINE'    
+when ldump.dump_blast like '%AM%' THEN 'AMT MINE'    
+when ldump.dump_blast like '%WC%' THEN 'W COOPER'    
+when ldump.dump_blast like '%CO%' THEN 'CORONADO'    
+when ldump.dump_blast IS NULL THEN 'Other'    
+when ldump.grade like '%MILL%' THEN 'Mill Stockpiles'    
+ELSE ldump.grade end as Pushback,    
+ROW_NUMBER() OVER (PARTITION BY ldump.shiftindex,ldump.truck ORDER BY ldump.TIMEDUMP_TS DESC) row_num    
+from dbo.lh_dump ldump WITH (NOLOCK)    
+    
+WHERE ldump.site_code = 'BAG')    
+    
+SELECT     
+pop.shiftflag,    
+pop.siteflag,    
+pop.shiftid,    
+dc.truck,    
+pop.eqmttype,    
+UPPER(pop.operator) as toper,    
+pop.OperatorImageURL,    
+pop.OperatorID,    
+pop.payload AS AVG_Payload,    
+pop.payloadtarget as AVG_PayloadTarget,    
+dc.deltac,    
+pop.DeltaCTarget AS Delta_c_target,    
+dc.idletime,    
+pop.idletimetarget,    
+dc.spottime,    
+pop.SpottingTarget AS spottarget,    
+dc.loadtime,    
+pop.LoadingTarget AS loadtarget,    
+dc.DumpingTime,    
+pop.dumpingtarget,    
+dc.EFH,    
+pop.EFHtarget,    
+dc.DumpingAtStockpile,    
+pop.DumpsAtStockpileTarget AS dumpingatStockpileTarget,    
+dc.DumpingAtCrusher,    
+pop.DumpsAtCrusherTarget AS dumpingAtCrusherTarget,    
+dc.LoadedTravel,    
+pop.LoadedTravelTarget,    
+dc.EmptyTravel,    
+pop.EmptyTravelTarget,    
+pop.AvgUseOfAvailibility AS useOfAvailability,    
+pop.AvgUseOfAvailibilityTarget AS useOfAvailabilityTarget,    
+pop.TotalMaterialDelivered,    
+pop.TotalMaterialDeliveredTarget,    
+pop.[Location] AS [destination],    
+pit.Pushback AS Pit,    
+stat.reasonidx,    
+stat.reasons,    
+stat.eqmtcurrstatus    
+FROM DELTAC dc    
+LEFT JOIN [bag].[CONOPS_BAG_TRUCK_POPUP] pop WITH (NOLOCK) ON dc.shiftindex = pop.shiftindex AND dc.truck = pop.TruckID    
+LEFT JOIN STAT stat ON pop.shiftid = stat.shiftid AND stat.eqmt = dc.truck AND stat.num = 1    
+LEFT JOIN PIT pit ON pit.shiftindex = pop.shiftindex AND pit.TRUCK = dc.truck AND pit.row_num = 1    
+    
+WHERE pop.shiftflag is not null    
+    
+    
+    
+    
+    
+    
+  

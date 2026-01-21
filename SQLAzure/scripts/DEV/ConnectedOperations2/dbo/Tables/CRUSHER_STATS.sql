@@ -1,0 +1,7 @@
+CREATE TABLE [dbo].[CRUSHER_STATS] (
+    [SITEFLAG] varchar(5) NOT NULL,
+    [SHIFTINDEX] int NOT NULL,
+    [CRUSHERLOC] varchar(100) NOT NULL,
+    [NOOFTRUCKWAITING] int NOT NULL,
+    [UTC_CREATED_DATE] datetime NOT NULL
+);

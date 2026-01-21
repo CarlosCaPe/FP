@@ -1,0 +1,13 @@
+CREATE VIEW [TYR].[ENUM] AS
+
+
+--SELECT * FROM TYR.ENUM
+CREATE VIEW TYR.ENUM
+AS
+
+SELECT
+'TYR' AS SITEFLAG,
+*
+FROM TYROperational.dbo.enum WITH(NOLOCK)
+
+

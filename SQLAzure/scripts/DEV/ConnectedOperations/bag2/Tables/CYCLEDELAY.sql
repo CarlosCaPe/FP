@@ -1,0 +1,15 @@
+CREATE TABLE [bag2].[CYCLEDELAY] (
+    [SITEFLAG] varchar(5) NOT NULL,
+    [OID] bigint NOT NULL,
+    [START_TIME_UTC] datetime2 NOT NULL,
+    [END_TIME_UTC] datetime2 NOT NULL,
+    [DELAYOID] bigint NOT NULL,
+    [DELAY_CLASS_OID] bigint NOT NULL,
+    [DELAY_CLASS_NAME] nvarchar(254) NULL,
+    [DELAY_CLASS_DESC] nvarchar(254) NULL,
+    [DELAY_CATEGORY] nvarchar(254) NULL,
+    [ESTIMATED_DURATION_MAGNITUDE] float NULL,
+    [ESTIMATED_FUEL_USED] float NULL,
+    [UTC_CREATED_DATE] datetime NOT NULL,
+    [UTC_LOGICAL_DELETED_DATE] datetime NULL
+);

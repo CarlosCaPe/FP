@@ -1,0 +1,68 @@
+CREATE VIEW [sie].[CONOPS_SIE_DAILY_EOS_IOS_STOCKPILE_HOURLY_V] AS
+  
+  
+  
+  
+  
+  
+  
+--SELECT * FROM [SIE].[CONOPS_SIE_DAILY_EOS_IOS_STOCKPILE_HOURLY_V] WHERE shiftflag = 'PREV'  
+CREATE VIEW [sie].[CONOPS_SIE_DAILY_EOS_IOS_STOCKPILE_HOURLY_V]  
+AS  
+  
+WITH CrLoc AS(  
+ SELECT 'CRUSHER' CrusherLoc  
+ UNION ALL  
+ SELECT 'A-SIDE' CrusherLoc  
+ UNION ALL  
+ SELECT 'B-SIDE' CrusherLoc  
+),  
+  
+CrLocShift AS(  
+SELECT  
+ a.SHIFTINDEX,  
+ a.SHIFTFLAG,  
+ a.SITEFLAG,  
+ a.SHIFTSTARTDATETIME,  
+ a.SHIFTENDDATETIME,  
+ CrusherLoc  
+FROM CrLoc, [SIE].[CONOPS_SIE_EOS_SHIFT_INFO_V] a WITH (NOLOCK)  
+),  
+  
+CTE AS(  
+SELECT  
+ c.SITEFLAG,  
+ c.shiftflag,  
+ c.SHIFTINDEX,  
+ c.CRUSHERLOC,  
+ a.COMPONENT,  
+ a.VALUE_TS,  
+ CAST(CONCAT(FORMAT(ISNULL(a.VALUE_TS,SHIFTSTARTDATETIME), 'yyyy-MM-dd HH'), FORMAT(SHIFTSTARTDATETIME, ':mm:00')) AS Datetime) AS DateTime,  
+ a.SENSORVALUE  
+FROM CrLocShift c  
+LEFT OUTER JOIN dbo.IOS_STOCKPILE_LEVELS a WITH (NOLOCK)  
+ ON c.CrusherLoc = a.CRUSHERLOC   
+ AND c.siteflag = 'SIE'  
+WHERE c.siteflag = 'SIE'  
+AND DATEADD(MINUTE, DATEDIFF(MINUTE, 0, a.VALUE_TS), 0) BETWEEN SHIFTSTARTDATETIME AND SHIFTENDDATETIME  
+AND CAST(FORMAT(a.VALUE_TS, 'mm') AS INT) - CAST(FORMAT(SHIFTSTARTDATETIME, 'mm') AS INT) BETWEEN 0 AND 5  
+OR c.CRUSHERLOC IN ('A-SIDE', 'B-SIDE')  
+--AND DATEPART(MINUTE,VALUE_TS) = '15'  
+)  
+  
+  
+SELECT   
+ SITEFLAG,  
+ shiftflag,  
+ SHIFTINDEX,  
+ CRUSHERLOC,  
+ "DateTime",  
+ RANK() OVER (PARTITION BY shiftflag, CRUSHERLOC ORDER BY "DateTime" ASC) AS shiftseq,  
+ CrusherStockpile,  
+ CrusherStockpileTons  
+FROM CTE  
+PIVOT    
+(AVG([SENSORVALUE]) FOR [COMPONENT]  IN (CrusherStockpile, CrusherStockpileTons)) AS PivotTable  
+  
+  
+  

@@ -1,0 +1,23 @@
+CREATE TABLE [cli].[SHIFT_GRADE] (
+    [SITEFLAG] varchar(5) NOT NULL,
+    [DBPREVIOUS] bigint NULL,
+    [DBNEXT] bigint NULL,
+    [DBVERSION] int NULL,
+    [SHIFTID] bigint NULL,
+    [ID] bigint NOT NULL,
+    [DBNAME] nvarchar(32) NOT NULL,
+    [DBKEY] bigint NOT NULL,
+    [FIELDID] nvarchar(36) NULL,
+    [FIELDLOC] bigint NULL,
+    [FIELDDUMP] bigint NULL,
+    [FIELDINV] float NULL,
+    [FIELDSPGR] float NULL,
+    [FIELDLOAD] bigint NULL,
+    [FIELDBLEND] bigint NULL,
+    [FIELDDENSITY] float NULL,
+    [FIELDTHICKNESS] float NULL,
+    [FIELDSHOT] tinyint NULL,
+    [FIELDPROPERTY] nvarchar(20) NULL,
+    [UTC_CREATED_DATE] datetime NOT NULL,
+    [UTC_LOGICAL_DELETED_DATE] datetime NULL
+);

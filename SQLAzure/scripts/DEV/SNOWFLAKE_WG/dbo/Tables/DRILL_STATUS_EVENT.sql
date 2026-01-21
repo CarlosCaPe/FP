@@ -1,0 +1,22 @@
+CREATE TABLE [dbo].[DRILL_STATUS_EVENT] (
+    [ORIG_SRC_ID] bigint NULL,
+    [SITE_CODE] varchar(4) NOT NULL,
+    [SHIFT_ID] varchar(12) NULL,
+    [SYSTEM_VERSION] varchar(50) NULL,
+    [DRILL_ID] bigint NULL,
+    [STATUS_EVENT_REASON_ID] bigint NOT NULL,
+    [EQUIPMENT_CATEGORY] varchar(64) NULL,
+    [EQUIPMENT_STATUS_EVENT_SK] varchar(100) NULL,
+    [DRILL_CYCLE_SK] bigint NULL,
+    [START_TS_UTC] datetimeoffset NULL,
+    [END_TS_UTC] datetimeoffset NULL,
+    [START_TS_LOCAL] datetimeoffset NULL,
+    [END_TS_LOCAL] datetimeoffset NULL,
+    [DURATION_MINS] decimal(38,6) NULL,
+    [EVENT_COMMENTS] varchar NULL,
+    [DISTINCT_STATUS_EVENT_FLAG] bit NULL,
+    [PREV_STATUS_EVENT_ID] varchar(100) NULL,
+    [NEXT_STATUS_EVENT_ID] varchar(100) NULL,
+    [DW_LOAD_TS] datetime2 NULL,
+    [DW_MODIFY_TS] datetime2 NULL
+);

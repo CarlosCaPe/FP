@@ -1,0 +1,20 @@
+CREATE TABLE [cer].[ZZZ_lh2_shift_root_date_b_temp] (
+    [shift_root_date_id] bigint NOT NULL DEFAULT ((0)),
+    [FieldStart] int NULL,
+    [FieldTime] int NULL,
+    [FieldYear] smallint NULL,
+    [FieldMonth] bigint NULL,
+    [FieldDay] smallint NULL,
+    [FieldShift] bigint NULL,
+    [FieldCrew] bigint NULL,
+    [FieldHoliday] smallint NULL,
+    [FieldUtcstart] int NULL,
+    [FieldUtcend] int NULL,
+    [FieldDststate] bigint NULL,
+    [Shiftdate] datetime2 NOT NULL DEFAULT ('01-jan-0001 00:00:00'),
+    [capture_ts_utc] datetimeoffset NOT NULL DEFAULT ('01-jan-0001 00:00:00'),
+    [integrate_ts_utc] datetimeoffset NOT NULL DEFAULT ('01-jan-0001 00:00:00'),
+    [logical_delete_flag] char(1) NOT NULL DEFAULT (''),
+    [orig_src_id] int NOT NULL DEFAULT ((0)),
+    [site_code] varchar(4) NOT NULL DEFAULT ('')
+);

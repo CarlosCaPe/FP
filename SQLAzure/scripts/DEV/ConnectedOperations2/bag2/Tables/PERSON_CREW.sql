@@ -1,0 +1,7 @@
+CREATE TABLE [bag2].[PERSON_CREW] (
+    [SITEFLAG] varchar(5) NOT NULL,
+    [PERSON_OID] bigint NOT NULL,
+    [CREW_OID] bigint NOT NULL,
+    [UTC_CREATED_DATE] datetime NOT NULL,
+    [UTC_LOGICAL_DELETED_DATE] datetime NULL
+);

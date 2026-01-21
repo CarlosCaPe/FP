@@ -1,0 +1,20 @@
+CREATE TYPE [dbo].[BL_DW_BLAST_IMO] AS TABLE (
+    [ORIG_SRC_ID] bigint NOT NULL,
+    [SITE_CODE] varchar(50) NOT NULL,
+    [ID] int NOT NULL,
+    [NAME] varchar(1000) NULL,
+    [STATUS] varchar(20) NULL,
+    [FIREDTIME] varchar(50) NULL,
+    [ABANDONEDTIME] varchar(50) NULL,
+    [ABANDONEDCOMMENT] varchar(5000) NULL,
+    [SUSPENDEDTIME] varchar(50) NULL,
+    [SUSPENDEDCOMMENT] varchar(5000) NULL,
+    [VOLUME] float NULL,
+    [HOLECOUNT] int NULL,
+    [SHOTFIRERNAME] varchar(500) NULL,
+    [REFRESHEDTIME] varchar(50) NULL,
+    [DELETED] bit NULL,
+    [DW_MODIFY_TS] varchar(50) NULL,
+    [DW_LOAD_TS] varchar(50) NULL,
+    [DW_FILE_TS_UTC] varchar(50) NULL
+);

@@ -1,0 +1,22 @@
+CREATE TABLE [mor].[shift_info_stg] (
+    [ShiftId] decimal(19,0) NOT NULL,
+    [ShiftName] varchar(4000) NULL,
+    [DbName] varchar(32) NOT NULL,
+    [ShiftYear] int NULL,
+    [ShiftMonth] int NULL,
+    [ShiftDay] int NULL,
+    [ShiftSuffix] varchar(1) NULL,
+    [FullShiftSuffix] varchar(64) NULL,
+    [ShiftStartSecSinceMidnight] int NULL,
+    [ShiftStartTimestamp] int NULL,
+    [ShiftStartTimestampUtc] int NULL,
+    [ShiftStartDate] datetime2 NULL,
+    [ShiftStartDateTime] datetime2 NULL,
+    [FullShiftName] varchar(4000) NULL,
+    [Holiday] int NULL,
+    [Crew] varchar(64) NULL,
+    [ShiftDuration] int NULL,
+    [ShiftDate] varchar(4000) NULL,
+    [UTC_CREATED_DATE] datetime NOT NULL,
+    [UTC_LOGICAL_DELETED_DATE] datetime NULL
+);

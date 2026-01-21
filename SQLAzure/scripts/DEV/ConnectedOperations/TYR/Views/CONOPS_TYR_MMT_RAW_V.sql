@@ -1,0 +1,120 @@
+CREATE VIEW [TYR].[CONOPS_TYR_MMT_RAW_V] AS
+
+
+
+--SELECT * FROM [tyr].[CONOPS_TYR_MMT_RAW_V] WHERE SHIFTFLAG = 'CURR'  
+CREATE VIEW [TYR].[CONOPS_TYR_MMT_RAW_V]  
+AS  
+  
+	WITH CrLoc AS (
+   		SELECT 'Crusher 1' CrusherLoc
+	),
+
+	CrLocShift AS (
+   		SELECT a.SHIFTINDEX,
+			   a.SHIFTFLAG,
+			   a.SITEFLAG,
+			   a.shiftstartdatetime,
+			   CrusherLoc
+   		FROM CrLoc, [tyr].[CONOPS_TYR_SHIFT_INFO_V] a WITH (NOLOCK)
+	),
+
+	TonsGrade AS (
+		SELECT [SHIFTINDEX]
+			  ,[SITE_CODE]
+			  ,[DUMP_LOC]
+			  ,[LOAD_EXCAV]
+			  ,SUM((ISNULL([TCU_PCT], 0) * CONVERT(DECIMAL(10), ISNULL([DUMPTONS], 0)))) / SUM([DUMPTONS]) AS [TCU_PCT]
+			  ,SUM((ISNULL([TMO_PCT], 0) * CONVERT(DECIMAL(10), ISNULL([DUMPTONS], 0)))) / SUM([DUMPTONS]) AS [TMO_PCT]
+			  ,SUM((ISNULL([TCLAY_PCT], 0) * CONVERT(DECIMAL(10), ISNULL([DUMPTONS], 0)))) / SUM([DUMPTONS]) AS [TCLAY_PCT]
+			  ,SUM((ISNULL([XCU_PCT], 0) * CONVERT(DECIMAL(10), ISNULL([DUMPTONS], 0)))) / SUM([DUMPTONS]) AS [XCU_PCT]
+			  ,SUM((ISNULL([KAOLINITE_PCT], 0) * CONVERT(DECIMAL(10), ISNULL([DUMPTONS], 0)))) / SUM([DUMPTONS]) AS [KAOLINITE_PCT]
+			  ,SUM((ISNULL([ASCU_PCT], 0) * CONVERT(DECIMAL(10), ISNULL([DUMPTONS], 0)))) / COUNT([DUMPTONS]) AS [ASCU_PCT]
+			  ,SUM((ISNULL([SWELLING_CLAY_PCT], 0) * CONVERT(DECIMAL(10), ISNULL([DUMPTONS], 0)))) / SUM([DUMPTONS]) AS [SWELLING_CLAY_PCT]
+			  ,SUM((ISNULL([SDR_P80], 0) * CONVERT(DECIMAL(10), ISNULL([DUMPTONS], 0)))) / SUM([DUMPTONS]) AS [SDR_P80]
+			  ,SUM((ISNULL([OXIDE_SULFIDE_RATIO], 0) * CONVERT(DECIMAL(10), ISNULL([DUMPTONS], 0)))) / SUM([DUMPTONS]) AS [OXIDE_SULFIDE_RATIO]
+			  ,SUM((ISNULL([FE_PCT], 0) * CONVERT(DECIMAL(10), ISNULL([DUMPTONS], 0)))) / SUM([DUMPTONS]) AS [FE_PCT]
+			  ,SUM((ISNULL([PB_PCT], 0) * CONVERT(DECIMAL(10), ISNULL([DUMPTONS], 0)))) / SUM([DUMPTONS]) AS [PB_PCT]
+			  ,[TIMELOAD_TS]
+		FROM (
+			SELECT [LOAD_SHIFTINDEX] AS [SHIFTINDEX]
+				  ,[SITE_CODE]
+				  ,CASE WHEN [DUMP_LOC] IN ('Crusher') THEN 'Crusher 1'
+					END [DUMP_LOC]
+			      ,[LOAD_EXCAV]
+				  ,[TCU_PCT]
+				  ,[TMO_PCT]
+				  ,[TCLAY_PCT]
+				  ,[XCU_PCT]
+				  ,[KAOLINITE_PCT]
+				  ,[ASCU_PCT]
+				  ,[SWELLING_CLAY_PCT]
+				  ,[SDR_P80]
+				  ,[OXIDE_SULFIDE_RATIO]
+				  ,[FE_PCT]
+				  ,[PB_PCT]
+				  ,[DUMPTONS]
+				  ,[TIMELOAD_TS]
+			FROM [dbo].[MMT_TRUCKLOAD_C] WITH (NOLOCK)
+			WHERE [SITE_CODE] = 'TYR'
+				  AND [DUMP_LOC] in ('Crusher')
+		) [a]
+		GROUP BY [SHIFTINDEX], [SITE_CODE], [DUMP_LOC], [LOAD_EXCAV], [TIMELOAD_TS]
+	),
+
+	HOS AS (
+		SELECT a.SHIFTINDEX,
+          	   a.SHIFTFLAG,
+          	   a.SITEFLAG,
+			   t.DUMP_LOC,
+			   t.LOAD_EXCAV,
+			   t.[TCU_PCT],
+			   t.TMO_PCT,
+			   t.TCLAY_PCT,
+			   t.XCU_PCT,
+			   t.KAOLINITE_PCT,
+			   t.ASCU_PCT,
+			   t.SWELLING_CLAY_PCT,
+			   t.SDR_P80,
+			   t.OXIDE_SULFIDE_RATIO,
+			   t.FE_PCT,
+			   t.PB_PCT,
+			   CEILING(DATEDIFF(MINUTE, [a].ShiftStartDateTime, t.TIMELOAD_TS) / 60.00) as HOS
+		FROM [tyr].[CONOPS_TYR_SHIFT_INFO_V] a WITH (NOLOCK)
+		LEFT JOIN TonsGrade t
+		ON a.SHIFTINDEX = t.SHIFTINDEX --AND a.SITEFLAG = t.SITE_CODE
+	)
+
+	SELECT cl.SHIFTFLAG
+		  ,cl.SITEFLAG
+		  ,cl.CrusherLoc
+		  ,cl.SHIFTSTARTDATETIME
+		  ,h.DUMP_LOC
+		  ,h.LOAD_EXCAV
+		  ,s.LOCATION
+		  ,h.[TCU_PCT]
+		  ,h.TMO_PCT
+		  ,h.TCLAY_PCT
+		  ,h.XCU_PCT
+		  ,h.KAOLINITE_PCT
+		  ,h.ASCU_PCT
+		  ,h.SWELLING_CLAY_PCT
+		  ,h.SDR_P80
+		  ,h.OXIDE_SULFIDE_RATIO
+		  ,h.FE_PCT
+		  ,h.PB_PCT
+		  ,DATEADD(hh, IIF(h.HOS = 0, 0, HOS - 1), cl.SHIFTSTARTDATETIME) AS hr
+		  ,IIF(h.HOS = 0, 1, HOS) AS HOS 
+	FROM CrLocShift cl
+	LEFT JOIN HOS h
+		ON cl.SHIFTFLAG = h.SHIFTFLAG
+		AND cl.SITEFLAG = h.SITEFLAG
+		AND cl.CrusherLoc = h.DUMP_LOC
+	LEFT JOIN [tyr].[CONOPS_TYR_SHOVEL_INFO_V] s WITH (NOLOCK)
+		ON cl.SHIFTFLAG = s.shiftflag
+		AND h.LOAD_EXCAV = s.ShovelID
+
+
+
+
+

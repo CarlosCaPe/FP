@@ -1,0 +1,59 @@
+ 
+/******************************************************************    
+* PROCEDURE : DBO.[UPSERT_CONOPS_CRUSHER_THROUGHPUT_2]  
+* PURPOSE	: UPSERT [UPSERT_CONOPS_CRUSHER_THROUGHPUT_2]  
+* NOTES     :   
+* CREATED	: GGOSAL1  
+* SAMPLE    : EXEC DBO.[UPSERT_CONOPS_CRUSHER_THROUGHPUT_2]  
+* MODIFIED DATE		AUTHOR		DESCRIPTION    
+*------------------------------------------------------------------    
+* {12 JUL 2023}    {GGOSAL1}   {INITIAL CREATED}    
+*******************************************************************/    
+CREATE PROCEDURE [dbo].[UPSERT_CONOPS_CRUSHER_THROUGHPUT_2]  
+ 
+AS  
+BEGIN
+
+MERGE dbo.CRUSHER_THROUGHPUT_2 AS T
+ 	USING (SELECT  
+		SHIFTINDEX
+ 		,SITEFLAG
+		,VALUE_TS
+ 		,CRUSHERLOC
+ 		,COMPONENT
+ 		,SENSOR_VALUE
+ 		,UTC_CREATED_DATE
+ 	FROM dbo.CRUSHER_THROUGHPUT_STG_2) AS S
+ 	ON (T.SHIFTINDEX = S.SHIFTINDEX AND T.SITEFLAG = S.SITEFLAG AND T.VALUE_TS = S.VALUE_TS AND T.CRUSHERLOC = S.CRUSHERLOC AND T.COMPONENT = S.COMPONENT)
+WHEN MATCHED  
+ 	THEN UPDATE SET    
+ 		T.SENSORVALUE = S.SENSOR_VALUE,
+ 		T.UTC_CREATED_DATE = S.UTC_CREATED_DATE
+WHEN NOT MATCHED  
+ 	THEN INSERT (  
+ 		SHIFTINDEX
+ 		,SITEFLAG
+		,VALUE_TS
+ 		,CRUSHERLOC
+ 		,COMPONENT
+ 		,SENSORVALUE
+ 		,UTC_CREATED_DATE
+ 	) 
+ 	VALUES(  
+ 		S.SHIFTINDEX
+ 		,S.SITEFLAG
+		,S.VALUE_TS
+ 		,S.CRUSHERLOC
+ 		,S.COMPONENT
+ 		,S.SENSOR_VALUE
+ 		,S.UTC_CREATED_DATE  
+ 	); 
+
+--Update Job Control
+UPDATE [dbo].[DI_JOB_CONTROL_ENTRY_TS_BASE]
+SET dw_load_ts = GETUTCDATE()
+WHERE job_name = 'job_conops_crusher_throughput_2';
+
+END
+
+

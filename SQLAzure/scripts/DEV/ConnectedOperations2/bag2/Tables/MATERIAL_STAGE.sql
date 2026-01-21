@@ -1,0 +1,3 @@
+CREATE TABLE [bag2].[MATERIAL_STAGE] (
+    [SRC_JSON] nvarchar NULL
+);

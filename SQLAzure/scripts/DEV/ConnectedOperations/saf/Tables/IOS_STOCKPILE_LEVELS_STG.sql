@@ -1,0 +1,8 @@
+CREATE TABLE [saf].[IOS_STOCKPILE_LEVELS_STG] (
+    [SHIFTINDEX] numeric(38,0) NOT NULL,
+    [SITEFLAG] varchar(5) NOT NULL,
+    [CRUSHERLOC] varchar(50) NOT NULL,
+    [COMPONENT] varchar(50) NOT NULL,
+    [SENSORVALUE] decimal(38,10) NULL,
+    [UTC_CREATED_DATE] datetime NULL
+);

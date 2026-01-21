@@ -1,0 +1,23 @@
+CREATE TABLE [TYR].[SHIFT_GRADE] (
+    [siteflag] varchar(5) NOT NULL,
+    [DbPrevious] bigint NULL,
+    [DbNext] bigint NULL,
+    [DbVersion] int NULL,
+    [ShiftId] bigint NULL,
+    [Id] bigint NOT NULL,
+    [DbName] nvarchar(32) NOT NULL,
+    [DbKey] bigint NOT NULL,
+    [FieldId] nvarchar(36) NULL,
+    [FieldLoc] bigint NULL,
+    [FieldDump] bigint NULL,
+    [FieldInv] float NULL,
+    [FieldSpgr] float NULL,
+    [FieldLoad] bigint NULL,
+    [FieldBlend] bigint NULL,
+    [FieldDensity] float NULL,
+    [FieldThickness] float NULL,
+    [FieldShot] tinyint NULL,
+    [FieldProperty] nvarchar(20) NULL,
+    [UTC_CREATED_DATE] datetime NOT NULL,
+    [UTC_LOGICAL_DELETED_DATE] datetime NULL
+);

@@ -1,0 +1,22 @@
+CREATE TABLE [mor].[plan_values] (
+    [siteflag] varchar(5) NOT NULL,
+    [Formatshiftid] varchar(50) NULL,
+    [ContentTypeID] varchar(100) NULL,
+    [ShiftID] varchar(50) NULL,
+    [ComplianceAssetId] varchar(100) NULL,
+    [Shovel] varchar(50) NULL,
+    [PB] varchar(50) NULL,
+    [Destination] varchar(50) NULL,
+    [MaterialType] varchar(50) NULL,
+    [Tons] decimal(18,5) NULL,
+    [Id] int NOT NULL,
+    [ContentType] varchar(50) NULL,
+    [Modified] datetime NULL,
+    [Created] datetime NULL,
+    [CreatedById] int NULL,
+    [ModifiedById] int NULL,
+    [Owshiddenversion] int NULL,
+    [Version] decimal(18,5) NULL,
+    [Path] varchar(2000) NULL,
+    [UTC_CREATED_DATE] datetime NULL
+);

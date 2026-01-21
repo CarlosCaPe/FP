@@ -1,0 +1,9 @@
+CREATE TABLE [dbo].[OPERATOR_CONSECUTIVE_WORKDAYS] (
+    [SITE_CODE] varchar(4) NULL,
+    [UNIT_CODE] int NULL,
+    [OPERID] varchar(60) NULL,
+    [FIRSTSHIFTINDEX] int NULL,
+    [LASTSHIFTINDEX] int NULL,
+    [NROFDAYS] int NULL,
+    [UTC_CREATED_DATE] datetime NULL
+);

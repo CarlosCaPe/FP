@@ -1,0 +1,58 @@
+CREATE VIEW [SIE].[CONOPS_SIE_SP_WORST_LOAD_TIME_V] AS
+
+
+
+
+
+--SELECT * FROM [sie].[CONOPS_SIE_SP_WORST_LOAD_TIME_V] WHERE SHIFTFLAG = 'CURR'
+CREATE VIEW [sie].[CONOPS_SIE_SP_WORST_LOAD_TIME_V]
+AS
+
+
+SELECT 
+shiftflag,
+siteflag,
+shiftid,
+shiftindex,
+ShovelID,
+eqmttype,
+Operator,
+OperatorID,
+OperatorImageURL,
+TotalMaterialMined,
+TotalMaterialMinedTarget,
+deltaC,
+DeltaCTarget,
+IdleTime,
+IdleTimeTarget,
+Spotting,
+SpottingTarget,
+Loading,
+LoadingTarget,
+Dumping,
+DumpingTarget,
+Payload,
+PayloadTarget,
+NumberOfLoads,
+NumberOfLoadsTarget,
+TonsPerReadyHour,
+TonsPerReadyHourTarget,
+AssetEfficiency,
+AssetEfficiencyTarget,
+TotalMaterialMoved,
+TotalMaterialMovedTarget,
+HangTime,
+HangTimeTarget,
+EFH,
+EFHTarget,
+ReasonIdx,
+reasons,
+eqmtcurrstatus
+FROM [sie].[CONOPS_SIE_SP_DELTA_C_V] 
+WHERE siteflag = 'SIE'
+AND Loading > LoadingTarget
+
+
+
+
+

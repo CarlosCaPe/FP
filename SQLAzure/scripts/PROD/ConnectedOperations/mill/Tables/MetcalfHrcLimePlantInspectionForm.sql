@@ -1,0 +1,22 @@
+CREATE TABLE [mill].[MetcalfHrcLimePlantInspectionForm] (
+    [TransactionId] int NOT NULL,
+    [SiteCode] varchar(3) NOT NULL,
+    [TransactionDate] datetime NOT NULL,
+    [RawData] varchar NOT NULL,
+    [Hrc] varchar NOT NULL,
+    [LimePlant] varchar NOT NULL,
+    [DryFeeder] varchar NOT NULL,
+    [DryFeederDustCollectors] varchar NOT NULL,
+    [WetFeeders] varchar NOT NULL,
+    [B6Conveyor] varchar NOT NULL,
+    [B7Conveyor] varchar NOT NULL,
+    [B8AConveyor] varchar NOT NULL,
+    [B8BConveyor] varchar NOT NULL,
+    [B9Conveyor] varchar NOT NULL,
+    [B10Conveyor] varchar NOT NULL,
+    [InspectionComment] varchar NOT NULL,
+    [CreatedBy] char(10) NOT NULL,
+    [UtcCreatedDate] datetime NOT NULL,
+    [ModifiedBy] char(10) NOT NULL,
+    [UtcModifiedDate] datetime NOT NULL
+);

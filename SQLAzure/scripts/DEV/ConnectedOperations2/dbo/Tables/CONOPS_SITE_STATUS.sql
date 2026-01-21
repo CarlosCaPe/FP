@@ -1,0 +1,4 @@
+CREATE TABLE [dbo].[CONOPS_SITE_STATUS] (
+    [SITE_CODE] varchar(10) NULL,
+    [STATUS] int NULL
+);

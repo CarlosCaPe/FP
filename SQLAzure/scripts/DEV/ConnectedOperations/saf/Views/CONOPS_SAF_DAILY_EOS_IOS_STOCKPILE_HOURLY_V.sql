@@ -1,0 +1,46 @@
+CREATE VIEW [saf].[CONOPS_SAF_DAILY_EOS_IOS_STOCKPILE_HOURLY_V] AS
+  
+  
+  
+  
+  
+  
+--SELECT * FROM [SAF].[CONOPS_SAF_DAILY_EOS_IOS_STOCKPILE_HOURLY_V] WHERE shiftflag = 'PREV'  
+CREATE VIEW [SAF].[CONOPS_SAF_DAILY_EOS_IOS_STOCKPILE_HOURLY_V]  
+AS  
+  
+WITH CTE AS(  
+SELECT  
+ a.SITEFLAG,  
+ s.shiftflag,  
+ s.SHIFTINDEX,  
+ a.CRUSHERLOC,  
+ a.COMPONENT,  
+ a.VALUE_TS,  
+ CAST(CONCAT(FORMAT(a.VALUE_TS, 'yyyy-MM-dd HH'), FORMAT(SHIFTSTARTDATETIME, ':mm:00')) AS Datetime) AS DateTime,  
+ a.SENSORVALUE  
+FROM dbo.IOS_STOCKPILE_LEVELS a WITH (NOLOCK)    
+LEFT JOIN [SAF].[CONOPS_SAF_EOS_SHIFT_INFO_V] s WITH (NOLOCK)    
+ ON a.SITEFLAG = s.siteflag  
+WHERE a.siteflag = 'SAF'  
+AND DATEADD(MINUTE, DATEDIFF(MINUTE, 0, a.VALUE_TS), 0) BETWEEN SHIFTSTARTDATETIME AND SHIFTENDDATETIME  
+AND CAST(FORMAT(a.VALUE_TS, 'mm') AS INT) - CAST(FORMAT(SHIFTSTARTDATETIME, 'mm') AS INT) BETWEEN 0 AND 5  
+--AND DATEPART(MINUTE,VALUE_TS) = '15'  
+)  
+  
+SELECT   
+ SITEFLAG,  
+ shiftflag,  
+ SHIFTINDEX,  
+ CRUSHERLOC,  
+ "DateTime",  
+ RANK() OVER (PARTITION BY shiftflag, CRUSHERLOC ORDER BY "DateTime" ASC) AS shiftseq,  
+ CrusherStockpile,  
+ CrusherStockpileTons  
+FROM CTE  
+PIVOT    
+(AVG([SENSORVALUE]) FOR [COMPONENT]  IN (CrusherStockpile, CrusherStockpileTons)) AS PivotTable  
+  
+  
+  
+  

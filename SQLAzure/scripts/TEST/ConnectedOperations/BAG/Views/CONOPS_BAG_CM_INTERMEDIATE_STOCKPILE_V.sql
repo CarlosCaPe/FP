@@ -1,0 +1,56 @@
+CREATE VIEW [BAG].[CONOPS_BAG_CM_INTERMEDIATE_STOCKPILE_V] AS
+
+
+
+
+--SELECT * FROM [bag].[CONOPS_BAG_CM_INTERMEDIATE_STOCKPILE_V] WITH (NOLOCK) WHERE SHIFTFLAG = 'CURR'
+CREATE VIEW [bag].[CONOPS_BAG_CM_INTERMEDIATE_STOCKPILE_V]
+AS
+
+WITH CTE AS (
+SELECT 
+	shiftindex,
+	CRUSHERLOC,
+	COMPONENT,
+	SENSORVALUE,
+ROW_NUMBER() OVER (PARTITION BY SHIFTINDEX,CRUSHERLOC,COMPONENT ORDER BY VALUE_TS DESC) NUM
+FROM [dbo].[IOS_STOCKPILE_LEVELS] WITH (NOLOCK)
+WHERE SITEFLAG = 'BAG'
+),
+
+MFLStockpile AS(
+SELECT
+	SHIFTINDEX,
+	SENSORVALUE AS MFLStockpile
+FROM CTE
+WHERE CRUSHERLOC = 'Crusher 2' 
+	AND COMPONENT = 'CrusherStockpile'
+	AND NUM = 1
+),
+
+MillStockpile AS(
+SELECT
+	SHIFTINDEX,
+	SENSORVALUE / 165000 * 100 AS MillStockpile
+FROM CTE
+WHERE CRUSHERLOC = 'Mill Stockpile' 
+	AND COMPONENT = 'Mill Stockpile'
+	AND NUM = 1
+)
+
+
+SELECT 
+a.[SITEFLAG]
+,a.[SHIFTFLAG]
+,0 AS [MFLStockpile] --MFL should be hidden/ not shown for Bagdad, Chino, Sierrita, Cerro Verde, Tyrone (only El Abra, Safford and Morenci have MFL)
+,m.[MillStockpile]
+FROM [bag].[CONOPS_BAG_SHIFT_INFO_V] a WITH (NOLOCK)
+LEFT JOIN MFLStockpile [s] WITH (NOLOCK) 
+	ON a.SHIFTINDEX = [s].SHIFTINDEX
+LEFT JOIN MillStockpile [m] WITH (NOLOCK) 
+ON a.SHIFTINDEX = [m].SHIFTINDEX
+
+
+
+
+

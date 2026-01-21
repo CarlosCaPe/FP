@@ -1,0 +1,3 @@
+CREATE TABLE [bag2].[PERSON_CREW_STAGE] (
+    [SRC_JSON] nvarchar NULL
+);

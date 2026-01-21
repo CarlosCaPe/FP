@@ -1,0 +1,108 @@
+
+/******************************************************************    
+* PROCEDURE : dbo.[UPSERT_CONOPS_LH_REASON_2]  
+* PURPOSE : Upsert [UPSERT_CONOPS_LH_REASON_2]  
+* NOTES     :   
+* CREATED : mfahmi  
+* SAMPLE    : EXEC dbo.[UPSERT_CONOPS_LH_REASON_2]  
+* MODIFIED DATE  AUTHOR    DESCRIPTION    
+*------------------------------------------------------------------    
+* {01 DEC 2022}  {mfahmi}    {Initial Created}    
+* {19 MAY 2023}  {ggosal1}   {Add PK 'Reason'}    
+*******************************************************************/    
+CREATE  PROCEDURE [dbo].[UPSERT_CONOPS_LH_REASON_2]  
+AS  
+BEGIN  
+  
+MERGE dbo.LH_REASON_2 AS T   
+USING (SELECT   
+  SHIFTINDEX  
+ ,SHIFTDATE  
+ ,SITE_CODE  
+ ,CLIID  
+ ,DDBKEY  
+ ,NAME  
+ ,REASON  
+ ,STATUS  
+ ,DELAYTIME  
+ ,CATEGORY  
+ ,MAINTTIME  
+ ,SYSTEM_VERSION  
+ ,UTC_CREATED_DATE   
+ FROM dbo.LH_REASON_stg_2) AS S   
+ ON (T.shiftindex = S.shiftindex   
+ AND T.shiftdate = S.shiftdate   
+ AND T.site_code = S.site_code   
+ AND T.ddbkey = S.ddbkey  
+ AND T.CLIID = S.CLIID
+ AND T.Reason = S.Reason)   
+  
+ WHEN MATCHED   
+ THEN UPDATE SET   
+ T.NAME = S.NAME   
+ ,T.STATUS = S.STATUS  
+ ,T.DELAYTIME = S.DELAYTIME  
+ ,T.CATEGORY = S.CATEGORY  
+ ,T.MAINTTIME = S.MAINTTIME  
+ ,T.SYSTEM_VERSION = S.SYSTEM_VERSION  
+ ,T.UTC_CREATED_DATE = S.UTC_CREATED_DATE    
+ WHEN NOT MATCHED   
+ THEN INSERT (   
+ SHIFTINDEX  
+ ,SHIFTDATE  
+ ,SITE_CODE  
+ ,CLIID  
+ ,DDBKEY  
+ ,NAME  
+ ,REASON  
+ ,STATUS  
+ ,DELAYTIME  
+ ,CATEGORY  
+ ,MAINTTIME  
+ ,SYSTEM_VERSION  
+ ,UTC_CREATED_DATE  
+  ) VALUES(   
+  S.SHIFTINDEX  
+ ,S.SHIFTDATE  
+ ,S.SITE_CODE  
+ ,S.CLIID  
+ ,S.DDBKEY  
+ ,S.NAME  
+ ,S.REASON  
+ ,S.STATUS  
+ ,S.DELAYTIME  
+ ,S.CATEGORY  
+ ,S.MAINTTIME  
+ ,S.SYSTEM_VERSION  
+ ,S.UTC_CREATED_DATE  
+ );   
+   
+ 
+  --remove    
+DELETE  
+FROM  [dbo].[lh_reason_2]    
+WHERE NOT EXISTS  
+(SELECT 1  
+FROM  dbo.[lh_reason_stg_2]  AS stg   
+WHERE   
+stg.SHIFTINDEX = [dbo].[lh_reason_2].SHIFTINDEX  
+AND 
+stg.SHIFTDATE = [dbo].[lh_reason_2].SHIFTDATE
+AND
+stg.SITE_CODE = [dbo].[lh_reason_2].SITE_CODE  
+AND 
+stg.CLIID = [dbo].[lh_reason_2].CLIID
+AND
+stg.DDBKEY = [dbo].[lh_reason_2].DDBKEY
+AND 
+stg.REASON = [dbo].[lh_reason_2].REASON
+);   
+   
+--Update Job Control
+UPDATE [dbo].[DI_JOB_CONTROL_ENTRY_TS_BASE]
+SET dw_load_ts = GETUTCDATE()
+WHERE job_name = 'job_conops_lh_reason_2';
+   
+END  
+  
+

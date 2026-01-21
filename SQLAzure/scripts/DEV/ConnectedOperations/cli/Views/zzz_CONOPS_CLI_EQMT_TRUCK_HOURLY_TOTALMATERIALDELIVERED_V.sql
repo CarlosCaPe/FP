@@ -1,0 +1,64 @@
+CREATE VIEW [cli].[zzz_CONOPS_CLI_EQMT_TRUCK_HOURLY_TOTALMATERIALDELIVERED_V] AS
+
+
+
+--select * from [cli].[CONOPS_CLI_EQMT_TRUCK_HOURLY_TOTALMATERIALDELIVERED_V]
+CREATE VIEW [cli].[zzz_CONOPS_CLI_EQMT_TRUCK_HOURLY_TOTALMATERIALDELIVERED_V]
+AS
+
+WITH CTE AS (
+SELECT  
+dumps.shiftid,
+t.FieldId AS [TruckId],
+dumps.FieldLsizetons AS [Tons],
+dateadd(second,dumps.fieldtimedump,sinfo.shiftstartdatetime) as shiftdumptime
+FROM [cli].SHIFT_DUMP dumps  WITH (NOLOCK)
+LEFT JOIN [cli].Enum enums WITH (NOLOCK) on enums.Id=dumps.FieldLoad 
+LEFT JOIN [cli].shift_loc loc WITH (NOLOCK) ON loc.Id = dumps.FieldLoc 
+LEFT JOIN [cli].shift_eqmt t ON t.Id = dumps.FieldTruck
+LEFT JOIN (
+SELECT shiftid, ShiftStartDateTime,LEAD(ShiftStartDateTime) 
+OVER ( ORDER BY shiftid ) AS ShiftEndDateTime 
+from [cli].[shift_info]) sinfo ON dumps.shiftid = sinfo.shiftid
+WHERE enums.Idx NOT IN (26,27,28,29,30)
+AND (loc.FieldId IN ('CRUSHER 1'))),
+
+
+Material AS (
+SELECT
+shiftflag,
+siteflag,
+ShiftStartDateTime,
+TruckId,
+SUM(Tons) AS TotalMaterialDelivered,
+CASE WHEN datediff(minute, a.ShiftStartDateTime,c.shiftdumptime) 
+between b.starts and b.ends THEN b.seq ELSE '999999' END AS shiftseq
+FROM [cli].[CONOPS_CLI_SHIFT_INFO_V] a 
+CROSS JOIN [dbo].[HOURLY_TIME_SEQ] b
+LEFT JOIN CTE c
+ON a.shiftid = c.shiftid
+GROUP BY shiftflag, siteflag,truckid,shiftdumptime, b.starts, b.ends, b.seq,ShiftStartDateTime),
+
+Final AS (
+SELECT
+shiftflag,
+siteflag,
+ShiftStartDateTime,
+TruckId,
+SUM(TotalMaterialDelivered) TotalMaterialDelivered,
+shiftseq
+FROM Material 
+WHERE shiftseq <> '999999'
+AND shiftseq <= datediff(minute,ShiftStartDateTime,dateadd(hour,-7,getutcdate()))
+GROUP BY shiftflag, siteflag, TruckId, shiftseq, ShiftStartDateTime)
+
+SELECT
+shiftflag,
+siteflag,
+TruckId AS Equipment,
+TotalMaterialDelivered,
+dateadd(hour,shiftseq,ShiftStartDateTime) as TimeinHour
+FROM Final
+WHERE TruckId IS NOT NULL
+--AND TruckID = 'C101'
+

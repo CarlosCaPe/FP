@@ -1,0 +1,16 @@
+CREATE VIEW [cer].[CONOPS_CER_AUTONOMOUS_TRUCK_V] AS
+
+
+
+--select * from [CER].[CONOPS_CER_AUTONOMOUS_TRUCK_V]
+CREATE VIEW [CER].[CONOPS_CER_AUTONOMOUS_TRUCK_V]
+AS
+
+SELECT DISTINCT 
+	FieldId AS TruckId,
+	0 AS Autonomous
+FROM CER.pit_truck_c WITH(NOLOCK)
+WHERE FieldId IS NOT NULL
+	AND FieldId <> ''
+
+

@@ -1,0 +1,13 @@
+CREATE VIEW [CLI].[ENUM] AS
+
+
+--SELECT * FROM CLI.ENUM
+CREATE VIEW CLI.ENUM
+AS
+
+SELECT
+'CMX' AS SITEFLAG,
+*
+FROM CMXOperational.dbo.enum WITH(NOLOCK)
+
+

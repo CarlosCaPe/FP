@@ -1,0 +1,13 @@
+CREATE VIEW [MOR].[ENUM] AS
+
+
+--SELECT * FROM MOR.ENUM
+CREATE VIEW MOR.ENUM
+AS
+
+SELECT
+'MOR' AS SITEFLAG,
+*
+FROM MOROperational.dbo.enum WITH(NOLOCK)
+
+

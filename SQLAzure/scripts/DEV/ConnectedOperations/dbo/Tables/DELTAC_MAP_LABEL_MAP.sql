@@ -1,0 +1,4 @@
+CREATE TABLE [dbo].[DELTAC_MAP_LABEL_MAP] (
+    [TYPE] varchar(128) NOT NULL,
+    [COLOR_CODE] varchar(32) NOT NULL
+);

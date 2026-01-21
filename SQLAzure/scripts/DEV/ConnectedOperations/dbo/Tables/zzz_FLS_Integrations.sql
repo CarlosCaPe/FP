@@ -1,0 +1,19 @@
+CREATE TABLE [dbo].[zzz_FLS_Integrations] (
+    [IntegrationID] uniqueidentifier NOT NULL,
+    [GroupID] uniqueidentifier NOT NULL,
+    [SiteCode] varchar(10) NOT NULL,
+    [ApprovalType] char(4) NOT NULL,
+    [ApprovalSubType] varchar(16) NOT NULL,
+    [ScreenParameter] varchar NOT NULL,
+    [IntegrationSequence] int NOT NULL,
+    [IntegrationType] varchar NOT NULL,
+    [Payload] varchar NOT NULL,
+    [Result] varchar NOT NULL,
+    [Error] varchar NOT NULL,
+    [Status] varchar(64) NOT NULL,
+    [RetryNumber] smallint NOT NULL,
+    [CreatedBy] char(10) NOT NULL,
+    [UtcCreatedDate] datetime NOT NULL,
+    [LastModifiedBy] char(10) NOT NULL,
+    [UtcLastModifiedDate] datetime NOT NULL
+);

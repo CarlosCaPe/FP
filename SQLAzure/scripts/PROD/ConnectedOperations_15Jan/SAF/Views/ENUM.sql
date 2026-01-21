@@ -1,0 +1,13 @@
+CREATE VIEW [SAF].[ENUM] AS
+
+
+--SELECT * FROM SAF.ENUM
+CREATE VIEW SAF.ENUM
+AS
+
+SELECT
+'SAF' AS SITEFLAG,
+*
+FROM SAFOperational.dbo.enum WITH(NOLOCK)
+
+

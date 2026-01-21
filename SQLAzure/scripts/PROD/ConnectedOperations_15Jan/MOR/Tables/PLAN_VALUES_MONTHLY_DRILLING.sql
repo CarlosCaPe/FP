@@ -1,0 +1,19 @@
+CREATE TABLE [MOR].[PLAN_VALUES_MONTHLY_DRILLING] (
+    [SITEFLAG] varchar(5) NOT NULL,
+    [CONTENTTYPEID] varchar(100) NOT NULL,
+    [TITLE] varchar(255) NULL,
+    [COMPLIANCEASSETID] varchar(100) NULL,
+    [EFFECTIVEDATE] date NULL,
+    [PLANNEDHOLES] numeric(18,0) NULL,
+    [PENRATE] numeric(18,0) NULL,
+    [ID] int NOT NULL,
+    [CONTENTTYPE] varchar(50) NOT NULL,
+    [MODIFIED] datetime NOT NULL,
+    [CREATED] datetime NOT NULL,
+    [CREATEDBYID] int NOT NULL,
+    [MODIFIEDBYID] int NOT NULL,
+    [OWSHIDDENVERSION] int NOT NULL,
+    [VERSION] decimal(10,5) NOT NULL,
+    [PATH] varchar(2000) NOT NULL,
+    [UTC_CREATED_DATE] datetime NOT NULL
+);

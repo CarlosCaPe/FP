@@ -1,0 +1,3 @@
+CREATE TABLE [bag2].[MACHINECATEGORY_STAGE] (
+    [SRC_JSON] nvarchar NULL
+);

@@ -1,0 +1,10 @@
+CREATE TABLE [bag2].[DELAYCATEGORY] (
+    [SITEFLAG] varchar(5) NOT NULL,
+    [DELAYCATEGORY_OID] bigint NOT NULL,
+    [NAME] nvarchar(255) NOT NULL,
+    [COLOUR] int NOT NULL,
+    [BOLD] bit NOT NULL,
+    [ITALIC] bit NOT NULL,
+    [UTC_CREATED_DATE] datetime NOT NULL,
+    [UTC_LOGICAL_DELETED_DATE] datetime NULL
+);

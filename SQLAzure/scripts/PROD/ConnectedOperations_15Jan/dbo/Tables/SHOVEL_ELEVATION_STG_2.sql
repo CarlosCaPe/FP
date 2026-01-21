@@ -1,0 +1,8 @@
+CREATE TABLE [dbo].[SHOVEL_ELEVATION_STG_2] (
+    [SITE_CODE] varchar(5) NOT NULL,
+    [SHIFTINDEX] int NOT NULL,
+    [EXCAV_NAME] varchar(255) NOT NULL,
+    [SHOVEL_DIG_POINT_Z] numeric(18,5) NULL,
+    [TIME_END_LOCAL_TS] datetime NULL,
+    [UTC_CREATED_DATE] datetime NULL
+);

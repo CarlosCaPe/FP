@@ -1,0 +1,5 @@
+CREATE PROCEDURE dbo.TestZero
+AS
+BEGIN
+	SELECT 1 / 0
+END

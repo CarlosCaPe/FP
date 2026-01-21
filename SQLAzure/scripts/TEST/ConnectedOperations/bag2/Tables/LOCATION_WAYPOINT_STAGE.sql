@@ -1,0 +1,3 @@
+CREATE TABLE [bag2].[LOCATION_WAYPOINT_STAGE] (
+    [SRC_JSON] nvarchar NULL
+);

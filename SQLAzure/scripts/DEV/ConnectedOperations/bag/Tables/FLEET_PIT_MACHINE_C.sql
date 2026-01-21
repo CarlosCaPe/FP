@@ -1,0 +1,21 @@
+CREATE TABLE [bag].[FLEET_PIT_MACHINE_C] (
+    [siteflag] varchar(5) NOT NULL,
+    [SHIFTID] decimal(9,0) NOT NULL,
+    [SHIFTINDEX] numeric(38,0) NOT NULL,
+    [EquipmentID] varchar(254) NOT NULL,
+    [EquipmentCategory] varchar(254) NULL,
+    [EQMTTYPE] varchar(254) NULL,
+    [StatusCode] int NULL,
+    [StatusStart] datetime2 NULL,
+    [TimeInState] int NULL,
+    [CrewName] varchar(50) NULL,
+    [Location] varchar(254) NULL,
+    [Region] varchar(254) NULL,
+    [Operator] varchar(254) NULL,
+    [OperatorId] varchar(50) NULL,
+    [AssignedShovel] varchar(254) NULL,
+    [FieldX] float NULL,
+    [FieldY] float NULL,
+    [FieldZ] float NULL,
+    [FieldVelocity] float NULL
+);

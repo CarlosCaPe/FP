@@ -1,0 +1,23 @@
+CREATE TABLE [mill].[MetcalfBallMillOperatorForm] (
+    [TransactionId] int NOT NULL,
+    [SiteCode] varchar(3) NOT NULL,
+    [TransactionDate] datetime NOT NULL,
+    [ShiftId] varchar(3) NOT NULL,
+    [RawData] varchar NOT NULL,
+    [InspectionTimeId] varchar(64) NOT NULL,
+    [CyclonePack1] varchar NOT NULL,
+    [CyclonePack2] varchar NOT NULL,
+    [Mill1] varchar NOT NULL,
+    [Mill2] varchar NOT NULL,
+    [B11A] varchar NOT NULL,
+    [B11B] varchar NOT NULL,
+    [B12] varchar NOT NULL,
+    [B13] varchar NOT NULL,
+    [B14] varchar NOT NULL,
+    [Valves] varchar NOT NULL,
+    [InspectionComment] varchar NOT NULL,
+    [CreatedBy] char(10) NOT NULL,
+    [UtcCreatedDate] datetime NOT NULL,
+    [ModifiedBy] char(10) NOT NULL,
+    [UtcModifiedDate] datetime NOT NULL
+);

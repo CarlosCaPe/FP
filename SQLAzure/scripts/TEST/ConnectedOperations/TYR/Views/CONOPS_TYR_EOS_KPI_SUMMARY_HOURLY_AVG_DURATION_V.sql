@@ -1,0 +1,58 @@
+CREATE VIEW [TYR].[CONOPS_TYR_EOS_KPI_SUMMARY_HOURLY_AVG_DURATION_V] AS
+
+
+-- SELECT * FROM [tyr].[CONOPS_TYR_EOS_KPI_SUMMARY_HOURLY_AVG_DURATION_V] WITH (NOLOCK) WHERE SHIFTFLAG = 'CURR'  
+CREATE VIEW [TYR].[CONOPS_TYR_EOS_KPI_SUMMARY_HOURLY_AVG_DURATION_V]  
+AS  
+  
+WITH CteStatusEvent AS (
+	SELECT ShiftIndex
+		,Site_Code AS SiteFlag
+		,dw_load_ts
+		,Duration
+	FROM [dbo].[status_event] WITH (NOLOCK)
+	WHERE Site_Code = 'TYR'
+	AND Status = 4
+	AND Reason = 401
+	AND Unit = 1
+),
+
+CteShiftInfo AS (
+	SELECT ShiftIndex
+		,ShiftFlag
+		,SiteFlag
+		,ShiftStartDatetime
+	FROM [tyr].[CONOPS_TYR_SHIFT_INFO_V] WITH (NOLOCK)
+),
+
+StatusEvent AS (
+	SELECT [se].ShiftIndex
+		,[se].ShiftFlag
+		,[se].SiteFlag
+		,[se].Duration
+		,[se].ShiftStartDateTime
+		,DATEADD(hh, IIF(HOS = 0, 0, HOS - 1), ShiftStartDateTime) AS Hr
+		,IIF(HOS = 0, 1, HOS) AS HOS 
+	FROM (
+		SELECT [si].ShiftIndex
+			,[si].ShiftFlag
+			,[si].SiteFlag
+			,[cse].Duration
+			,[si].ShiftStartDateTime
+			,CEILING(DATEDIFF(MINUTE, [si].ShiftStartDateTime, [cse].dw_load_ts) / 60.00) as HOS
+		FROM [tyr].[CONOPS_TYR_SHIFT_INFO_V] [si] WITH (NOLOCK)
+		LEFT JOIN CteStatusEvent [cse]
+			ON [si].ShiftIndex = [cse].ShiftIndex
+			AND [si].SiteFlag = [cse].SiteFlag
+	) AS [se]
+)
+
+SELECT ShiftIndex
+	,ShiftFlag
+	,SiteFlag
+	,CAST( COALESCE( AVG( Duration)/ 60, 0) AS DECIMAL(7,2)) AS [AvgDuration]
+	,Hr
+	,Hos
+FROM StatusEvent 
+GROUP BY ShiftIndex, SiteFlag, ShiftFlag, Hos, Hr
+

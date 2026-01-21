@@ -1,0 +1,20 @@
+CREATE TABLE [bag2].[MATERIAL] (
+    [SITEFLAG] varchar(5) NOT NULL,
+    [MATERIAL_OID] bigint NOT NULL,
+    [CODECAES] int NULL,
+    [COLOUR] nvarchar(254) NULL,
+    [DESCRIPTION] nvarchar(254) NULL,
+    [ID] bigint NOT NULL,
+    [BANKDENSITY] float NULL,
+    [LOOSEDENSITY] float NULL,
+    [MATUNIT] nvarchar(254) NULL,
+    [NAME] nvarchar(254) NOT NULL,
+    [IS_ACTIVE] bit NOT NULL,
+    [MATERIALGROUP] bigint NULL,
+    [EXTERNALREF] nvarchar(254) NULL,
+    [EXTERNALDESC] nvarchar(254) NULL,
+    [MODEL_UPDATE_VERSION] bigint NOT NULL,
+    [LAYER_UPDATE_VERSION] bigint NOT NULL,
+    [UTC_CREATED_DATE] datetime NOT NULL,
+    [UTC_LOGICAL_DELETED_DATE] datetime NULL
+);

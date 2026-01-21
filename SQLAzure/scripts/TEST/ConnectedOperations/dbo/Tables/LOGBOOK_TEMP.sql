@@ -1,0 +1,22 @@
+CREATE TABLE [dbo].[LOGBOOK_TEMP] (
+    [Id] int NOT NULL,
+    [LogbookTypeCode] varchar(8) NOT NULL,
+    [SiteCode] char(3) NOT NULL,
+    [ShiftId] varchar(16) NOT NULL,
+    [Title] nvarchar(512) NOT NULL,
+    [Description] nvarchar NOT NULL,
+    [ImportanceCode] varchar(8) NOT NULL,
+    [AreaCode] varchar(8) NOT NULL,
+    [EmployeeId] char(10) NOT NULL,
+    [ExtendedProperty1] nvarchar(512) NULL,
+    [ExtendedProperty2] nvarchar(512) NULL,
+    [ExtendedProperty3] nvarchar(512) NULL,
+    [ExtendedProperties] nvarchar NULL,
+    [IsActive] bit NOT NULL,
+    [OrderByAreaCreatedDate] varchar(30) NOT NULL,
+    [OrderByImportanceCreatedDate] varchar(30) NOT NULL,
+    [CreatedBy] char(10) NOT NULL,
+    [UtcCreatedDate] datetime NOT NULL,
+    [ModifiedBy] char(10) NOT NULL,
+    [UtcModifiedDate] datetime NOT NULL
+);

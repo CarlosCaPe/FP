@@ -1,0 +1,19 @@
+CREATE TABLE [dbo].[ETL_JOB_MAP] (
+    [ETL_JOB_NAME] varchar(100) NOT NULL,
+    [SRC_TABLE_INFO] varchar(100) NULL,
+    [TGT_TABLE_NAME] varchar(100) NULL,
+    [ETL_OBJECT_NAME] varchar(100) NULL,
+    [ETL_OBJECT_TYPE] varchar(100) NULL,
+    [ETL_DELTA_EXTRACT_COL_NAME] varchar(5000) NULL,
+    [STORAGE_CONTAINER_DIRECTORY] varchar(500) NULL,
+    [TABLE_STG_TABLE_NAME] varchar(100) NULL,
+    [TGT_MERGE_PROC_DB_NAME] varchar(100) NULL,
+    [TGT_MERGE_PROC_SCHEMA_NAME] varchar(100) NULL,
+    [TGT_MERGE_PROC_NAME] varchar(100) NULL,
+    [LAST_REQUESTED_BY] varchar(100) NULL,
+    [CREATED_BY] varchar(100) NULL,
+    [CREATED_TS] datetime NULL,
+    [LAST_UPDATED_BY] varchar(100) NULL,
+    [LAST_UPDATED_TS] datetime NULL,
+    [STG_VIEW_NAME] varchar(100) NULL
+);

@@ -1,0 +1,8 @@
+CREATE VIEW [bag2].[ASSET_EFFICIENCY_V] AS
+
+CREATE VIEW BAG2.ASSET_EFFICIENCY_V
+AS
+
+SELECT * FROM bag.asset_efficiency_v
+
+

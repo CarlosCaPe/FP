@@ -1,0 +1,23 @@
+CREATE TABLE [mor].[ZZZ_plan_values_stg_temp] (
+    [ContentTypeID] varchar(100) NOT NULL,
+    [ShiftID] varchar(50) NOT NULL,
+    [ComplianceAssetId] varchar(100) NULL,
+    [Shovel] varchar(50) NOT NULL,
+    [PB] varchar(50) NOT NULL,
+    [Level] int NOT NULL,
+    [Destination] varchar(50) NOT NULL,
+    [MaterialType] varchar(50) NOT NULL,
+    [Tons] varchar(50) NOT NULL,
+    [DTCU] decimal(10,5) NOT NULL,
+    [Mo] decimal(10,5) NOT NULL,
+    [EFH] varchar(50) NOT NULL,
+    [Id] int NOT NULL,
+    [ContentType] varchar(50) NOT NULL,
+    [Modified] datetime NOT NULL,
+    [Created] datetime NOT NULL,
+    [CreatedById] int NOT NULL,
+    [ModifiedById] int NOT NULL,
+    [Owshiddenversion] int NOT NULL,
+    [Version] decimal(10,5) NOT NULL,
+    [Path] varchar(2000) NOT NULL
+);

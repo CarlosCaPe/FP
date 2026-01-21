@@ -1,0 +1,9 @@
+CREATE VIEW [dbo].[OEE] AS
+
+--SELECT * FROM dbo.OEE
+CREATE VIEW dbo.OEE
+AS
+
+SELECT *
+FROM dbo.OEE_2 WITH(NOLOCK)
+

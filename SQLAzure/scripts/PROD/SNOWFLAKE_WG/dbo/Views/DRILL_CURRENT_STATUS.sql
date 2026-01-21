@@ -1,0 +1,1 @@
+-- Unable to get definition for [dbo].[DRILL_CURRENT_STATUS]

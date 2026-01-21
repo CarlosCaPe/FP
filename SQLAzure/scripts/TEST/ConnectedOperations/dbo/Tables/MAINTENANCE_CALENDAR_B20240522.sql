@@ -1,0 +1,20 @@
+CREATE TABLE [dbo].[MAINTENANCE_CALENDAR_B20240522] (
+    [Id] int NOT NULL,
+    [SiteCode] char(3) NOT NULL,
+    [EventTitle] varchar(512) NOT NULL,
+    [EventTypeCode] varchar(8) NOT NULL,
+    [EquipmentTypeCode] varchar(8) NOT NULL,
+    [EquipmentName] varchar(512) NOT NULL,
+    [Description] varchar NOT NULL,
+    [StartDateTime] datetime NOT NULL,
+    [EndDateTime] datetime NOT NULL,
+    [IsRecurrence] bit NOT NULL,
+    [CreatedBy] char(10) NOT NULL,
+    [UtcCreatedDate] datetime NOT NULL,
+    [LastModifiedBy] char(10) NOT NULL,
+    [UtcModifiedDate] datetime NOT NULL,
+    [RecurrenceTypeCode] char(1) NULL,
+    [RecurrenceStartDateTime] datetime NULL,
+    [RecurrenceEndDateTime] datetime NULL,
+    [RecurrenceCustomNumber] int NULL
+);

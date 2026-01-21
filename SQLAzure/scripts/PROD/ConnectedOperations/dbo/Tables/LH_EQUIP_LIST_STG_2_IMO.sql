@@ -1,0 +1,20 @@
+CREATE TABLE [dbo].[LH_EQUIP_LIST_STG_2_IMO] (
+    [SHIFTINDEX] int NOT NULL,
+    [SHIFTDATE] date NULL,
+    [SITE_CODE] nvarchar(5) NOT NULL,
+    [CLIID] int NULL,
+    [DDBKEY] int NULL,
+    [EQMTID] nvarchar(50) NOT NULL,
+    [EQMTID_ORIG] nvarchar(10) NULL,
+    [EQMTTYPE] nvarchar(50) NULL,
+    [EQMTTYPE_CODE] int NULL,
+    [EQMTTYPE_CODE_ORIG] nvarchar(10) NULL,
+    [EQMTTYPE_ORIG] nvarchar(10) NULL,
+    [EXTRALOAD] int NULL,
+    [PIT] nvarchar(50) NULL,
+    [SIZE] float NULL,
+    [TRAMMER] nvarchar(10) NULL,
+    [UNIT] nvarchar(50) NULL,
+    [UNIT_CODE] int NULL,
+    [UTC_CREATED_DATE] datetime NULL
+);

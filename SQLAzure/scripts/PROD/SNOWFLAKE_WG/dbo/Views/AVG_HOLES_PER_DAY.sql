@@ -1,0 +1,1 @@
+-- Unable to get definition for [dbo].[AVG_HOLES_PER_DAY]

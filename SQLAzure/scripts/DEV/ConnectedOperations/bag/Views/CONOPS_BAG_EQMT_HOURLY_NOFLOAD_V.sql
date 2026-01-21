@@ -1,0 +1,29 @@
+CREATE VIEW [bag].[CONOPS_BAG_EQMT_HOURLY_NOFLOAD_V] AS
+
+--SELECT * FROM [bag].[CONOPS_BAG_EQMT_HOURLY_NOFLOAD_V] WHERE shiftflag = 'prev'
+CREATE VIEW [bag].[CONOPS_BAG_EQMT_HOURLY_NOFLOAD_V]
+AS
+
+WITH CTE AS (
+SELECT
+	SITE_CODE,
+	SHIFT_ID AS SHIFTID,
+	SHOVEL_NAME AS EQUIPMENT,
+	LOAD_HOS - 1 AS HOS,
+	COUNT(*) AS NofLoad
+FROM BAG.FLEET_SHOVEL_CYCLE_V
+GROUP BY SITE_CODE, SHIFT_ID, SHOVEL_NAME, LOAD_HOS
+)
+
+SELECT
+	siteflag,
+	shiftflag,
+	Equipment,
+	SUM(NofLoad) NofLoad,
+	HOS,
+	dateadd(hour,HOS,ShiftStartDateTime) as TimeinHour
+FROM [bag].[CONOPS_BAG_SHIFT_INFO_V] a
+LEFT JOIN CTE b
+	ON a.SHIFTID = b.SHIFTID
+GROUP BY siteflag, shiftflag, Equipment, NofLoad, HOS, ShiftStartDateTime
+

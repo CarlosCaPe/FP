@@ -1,0 +1,6 @@
+CREATE TABLE [dbo].[PAYLOAD_FILTER_NEW] (
+    [SITE_CODE] varchar(10) NOT NULL,
+    [EQMT_TYPE] varchar(50) NOT NULL,
+    [MIN_PAYLOAD] int NULL,
+    [TARGET_PAYLOAD] int NULL
+);

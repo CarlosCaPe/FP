@@ -1,0 +1,131 @@
+
+  
+  
+  
+    
+/******************************************************************      
+* PROCEDURE : DBO.[UPSERT_CONOPS_SHIFT_DUMP]    
+* PURPOSE : UPSERT [UPSERT_CONOPS_SHIFT_DUMP]    
+* NOTES     :     
+* CREATED : LWASINI    
+* SAMPLE    : EXEC DBO.[UPSERT_CONOPS_SHIFT_DUMP]     
+* MODIFIED DATE  AUTHOR    DESCRIPTION      
+*------------------------------------------------------------------      
+* {25 OCT 2022}  {LWASINI}   {INITIAL CREATED}      
+* {22 FEB 2023}  {MFAHMI}   {Enhancement the logic to add delete of records}  
+* {01 MAR 2023}  {GGOSAL1}  {ADD COLUMN SITEFLAG}    
+*******************************************************************/      
+CREATE PROCEDURE [dbo].[UPSERT_CONOPS_SHIFT_DUMP]    
+(    
+@G_SITE VARCHAR(5)    
+)    
+AS    
+BEGIN  
+DECLARE @G_SITE_ALIAS VARCHAR(5)
+
+SET @G_SITE_ALIAS = CASE WHEN @G_SITE = 'CLI' THEN 'CMX' ELSE @G_SITE END
+
+EXEC     
+(    
+'MERGE ' + @G_SITE + '.SHIFT_DUMP AS T '    
++' USING (SELECT '  
++' ''' +@G_SITE_ALIAS+ ''' AS SITEFLAG' 
++' ,DBPREVIOUS'    
++' ,DBNEXT'    
++' ,DBVERSION'    
++' ,SHIFTID'    
++' ,ID'    
++' ,DBNAME'    
++' ,DBKEY'    
++' ,FIELDID'    
++' ,FIELDTRUCK'    
++' ,FIELDLOC'    
++' ,FIELDGRADE'    
++' ,FIELDLOADREC'    
++' ,FIELDEXCAV'    
++' ,FIELDBLAST'    
++' ,FIELDBAY'    
++' ,FIELDTONS'    
++' ,FIELDTIMEARRIVE'    
++' ,FIELDTIMEDUMP'    
++' ,FIELDTIMEEMPTY'    
++' ,FIELDTIMEDIGEST'    
++' ,FIELDCALCTRAVTIME'    
++' ,FIELDLOAD'    
++' ,FIELDEXTRALOAD'    
++' ,FIELDDIST'    
++' ,FIELDEFH'    
++' ,FIELDLOADTYPE'    
++' ,FIELDTOPER'    
++' ,FIELDEOPER'    
++' ,FIELDORIGASN'    
++' ,FIELDREASNBY'    
++' ,FIELDPATHTRAVTIME'    
++' ,FIELDEXPTRAVELTIME'    
++' ,FIELDEXPTRAVELDIST'    
++' ,FIELDGPSTRAVELDIST'    
++' ,FIELDLOCACTLC'    
++' ,FIELDLOCACTTP'    
++' ,FIELDLOCACTRL'    
++' ,FIELDAUDIT'    
++' ,FIELDGPSXTKD'    
++' ,FIELDGPSYTKD'    
++' ,FIELDGPSSTAT'    
++' ,FIELDGPSHEAD'    
++' ,FIELDGPSVEL'    
++' ,FIELDLSIZETONS'    
++' ,FIELDLSIZEID'    
++' ,FIELDLSIZEVERSION'    
++' ,FIELDLSIZEDB'    
++' ,FIELDFACTAPPLY'    
++' ,FIELDDLOCK'    
++' ,FIELDELOCK'    
++' ,FIELDEDLOCK'    
++' ,FIELDRLOCK'    
++' ,FIELDRECONSTAT'    
++' ,FIELDTIMEARRIVEMOBILE'    
++' ,FIELDTIMEDUMPMOBILE'    
++' ,FIELDTIMEEMPTYMOBILE'    
++' ,FIELDMEASURETIME'    
++' ,FIELDWEIGHTST'    
++' ,UTC_CREATED_DATE '    
++' ,UTC_LOGICAL_DELETED_DATE'    
++' FROM ' + @G_SITE + '.SHIFT_DUMP_STG'    
++' WHERE CHANGE_TYPE IN (''U'',''I'')) AS S '    
+ +' ON (T.ID = S.ID AND T.SITEFLAG = S.SITEFLAG ) '    
++' WHEN MATCHED '    
++' THEN UPDATE SET '    
++' T.DBPREVIOUS = S.DBPREVIOUS'    
++' ,T.DBNEXT = S.DBNEXT'    
++' ,T.DBVERSION = S.DBVERSION'    
++' ,T.SHIFTID = S.SHIFTID'    
++' ,T.DBNAME = S.DBNAME'    
++' ,T.DBKEY = S.DBKEY'    
++' ,T.FIELDID = S.FIELDID'    
++' ,T.FIELDTRUCK = S.FIELDTRUCK'    
++' ,T.FIELDLOC = S.FIELDLOC'    
++' ,T.FIELDGRADE = S.FIELDGRADE'    
++' ,T.FIELDLOADREC = S.FIELDLOADREC'    
++' ,T.FIELDEXCAV = S.FIELDEXCAV'    
++' ,T.FIELDBLAST = S.FIELDBLAST'    
++' ,T.FIELDBAY = S.FIELDBAY'    
++' ,T.FIELDTONS = S.FIELDTONS'    
++' ,T.FIELDTIMEARRIVE = S.FIELDTIMEARRIVE'    
++' ,T.FIELDTIMEDUMP = S.FIELDTIMEDUMP'    
++' ,T.FIELDTIMEEMPTY = S.FIELDTIMEEMPTY'    
++' ,T.FIELDTIMEDIGEST = S.FIELDTIMEDIGEST'    
++' ,T.FIELDCALCTRAVTIME = S.FIELDCALCTRAVTIME'    
++' ,T.FIELDLOAD = S.FIELDLOAD'    
++' ,T.FIELDEXTRALOAD = S.FIELDEXTRALOAD'    
++' ,T.FIELDDIST = S.FIELDDIST'    
++' ,T.FIELDEFH = S.FIELDEFH'    
++' ,T.FIELDLOADTYPE = S.FIELDLOADTYPE'    
++' ,T.FIELDTOPER = S.FIELDTOPER'    
++' ,T.FIELDEOPER = S.FIELDEOPER'    
++' ,T.FIELDORIGASN = S.FIELDORIGASN'    
++' ,T.FIELDREASNBY = S.FIELDREASNBY'    
++' ,T.FIELDPATHTRAVTIME = S.FIELDPATHTRAVTIME'    
++' ,T.FIELDEXPTRAVELTIME = S.FIELDEXPTRAVELTIME'    
++' ,T.FIELDEXPTRAVELDIST = S.FIELDEXPTRAVELDIST'    
++' ,T.FIELDGPSTRAVELDIST = S.FIELDGPSTRAVELDIST'    
++' ,T.FIELDLOCACTLC = S.FIELDLOCACTLC'  

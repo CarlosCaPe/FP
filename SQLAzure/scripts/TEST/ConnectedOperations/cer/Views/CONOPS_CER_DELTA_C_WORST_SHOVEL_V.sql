@@ -1,0 +1,42 @@
+CREATE VIEW [cer].[CONOPS_CER_DELTA_C_WORST_SHOVEL_V] AS
+
+
+
+
+
+--select * from [cer].[CONOPS_CER_DELTA_C_WORST_SHOVEL_V]
+CREATE VIEW [cer].[CONOPS_CER_DELTA_C_WORST_SHOVEL_V]
+AS
+
+
+SELECT
+a.shiftflag,
+a.ShiftStartDateTime,
+a.ShiftEndDateTime,
+a.siteflag,
+a.shiftid,
+b.excav,
+b.deltac_ts,
+b.delta_c,
+ISNULL(ps.Delta_c_target,0) AS DeltaCTarget
+FROM [cer].[CONOPS_CER_SHIFT_INFO_V] a (NOLOCK)
+
+LEFT JOIN (
+select 
+site_code,
+shiftindex,
+--concat(concat(right(replace(cast(shiftdate as varchar(10)),'-',''),6),'00'),shift_code) as shiftid,
+excav,
+deltac_ts,
+avg(delta_c) as delta_c
+from [dbo].[delta_c] (nolock)
+where site_code = 'CER'
+group by site_code,excav,deltac_ts,shiftindex) b
+ON a.shiftindex = b.shiftindex AND a.siteflag = b.site_code 
+
+LEFT JOIN [cer].[CONOPS_CER_DELTA_C_TARGET_V] ps WITH (NOLOCK)
+ON a.shiftid = ps.shiftid AND a.siteflag = ps.siteflag
+
+
+WHERE a.siteflag = 'CER'
+

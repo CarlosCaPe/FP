@@ -1,0 +1,9 @@
+CREATE TABLE [bag].[LH_EQUIP_CATEGORY_MAP] (
+    [FLEET_EQUIP_CATEGORY] varchar(512) NULL,
+    [LH_EQUIP_CATEGORY] varchar(512) NULL,
+    [DISPATCH_EQUIP_CATEGORY_NUMBER] int NULL,
+    [CREATED_BY] varchar(512) NULL,
+    [CREATED_TS] datetime NULL,
+    [LAST_UPDATED_BY] varchar(512) NULL,
+    [LAST_UPDATED_TS] datetime NULL
+);

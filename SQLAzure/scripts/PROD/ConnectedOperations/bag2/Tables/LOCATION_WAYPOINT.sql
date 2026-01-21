@@ -1,0 +1,7 @@
+CREATE TABLE [bag2].[LOCATION_WAYPOINT] (
+    [SITEFLAG] varchar(5) NOT NULL,
+    [OID] bigint NOT NULL,
+    [WAYPOINT_OID] bigint NOT NULL,
+    [UTC_CREATED_DATE] datetime NOT NULL,
+    [UTC_LOGICAL_DELETED_DATE] datetime NULL
+);

@@ -1,0 +1,105 @@
+CREATE VIEW [bag2].[MSHIST_HAUL_CYCLE] AS
+
+
+
+CREATE VIEW [bag2].[MSHIST_HAUL_CYCLE]
+AS
+
+WITH Last3Shift AS (
+    SELECT TOP 3 
+        OID,
+        ROW_NUMBER() OVER (ORDER BY OID DESC) AS ROW_NO
+    FROM [ConnectedOperations].[bag2].[SHIFT]
+    ORDER BY OID DESC
+),
+
+starttime_utc AS (
+    SELECT OID, [Queuing.At.Source], [Dumping], [Loading]
+    FROM (
+        SELECT OID, [NAME], [START_TIME_UTC]
+        FROM [ConnectedOperations].[bag2].[CYCLEACTIVITYCOMPONENT] WITH (NOLOCK)
+    ) AS SourceTable
+    PIVOT (
+        MAX(START_TIME_UTC)
+        FOR [NAME] IN ([Queuing.At.Source], [Dumping], [Loading])
+    ) AS Pv1
+),
+
+endtime_utc AS (
+    SELECT OID, [Dumping], [Loading]
+    FROM (
+        SELECT OID, [NAME], [END_TIME_UTC]
+        FROM [ConnectedOperations].[bag2].[CYCLEACTIVITYCOMPONENT] WITH (NOLOCK)
+    ) AS SourceTable
+    PIVOT (
+        MAX(END_TIME_UTC)
+        FOR [NAME] IN ([Dumping], [Loading])
+    ) AS Pv2
+)
+
+SELECT 
+    'BAG' AS SITE_CODE,
+    C.ECF_CLASS_ID,
+    CONCAT(RIGHT(SUBSTRING(REPORTING_DATE, 1, 8), 6), '00', 
+        CASE 
+            WHEN shifttype = 0 THEN 1
+            WHEN shifttype = 1 THEN 2 
+            ELSE NULL
+        END) AS SHIFT_ID,
+    PM.NAME AS TRUCK_NAME,
+    TMC.NAME AS TRUCK_EQUIP_CLASS,
+    PO.PERSONNELID AS TRUCK_OPERATOR_ID,
+    PO.NAME AS TRUCK_OPERATOR_NAME,
+    SM.NAME AS SHOVEL_NAME,
+    SMC.NAME AS SHOVEL_EQUIP_CLASS,
+    SO.PERSONNELID AS SHOVEL_OPERATOR_ID,
+    SO.NAME AS SHOVEL_OPERATOR_NAME,
+    -- ENDPROCESSOR AS DUMP_LOC_ID,
+    C.ENDSINKLOCATIONNAME AS DUMP_LOC_NAME,
+    C.SOURCELOCATIONNAME AS LOAD_LOC_NAME,
+    M.NAME AS MATERIAL_NAME,
+    CASE
+        WHEN M.NAME IS NOT NULL THEN CONCAT(ML.NAME, '-', M.NAME)
+        ELSE ML.NAME 
+    END AS GRADE,
+    CASE 
+        WHEN CA_ET.[Loading] NOT BETWEEN s.starttime_utc AND s.endtime_utc
+        THEN - (DATEDIFF(HOUR, s.starttime_utc, CA_ET.[Loading]) + 13)
+        ELSE DATEDIFF(HOUR, s.starttime_utc, CA_ET.[Loading]) + 1
+    END AS LOAD_HOS,
+    CASE 
+        WHEN CA_ET.[Dumping] NOT BETWEEN s.starttime_utc AND s.endtime_utc
+        THEN - (DATEDIFF(HOUR, s.starttime_utc, CA_ET.[Dumping]) + 13)
+        ELSE DATEDIFF(HOUR, s.starttime_utc, CA_ET.[Dumping]) + 1
+    END AS DUMP_HOS,
+    -- LOADERMATERIAL AS MATERIAL_ID,
+    -- SECONDARYMACHINE AS EXCAV_ID,
+    -- CA_ST.[Queuing.At.Source] AS QUEUINGATSOURCESTARTTIME_UTC,
+    CONVERT(DATETIME, CA_ST.[Queuing.At.Source]) AT TIME ZONE 'UTC' AT TIME ZONE 'US Mountain Standard Time' AS QUEUINGATSOURCESTARTTIME_LOCAL_TS,
+    CONVERT(DATETIME, CA_ST.[Loading]) AT TIME ZONE 'UTC' AT TIME ZONE 'US Mountain Standard Time' AS LOADINGSTARTTIME_LOCAL_TS,
+    CONVERT(DATETIME, CA_ST.[Dumping]) AT TIME ZONE 'UTC' AT TIME ZONE 'US Mountain Standard Time' AS DUMPINGSTARTTIME_LOCAL_TS,
+    CONVERT(DATETIME, CA_ET.[Dumping]) AT TIME ZONE 'UTC' AT TIME ZONE 'US Mountain Standard Time' AS DUMPINGENDTIME_LOCAL_TS,
+    M.EXTERNALREF AS MATERIAL_CODE_DISPATCH,
+    260 AS REPORT_PAYLOAD_SHORT_TONS,
+    (PAYLOAD / 1000) / 0.90718474 AS MEASURED_PAYLOAD_SHORT_TONS, 
+    PAYLOAD / 1000 AS MEASURED_PAYLOAD_METRIC_TONS,
+    CASE
+        WHEN C.CREATIONMODE = 2 THEN 1
+        ELSE 0 
+    END AS EXTRA_LOAD,
+    GB.NAME AS SOURCEBLOCKLEVEL
+FROM [ConnectedOperations].[bag2].[CYCLE] C WITH (NOLOCK)
+LEFT JOIN starttime_utc CA_ST WITH (NOLOCK)
+    ON C.CYCLE_OID = CA_ST.OID
+LEFT JOIN endtime_utc CA_ET WITH (NOLOCK)
+    ON C.CYCLE_OID = CA_ET.OID
+LEFT JOIN [ConnectedOperations].[bag2].[MATERIAL] M WITH (NOLOCK)
+    ON C.LOADERMATERIAL = M.MATERIAL_OID
+LEFT JOIN [ConnectedOperations].[bag2].[SHIFT] S WITH (NOLOCK)
+    ON CA_ET.DUMPING > S.STARTTIME_UTC
+    AND CA_ET.DUMPING <= S.ENDTIME_UTC
+LEFT JOIN [ConnectedOperations].[bag2].[MACHINE] ML WITH (NOLOCK)
+    ON C.ENDPROCESSOR = ML.MACHINE_OID
+LEFT JOIN [ConnectedOperations].[bag2].[LOCATION] LOC WITH (NOLOCK)
+    ON C.SOURCELOCATION = LOC.LOCATION_OID
+LEFT JOIN [ConnectedOperations].[bag2].[MACHINE] PM W

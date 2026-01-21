@@ -1,0 +1,29 @@
+CREATE VIEW [CLI].[CONOPS_CLI_OVERALL_AVG_PAYLOAD_V] AS
+
+  
+  
+--select * from [cli].[CONOPS_CLI_OVERALL_AVG_PAYLOAD_V] where shiftflag = 'curr'  
+CREATE VIEW [cli].[CONOPS_CLI_OVERALL_AVG_PAYLOAD_V]   
+AS  
+  
+SELECT [shift].shiftflag,  
+    [shift].[siteflag],  
+    COALESCE([AVG_Payload], 0) [AVG_Payload],  
+    [pt].[PayloadTarget] [Target]  
+FROM [CLI].[CONOPS_CLI_SHIFT_INFO_V] [shift]  
+LEFT JOIN (  
+ SELECT SHIFTINDEX,  
+     SITE_CODE,  
+     AVG([load].MEASURETON) Avg_Payload  
+ FROM [dbo].[lh_load] [load] WITH (NOLOCK)  
+ WHERE [load].MEASURETON >= (SELECT PayloadFilterLower FROM dbo.PAYLOAD_FILTER WHERE SITEFLAG = 'CLI')
+ AND SITE_CODE = 'CLI'  
+ GROUP BY SHIFTINDEX, SITE_CODE  
+) [AvgPayload]  
+on [AvgPayload].SHIFTINDEX = [shift].ShiftIndex  
+   AND [AvgPayload].SITE_CODE = 'CLI' 
+LEFT JOIN [dbo].[PAYLOAD_TARGET] [pt] WITH (NOLOCK) ON [shift].siteflag = [pt].siteflag 
+  
+  
+  
+
