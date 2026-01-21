@@ -2,6 +2,14 @@
 
 This folder contains SQL DDL snapshots from Azure SQL databases.
 
+## 🚧 TODO - Próximos Pasos
+
+1. **Ejecutar desde servidor en red corporativa** - Los scripts no funcionan desde fuera de la red (VPN/Firewall)
+2. **Probar `extract_schemas_v2.py`** - Usa azure-identity, debería funcionar con `az login`
+3. **Extraer schemas de las 6 bases de datos** en DEV, TEST, PROD
+4. **Organizar estructura** - Una vez extraídos, revisar y limpiar los DDL
+5. **Usar como base para crear nuevos objetos** - Este repo será el source of truth para SQL Azure
+
 ## Servers
 
 | Environment | Server |
