@@ -21,7 +21,7 @@ SENSOR_SNAPSHOT_GET(
     is_af_path_flag: bool,
     sensor_ids: dynamic
 ) {
-    // Mapear site_code a database name
+    // Map site_code to database name
     let db_name = case(
         site_code == "SAM", "Miami",
         site_code == "MOR", "Morenci",
@@ -32,9 +32,9 @@ SENSOR_SNAPSHOT_GET(
         site_code == "CVE", "CerroVerde",
         "Unknown"
     );
-    // Query FCTSCURRENT del database correspondiente
-    // Nota: database() dinámico no funciona directamente, 
-    // ver alternativa abajo con union
+    // Query FCTSCURRENT from the corresponding database
+    // Note: dynamic database() doesn't work directly,
+    // see alternative below using union
     database(db_name).FCTSCURRENT
     | where sensor_id in (sensor_ids)
     | project 
@@ -46,7 +46,7 @@ SENSOR_SNAPSHOT_GET(
 }
 
 // -----------------------------------------------------------------------------
-// ALTERNATIVA: Si database() dinámico no funciona, usar UNION explícito
+// ALTERNATIVE: If dynamic database() doesn't work, use explicit UNION
 // -----------------------------------------------------------------------------
 .create-or-alter function with (folder = "FCTS", docstring = "Equivalent to Snowflake SENSOR_SNAPSHOT_GET - Union version") 
 SENSOR_SNAPSHOT_GET_V2(
@@ -92,9 +92,9 @@ database('Morenci').FCTSCURRENT
     QUALITY = quality
 
 // -----------------------------------------------------------------------------
-// STEP 3: Query para comparar con Snowflake (regression test)
+// STEP 3: Query for comparing with Snowflake (regression test)
 // -----------------------------------------------------------------------------
-// Ejecutar y exportar a CSV para comparar columnas con Snowflake output
+// Execute and export to CSV to compare columns with Snowflake output
 
 let sensor_list = dynamic([
     'CR03_CRUSH_OUT_TIME',

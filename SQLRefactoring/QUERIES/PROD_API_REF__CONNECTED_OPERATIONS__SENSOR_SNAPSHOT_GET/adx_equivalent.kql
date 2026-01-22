@@ -1,10 +1,10 @@
 // ============================================================================
 // ADX EQUIVALENT: SENSOR_SNAPSHOT_GET
 // ============================================================================
-// La función de Snowflake SENSOR_SNAPSHOT_GET devuelve el último valor (snapshot)
-// de sensores por SITE_CODE. En ADX, esto es exactamente lo que hace FCTSCURRENT.
+// The Snowflake function SENSOR_SNAPSHOT_GET returns the latest value (snapshot)
+// of sensors by SITE_CODE. In ADX, this is exactly what FCTSCURRENT does.
 //
-// Mapeo de Snowflake → ADX:
+// Mapping Snowflake → ADX:
 // | Snowflake Table              | ADX Database | ADX Table/Function |
 // |------------------------------|--------------|-------------------|
 // | SENSOR_READING_SAM_B         | Miami        | FCTSCURRENT       |
@@ -92,10 +92,10 @@ database('Global').RegistryStreams
 | take 10
 
 // -----------------------------------------------------------------------------
-// FUNCIÓN PARAMETRIZADA (crear en ADX si se necesita reusar)
+// PARAMETERIZED FUNCTION (create in ADX if reuse is needed)
 // -----------------------------------------------------------------------------
 
-// Puedes crear una función en ADX que replique la firma de SENSOR_SNAPSHOT_GET:
+// You can create a function in ADX that replicates the SENSOR_SNAPSHOT_GET signature:
 //
 // .create-or-alter function SENSOR_SNAPSHOT_GET(site_code:string, sensor_ids:dynamic)
 // {

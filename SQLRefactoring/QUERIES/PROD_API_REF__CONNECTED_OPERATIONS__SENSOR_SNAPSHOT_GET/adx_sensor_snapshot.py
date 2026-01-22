@@ -121,13 +121,13 @@ def sensor_snapshot_get(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Query ADX FCTSCURRENT (equivalente a SENSOR_SNAPSHOT_GET)"
+        description="Query ADX FCTSCURRENT (equivalent to SENSOR_SNAPSHOT_GET)"
     )
     parser.add_argument(
         "--site", "-s",
         required=True,
         choices=list(SITE_TO_DATABASE.keys()),
-        help="Código del sitio"
+        help="Site code"
     )
     parser.add_argument(
         "--sensors", "-n",
