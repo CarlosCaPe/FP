@@ -1,0 +1,485 @@
+# =============================================================================
+# ADX UNIFIED SEMANTIC MODEL
+# =============================================================================
+# Single reference for all ADX databases in the FCTS cluster
+# Cluster: fctsnaproddatexp02.westus2.kusto.windows.net
+#
+# Use this as the primary reference for understanding ADX data architecture
+# =============================================================================
+
+semantic_model:
+  name: ADX_FCTS_Unified
+  description: |
+    Unified semantic model for all FCTS Azure Data Explorer databases.
+    This is the primary real-time sensor data platform replacing Snowflake SENSOR_READING_* tables.
+  cluster: https://fctsnaproddatexp02.westus2.kusto.windows.net
+  version: "1.0.0"
+  updated_at: "2026-01-22"
+  
+# =============================================================================
+# SITE DATABASES
+# =============================================================================
+# All site databases share the SAME schema pattern:
+#   - Table: FCTS_INGEST (raw ingestion)
+#   - Function: FCTS (historical data with retention)
+#   - Function: FCTSCURRENT (latest snapshot per sensor)
+
+site_databases:
+  - name: Miami
+    site_code: SAM
+    description: Miami site sensor data
+    snowflake_equivalent: PROD_DATALAKE.FCTS.SENSOR_READING_SAM_B
+    
+  - name: Morenci
+    site_code: MOR
+    description: Morenci site sensor data
+    snowflake_equivalent: PROD_DATALAKE.FCTS.SENSOR_READING_MOR_B
+    approximate_row_count: 493000000
+    
+  - name: Climax
+    site_code: CMX
+    description: Climax site sensor data
+    snowflake_equivalent: PROD_DATALAKE.FCTS.SENSOR_READING_CMX_B
+    
+  - name: Sierrita
+    site_code: SIE
+    description: Sierrita site sensor data
+    snowflake_equivalent: PROD_DATALAKE.FCTS.SENSOR_READING_SIE_B
+    
+  - name: NewMexico
+    site_code: NMO
+    description: New Mexico site sensor data
+    snowflake_equivalent: PROD_DATALAKE.FCTS.SENSOR_READING_NMO_B
+    
+  - name: Bagdad
+    site_code: BAG
+    description: Bagdad site sensor data
+    snowflake_equivalent: PROD_DATALAKE.FCTS.SENSOR_READING_BAG_B
+    
+  - name: CerroVerde
+    site_code: CVE
+    description: Cerro Verde site sensor data
+    snowflake_equivalent: PROD_DATALAKE.FCTS.SENSOR_READING_CVE_B
+
+# =============================================================================
+# COMMON SCHEMA (applies to ALL site databases)
+# =============================================================================
+
+common_entities:
+  FCTS_INGEST:
+    description: |
+      Raw sensor data ingestion table. Data streams directly from Event Hub.
+      Use FCTS or FCTSCURRENT functions for querying - they add retention policies.
+    type: table
+    columns:
+      - name: site_code
+        type: string
+        description: Site identifier (MOR, BAG, SAM, etc.)
+        
+      - name: sensor_id
+        type: string
+        description: Unique sensor identifier / PI Point name
+        is_primary_key: true
+        examples:
+          - "mor-cr03_wi00317_pv"
+          - "BLNKPNTRCHR_OPC.SMOHYD.PI_SLP_RATE"
+          
+      - name: data_source
+        type: string
+        description: Source system identifier
+        
+      - name: timestamp
+        type: datetime
+        description: Reading timestamp (UTC)
+        is_temporal: true
+        
+      - name: value
+        type: string
+        description: Sensor reading value (as string, may need casting)
+        is_measure: true
+        
+      - name: uom
+        type: string
+        description: Unit of measure
+        
+      - name: quality
+        type: int
+        description: Data quality indicator (0 = good)
+        
+      - name: annotations
+        type: dynamic
+        description: Additional metadata as JSON
+        
+      - name: stream_details
+        type: dynamic
+        description: Stream configuration details as JSON
+        
+      - name: enqueuedtime
+        type: datetime
+        description: Event Hub ingestion timestamp
+        
+  FCTS:
+    description: |
+      Historical sensor data function with retention policy.
+      Use for time-series analysis and historical queries.
+    type: function
+    returns: Sensor readings with retention
+    usage: |
+      database('Morenci').FCTS
+      | where timestamp > ago(30d)
+      | where sensor_id == "sensor_name"
+    output_columns:
+      - site_code
+      - sensor_id
+      - data_source
+      - timestamp
+      - value
+      - uom
+      - quality
+      
+  FCTSCURRENT:
+    description: |
+      Latest snapshot per sensor. Most efficient for current values.
+      Equivalent to Snowflake SENSOR_SNAPSHOT_GET function.
+    type: function
+    returns: One row per sensor with latest value
+    usage: |
+      database('Morenci').FCTSCURRENT
+      | where sensor_id in ("sensor1", "sensor2")
+    output_columns:
+      - sensor_id
+      - timestamp
+      - value
+      - uom
+      - quality
+
+# =============================================================================
+# GLOBAL DATABASE (Metadata & Registry)
+# =============================================================================
+
+global_database:
+  name: Global
+  description: Central registry, metadata, and cross-site functions
+  
+  tables:
+    FaeLogsIngest:
+      description: FAE (Factory Automation Engine) job execution logs
+      approximate_row_count: 442000000
+      columns:
+        - {name: id, type: guid, is_primary_key: true}
+        - {name: siteCode, type: string}
+        - {name: jobId, type: guid}
+        - {name: name, type: string}
+        - {name: scheduled, type: datetime}
+        - {name: start, type: datetime}
+        - {name: end, type: datetime}
+        - {name: status, type: string}
+        - {name: errors, type: bool}
+        - {name: actionLogs, type: dynamic}
+        
+    RegistryIngest:
+      description: Sensor/device registry with metadata
+      columns:
+        - {name: id, type: string, is_primary_key: true}
+        - {name: registryType, type: string}
+        - {name: displayName, type: string}
+        - {name: siteCode, type: string}
+        - {name: process, type: string}
+        - {name: version, type: int}
+        - {name: status, type: string}
+        - {name: deviceType, type: string}
+        - {name: dataModel, type: string}
+        - {name: sensors, type: dynamic}
+        
+    JobsIngest:
+      description: FAE job definitions and schedules
+      columns:
+        - {name: id, type: guid, is_primary_key: true}
+        - {name: name, type: string}
+        - {name: siteCode, type: string}
+        - {name: schedule, type: string}
+        - {name: enabled, type: bool}
+        
+  functions:
+    # Cross-site sensor functions
+    FCTS_CURRENT_VALUE:
+      description: Get current value for any sensor across sites
+      parameters: [site_code, sensor_id]
+      
+    RegistryStreams:
+      description: List all registered sensor streams
+      
+    RegistryDevices:
+      description: List all registered devices
+      
+    RegistryConstants:
+      description: Configuration constants
+      
+    # ConSmelter functions (Cerro Verde Smelter)
+    ConSmelter:
+      description: Smelter operations functions for Cerro Verde
+      functions:
+        - GetCopperAssay
+        - GetCopperAssayByTotalBatchId
+        - GetCopperBlowProtocolExecution
+        - GetFlashFurnaceStatus
+        - GetFlashFurnaceTHRate
+        - GetHalfTimeKpi
+        - GetHalfTimeKpi_Chip
+        - GetHalfTimeKpi_CrushedMaterial
+        - GetHalfTimeKpi_Silica
+        - GetMaterialInputTons
+        - GetRefiningBurnerMinMax
+        - GetRefiningNaturalGasRatio
+        - GetRefiningTuyereAirFlow
+        - GetRefiningTuyereGasFlow
+        - GetRefiningTuyere1AirFlow
+        - GetRefiningTuyere1GasFlow
+        - GetRefiningTuyere2AirFlow
+        - GetRefiningTuyere2GasFlow
+        - GetSlagBlowProtocolExecutionFirstHalf
+        - GetSlagBlowProtocolExecutionSecondHalf
+        - GetSlagCopperBlowAvgFlowRate
+        - GetSO2Peaks
+        - GetOperationalParametersFollowUps
+        - GetCastingLadleHeating
+        - GetCastingSpeed
+        - GetCastingTaskDefaultValueByStartEnd
+        - GetUpperBottomTempPreparation
+        - GetFlashFurnaceMatteAssayManualReader
+        - GetFlashFurnaceTargetAssay
+        - GetPisDefaultValue
+        
+    # MillOps functions (Mill Operations KPIs)
+    MillOps:
+      description: Mill operations KPI functions
+      functions:
+        - GetKpisValue
+        - GetKpiDetailValue
+        - GetKpisColumnNpsWater
+        - GetKpisRougherRecovery
+        - GetKpisCanyonRecycle
+        - GetKpis5010Densinometer
+        - GetKpis5011Densinometer
+        
+    # PI System Integration
+    PISystem:
+      description: Direct PI System data access
+      functions:
+        - PISystem_MOR_Raw_Data
+        - PISystem_MOR_Daily_Averages
+        - PISystem_NMO_Raw_Data
+        - PISystem_NMO_Daily_Averages
+        
+    # FAE Job Monitoring
+    FaeJobs:
+      description: FAE job monitoring functions
+      functions:
+        - FaeJobLog
+        - FaeJobsStatus
+        - FaeRunIDLog
+        - FaeUi_GetRecentJobLogs
+        - FaeUi_GetJobInvocationLog
+        
+    # Utility functions
+    Utilities:
+      functions:
+        - GetDynamicHierarchy
+        - PI_Integration_DataSources
+        - time_weighted_avg_fl
+        - TimeEq
+        - UDETripLogs
+        - AllUDETripLogs
+
+# =============================================================================
+# APP INTEGRATION DATABASE
+# =============================================================================
+
+app_integration_database:
+  name: AppIntegration
+  description: Application-specific integration functions for dashboards and APIs
+  
+  functions:
+    AcidTankLevels:
+      description: Acid tank level monitoring for all sites
+      usage: database('AppIntegration').AcidTankLevels()
+      
+    HaulTruck:
+      description: Haul truck telemetry data
+      usage: database('AppIntegration').HaulTruck()
+      
+    HaulTruck_DEV:
+      description: Development version of HaulTruck function
+      
+    Morenci_Batman:
+      description: Morenci Batman mill monitoring
+      functions:
+        - Morenci_Batman_BallMill_Aggregates
+        - Morenci_Batman_Section_Aggregates
+        - Morenci_Batman_Mill_Overview
+
+# =============================================================================
+# QUERY PATTERNS
+# =============================================================================
+
+query_patterns:
+  # Get current value for specific sensors at a site
+  current_value_single_site:
+    description: Get latest sensor values from a specific site
+    kql: |
+      database('Morenci').FCTSCURRENT
+      | where sensor_id in ("sensor1", "sensor2", "sensor3")
+      | project TAG_NAME = sensor_id, VALUE_UTC_TS = timestamp, 
+                SENSOR_VALUE = tostring(value), UOM = uom, QUALITY = quality
+                
+  # Historical time-series query
+  historical_timeseries:
+    description: Get sensor history for time-series analysis
+    kql: |
+      database('Morenci').FCTS
+      | where timestamp > ago(24h)
+      | where sensor_id == "mor-cr03_wi00317_pv"
+      | summarize avg(todouble(value)) by bin(timestamp, 5m)
+      
+  # Cross-site comparison
+  cross_site_current:
+    description: Compare current values across multiple sites
+    kql: |
+      union
+        (database('Morenci').FCTSCURRENT | extend site = "MOR"),
+        (database('Bagdad').FCTSCURRENT | extend site = "BAG"),
+        (database('Miami').FCTSCURRENT | extend site = "SAM")
+      | where sensor_id contains "CRUSHER"
+      | project site, sensor_id, timestamp, value
+      
+  # Aggregated statistics
+  daily_statistics:
+    description: Calculate daily statistics for a sensor
+    kql: |
+      database('Morenci').FCTS
+      | where timestamp > ago(7d)
+      | where sensor_id == "sensor_name"
+      | summarize 
+          avg_value = avg(todouble(value)),
+          min_value = min(todouble(value)),
+          max_value = max(todouble(value)),
+          reading_count = count()
+        by bin(timestamp, 1d)
+
+# =============================================================================
+# SNOWFLAKE TO ADX MIGRATION MAPPING
+# =============================================================================
+
+migration_mapping:
+  description: |
+    Mapping from Snowflake SENSOR_READING tables to ADX databases.
+    The SENSOR_READING_*_B tables in Snowflake are being deprecated.
+    
+  mappings:
+    - snowflake: PROD_DATALAKE.FCTS.SENSOR_READING_MOR_B
+      adx_database: Morenci
+      adx_function: FCTS / FCTSCURRENT
+      
+    - snowflake: PROD_DATALAKE.FCTS.SENSOR_READING_BAG_B
+      adx_database: Bagdad
+      adx_function: FCTS / FCTSCURRENT
+      
+    - snowflake: PROD_DATALAKE.FCTS.SENSOR_READING_SAM_B
+      adx_database: Miami
+      adx_function: FCTS / FCTSCURRENT
+      
+    - snowflake: PROD_DATALAKE.FCTS.SENSOR_READING_CMX_B
+      adx_database: Climax
+      adx_function: FCTS / FCTSCURRENT
+      
+    - snowflake: PROD_DATALAKE.FCTS.SENSOR_READING_SIE_B
+      adx_database: Sierrita
+      adx_function: FCTS / FCTSCURRENT
+      
+    - snowflake: PROD_DATALAKE.FCTS.SENSOR_READING_NMO_B
+      adx_database: NewMexico
+      adx_function: FCTS / FCTSCURRENT
+      
+    - snowflake: PROD_DATALAKE.FCTS.SENSOR_READING_CVE_B
+      adx_database: CerroVerde
+      adx_function: FCTS / FCTSCURRENT
+      
+  snowflake_function_equivalent:
+    function: PROD_API_REF.CONNECTED_OPERATIONS.SENSOR_SNAPSHOT_GET
+    adx_equivalent: database('{site_db}').FCTSCURRENT
+    performance_improvement: "~200x faster"
+
+# =============================================================================
+# MEASURES (Standard Aggregations)
+# =============================================================================
+
+measures:
+  - name: current_value
+    description: Latest sensor reading
+    expression: FCTSCURRENT | summarize Value=take_any(value) by sensor_id
+    
+  - name: avg_24h
+    description: 24-hour rolling average
+    expression: FCTS | where timestamp > ago(24h) | summarize avg(todouble(value)) by sensor_id
+    
+  - name: max_24h
+    description: 24-hour maximum
+    expression: FCTS | where timestamp > ago(24h) | summarize max(todouble(value)) by sensor_id
+    
+  - name: min_24h
+    description: 24-hour minimum
+    expression: FCTS | where timestamp > ago(24h) | summarize min(todouble(value)) by sensor_id
+    
+  - name: reading_count_24h
+    description: Number of readings in last 24 hours
+    expression: FCTS | where timestamp > ago(24h) | summarize count() by sensor_id
+    
+  - name: data_freshness
+    description: Time since last reading
+    expression: FCTSCURRENT | extend freshness = now() - timestamp | project sensor_id, freshness
+
+# =============================================================================
+# DIMENSIONS
+# =============================================================================
+
+dimensions:
+  - name: site
+    description: Mining site
+    values: [MOR, BAG, SAM, CMX, SIE, NMO, CVE]
+    
+  - name: sensor_id
+    description: Unique PI Point / sensor identifier
+    
+  - name: timestamp
+    description: Reading time (UTC)
+    time_grains: [second, minute, hour, day, week, month]
+    
+  - name: quality
+    description: Data quality code (0 = good)
+    
+  - name: uom
+    description: Unit of measure
+
+# =============================================================================
+# CONNECTION INFO
+# =============================================================================
+
+connection:
+  cluster: https://fctsnaproddatexp02.westus2.kusto.windows.net
+  authentication: Azure AD (Interactive Browser / Service Principal)
+  required_packages:
+    - azure-kusto-data
+    - azure-identity
+  security_group: SG-ENT-FCTS-ADX-Viewer
+  
+  python_example: |
+    from azure.identity import InteractiveBrowserCredential
+    from azure.kusto.data import KustoClient, KustoConnectionStringBuilder
+    
+    cluster = "https://fctsnaproddatexp02.westus2.kusto.windows.net"
+    credential = InteractiveBrowserCredential()
+    kcsb = KustoConnectionStringBuilder.with_azure_token_credential(cluster, credential)
+    client = KustoClient(kcsb)
+    
+    # Query example
+    result = client.execute("Morenci", "FCTSCURRENT | take 10")
