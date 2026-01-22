@@ -324,3 +324,55 @@ snowrefactor compare-views \
 - ADX cluster: `fctsnaproddatexp02.westus2.kusto.windows.net`
 - Cada sitio tiene su database (Morenci, Bagdad, etc.) con función `FCTSCURRENT()`
 - `FCTSCURRENT()` ya devuelve el último valor por sensor (no necesita ventana de 30 días)
+
+---
+
+## 🗂️ ADX Semantic Model
+
+El modelo semántico unificado para operaciones mineras está en [`adx_semantic_models/ADX_UNIFIED.semantic.yaml`](adx_semantic_models/ADX_UNIFIED.semantic.yaml).
+
+### Estructura
+
+| Componente | Contenido |
+|------------|-----------|
+| **version** | 4.0 |
+| **connections** | Snowflake (FCX-NA) + ADX (fctsnaproddatexp02) |
+| **outcome_definitions** | 16 métricas de negocio con description, unit, sensible_range |
+| **sites** | 7 independientes (MOR, BAG, SAM, CMX, SIE, NMO, CVE) |
+| **outcomes per site** | 16 cada uno con query + sample_data real validado |
+| **cross_site_queries** | 3 queries comparativos |
+| **column_mappings** | Referencia Snowflake + ADX |
+| **usage_examples** | Python para ambas fuentes |
+
+### Los 16 Business Outcomes
+
+| # | Outcome | Section | Source |
+|---|---------|---------|--------|
+| 01 | Dig compliance (%) | Loading | Snowflake |
+| 02 | Dig rate (TPOH) | Loading | Snowflake |
+| 03 | Priority shovels | Loading | Snowflake |
+| 04 | Number of trucks | Haulage | Snowflake |
+| 05 | Cycle Time (min) | Haulage | Snowflake |
+| 06 | Asset Efficiency | Haulage | Snowflake |
+| 07 | Dump compliance (%) | Haulage | Snowflake |
+| 08 | Mill tons delivered | Mill | Snowflake |
+| 09 | Mill Crusher Rate | Mill | ADX |
+| 10 | Mill Rate (TPOH) | Mill | ADX |
+| 11 | Mill Strategy (IOS) | Mill | ADX |
+| 12 | MFL tons delivered | MFL | Snowflake |
+| 13 | MFL Crusher Rate | MFL | ADX |
+| 14 | MFL FOS Rate | MFL | ADX |
+| 15 | MFL Strategy | MFL | ADX |
+| 16 | ROM tons delivered | ROM | Snowflake |
+
+### Validación
+
+```powershell
+python tools\scripts\validate_semantic_model.py
+```
+
+### Archivos Relacionados
+
+- [`KPI_ADX_MAPPING_ANALYSIS.md`](KPI_ADX_MAPPING_ANALYSIS.md) - Análisis de mapeo KPI → ADX
+- [`adx_snapshots/`](adx_snapshots/) - Snapshots de estructura por database
+- [`reports/semantic_model_complete.json`](reports/semantic_model_complete.json) - Backup JSON

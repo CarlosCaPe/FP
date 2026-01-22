@@ -4,6 +4,8 @@
 
 This document analyzes the business KPIs defined in `knowledge_base.json` and maps them to available ADX data sources. The goal is to determine which metrics can be served from ADX vs other sources (Snowflake, manual entry, etc.).
 
+> **📌 Related:** See [ADX_UNIFIED.semantic.yaml](adx_semantic_models/ADX_UNIFIED.semantic.yaml) for the complete semantic model with 7 sites × 16 outcomes validated with real data.
+
 ---
 
 ## 🎯 PRIORITY CLASSIFICATION
@@ -327,9 +329,24 @@ database("AppIntegration").HaulTruck()
 
 ## 📁 RELATED FILES
 
-- [knowledge_base.json](knowledge_base.json) - Business KPI definitions
-- [ADX_UNIFIED.semantic.yaml](ADX_UNIFIED.semantic.yaml) - Technical semantic model
-- [adx_snapshots/](adx_snapshots/) - Database structure snapshots
+| File | Description |
+|------|-------------|
+| [ADX_UNIFIED.semantic.yaml](adx_semantic_models/ADX_UNIFIED.semantic.yaml) | **THE** unified semantic model - 7 sites × 16 outcomes |
+| [knowledge_base.json](knowledge_base.json) | Business KPI definitions |
+| [adx_snapshots/](adx_snapshots/) | Database structure snapshots |
+| [validate_semantic_model.py](tools/scripts/validate_semantic_model.py) | Model validation script |
+
+## 📊 SEMANTIC MODEL VALIDATION SUMMARY
+
+| Site | Snowflake | ADX | Total | Notes |
+|------|-----------|-----|-------|-------|
+| **MOR** | 9/10 | 6/6 | **15/16** | Full coverage |
+| **BAG** | 9/10 | 6/6 | **15/16** | Full coverage |
+| **SIE** | 7/10 | 6/6 | **13/16** | Good coverage |
+| **SAM** | 0/10 | 6/6 | **6/16** | No Load/Haul - processing only |
+| **CMX** | 0/10 | 5/6 | **5/16** | Molybdenum operation |
+| **NMO** | 0/10 | 6/6 | **6/16** | Different dispatch system |
+| **CVE** | 0/10 | 6/6 | **6/16** | Peru - separate systems |
 
 ---
 

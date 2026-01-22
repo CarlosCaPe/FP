@@ -1,956 +1,2915 @@
 # =============================================================================
-# ADX UNIFIED SEMANTIC MODEL - WITH BUSINESS KPI MAPPING
+# ADX UNIFIED SEMANTIC MODEL - COMPLETE
 # =============================================================================
-# Single reference for all ADX databases in the FCTS cluster
-# Cluster: fctsnaproddatexp02.westus2.kusto.windows.net
+# THE SINGLE SOURCE OF TRUTH for all FCTS mining operations
+# 
+# Structure:
+#   - 7 Sites (each independent)
+#   - 16 Business Outcomes per site
+#   - Real validated sample data
+#   - Full metadata (descriptions, units, ranges)
 #
-# Use this as the primary reference for understanding ADX data architecture
-# INCLUDES: Business KPI mappings from knowledge_base.json
+# Generated: 2026-01-22
+# Cluster: https://fctsnaproddatexp02.westus2.kusto.windows.net
 # =============================================================================
 
-semantic_model:
-  name: ADX_FCTS_Unified
-  description: |
-    Unified semantic model for all FCTS Azure Data Explorer databases.
-    This is the primary real-time sensor data platform replacing Snowflake SENSOR_READING_* tables.
+version: "4.0"
+name: ADX_FCTS_UNIFIED_COMPLETE
+generated_at: "2026-01-22T16:02:49.697059"
+
+# =============================================================================
+# DATA SOURCE CONNECTIONS
+# =============================================================================
+connections:
+  snowflake:
+    account: FCX-NA
+    warehouse: WH_BATCH_DE_NONPROD
+    database: PROD_WG
+    schema: LOAD_HAUL
+    authentication: externalbrowser
+    tables:
+      - LH_LOADING_CYCLE  # Shovel loading events
+      - LH_HAUL_CYCLE     # Truck haul cycles
+      - LH_EQUIPMENT      # Equipment master data
     
-    INCLUDES BUSINESS KPI MAPPING:
-    - Mill IOS (HIGHEST PRIORITY) → ADX Available
-    - Mill Crusher Rate → ADX Available
-    - Processing Metrics → ADX Available
-    - Drilling/Blasting → Snowflake Only
-    - Load/Haul → Partial (SAP Integration)
-    
-  cluster: https://fctsnaproddatexp02.westus2.kusto.windows.net
-  version: "2.0.0"
-  updated_at: "2026-01-22"
-  knowledge_base_ref: "../knowledge_base.json"
+  adx:
+    cluster: https://fctsnaproddatexp02.westus2.kusto.windows.net
+    authentication: InteractiveBrowserCredential
+    functions:
+      - FCTSCURRENT()  # Latest value per sensor
+      - FCTS()         # Historical time series
 
 # =============================================================================
-# 🎯 BUSINESS KPI TO ADX MAPPING
+# OUTCOME DEFINITIONS (The 16 Business Metrics)
 # =============================================================================
-# Maps business requirements from knowledge_base.json to ADX data sources
-# Priority: HIGHEST → HIGH → MEDIUM → LOWER
+outcome_definitions:
 
-business_kpis:
+  01_dig_compliance:
+    name: "Dig compliance (%)"
+    section: "Loading"
+    source: SNOWFLAKE
+    description: "Spatial compliance of shovel dig points relative to designated dig zones. Measures how well operators follow the dig plan."
+    unit: "%"
+    sensible_range:
+      min: 0
+      max: 100
+      typical: "85-95%"
+    business_impact: "High compliance = better ore grade control and mine plan adherence"
+
+  02_dig_rate:
+    name: "Dig rate (TPOH)"
+    section: "Loading"
+    source: SNOWFLAKE
+    description: "Total tons per operating hour loaded by the entire shovel fleet. Key productivity metric for loading operations."
+    unit: "TPH"
+    sensible_range:
+      min: 0
+      max: 99000
+      typical: "15,000-50,000 TPH"
+    business_impact: "Higher dig rate = more material moved = higher production"
+
+  03_priority_shovels:
+    name: "Priority shovels"
+    section: "Loading"
+    source: SNOWFLAKE
+    description: "Top 5 shovels ranked by production (tons loaded). Identifies best performing equipment."
+    unit: "tons"
+    sensible_range:
+      min: 0
+      max: 10000
+      typical: "2,000-5,000 tons/shift per shovel"
+    business_impact: "Focus resources on high-producing shovels"
+
+  04_truck_count:
+    name: "Number of trucks (qty)"
+    section: "Haulage"
+    source: SNOWFLAKE
+    description: "Count of active haul trucks that completed at least one cycle. Mechanically available fleet size."
+    unit: "count"
+    sensible_range:
+      min: 20
+      max: 150
+      typical: "80-130 trucks"
+    business_impact: "More trucks = higher haulage capacity"
+
+  05_cycle_time:
+    name: "Cycle Time (min)"
+    section: "Haulage"
+    source: SNOWFLAKE
+    description: "Average round trip time for haul trucks from load to dump and back. Key efficiency metric."
+    unit: "minutes"
+    sensible_range:
+      min: 15
+      max: 120
+      typical: "35-60 min"
+    business_impact: "Lower cycle time = more cycles per shift = higher productivity"
+
+  06_asset_efficiency:
+    name: "Asset Efficiency"
+    section: "Haulage"
+    source: SNOWFLAKE
+    description: "Truck utilization measured by cycles per truck and payload efficiency."
+    unit: "cycles/truck"
+    sensible_range:
+      min: 5
+      max: 20
+      typical: "8-12 cycles/truck/shift"
+    business_impact: "Higher efficiency = better ROI on equipment"
+
+  07_dump_compliance:
+    name: "Dump plan compliance (%)"
+    section: "Haulage"
+    source: SNOWFLAKE
+    description: "Percentage of material dumped at correct designated locations per the mine plan."
+    unit: "%"
+    sensible_range:
+      min: 0
+      max: 100
+      typical: "90-98%"
+    business_impact: "High compliance = correct ore/waste separation"
+
+  08_mill_tons:
+    name: "Mill - tons delivered"
+    section: "Lbs on Ground - Mill"
+    source: SNOWFLAKE
+    description: "Total tons of material dumped at Mill/Crusher locations. Feed to concentrator."
+    unit: "tons"
+    sensible_range:
+      min: 0
+      max: 200000
+      typical: "80,000-120,000 tons/shift"
+    business_impact: "Mill feed volume directly impacts copper production"
+
+  09_mill_crusher:
+    name: "Mill - Crusher Rate (TPOH)"
+    section: "Lbs on Ground - Mill"
+    source: ADX
+    description: "Real-time crusher throughput from PI sensors. Primary crusher feeding the mill."
+    unit: "TPH"
+    sensible_range:
+      min: 0
+      max: 12000
+      typical: "7,000-9,000 TPH"
+    business_impact: "Crusher bottleneck limits mill throughput"
+
+  10_mill_rate:
+    name: "Mill - Mill Rate (TPOH)"
+    section: "Lbs on Ground - Mill"
+    source: ADX
+    description: "Throughput rate of the milling circuit (SAG + Ball mills)."
+    unit: "TPH"
+    sensible_range:
+      min: 0
+      max: 12000
+      typical: "7,000-9,000 TPH"
+    business_impact: "Mill rate determines concentrate production capacity"
+
+  11_mill_strategy:
+    name: "Mill - Strategy compliance (IOS Level)"
+    section: "Lbs on Ground - Mill"
+    source: ADX
+    description: "In-Ore Stockpile (IOS) level and direction. Critical buffer between mine and mill."
+    unit: "%"
+    sensible_range:
+      min: 0
+      max: 100
+      typical: "25-75%"
+    business_impact: "IOS level indicates mine-mill balance. Too low = mill starved, too high = capacity issue"
+
+  12_mfl_tons:
+    name: "MFL - tons delivered"
+    section: "Lbs on Ground - MFL"
+    source: SNOWFLAKE
+    description: "Total tons dumped at MFL (Mill Feed Leach) or leach pad locations."
+    unit: "tons"
+    sensible_range:
+      min: 0
+      max: 100000
+      typical: "40,000-70,000 tons/shift"
+    business_impact: "Leach feed volume for SX-EW copper production"
+
+  13_mfl_crusher:
+    name: "MFL - Crusher Rate (TPOH)"
+    section: "Lbs on Ground - MFL"
+    source: ADX
+    description: "Throughput rate at MFL crusher from PI sensors."
+    unit: "TPH"
+    sensible_range:
+      min: 0
+      max: 8000
+      typical: "3,000-5,000 TPH"
+    business_impact: "MFL crusher capacity limits leach feed"
+
+  14_mfl_fos:
+    name: "MFL - FOS Rate (TPOH)"
+    section: "Lbs on Ground - MFL"
+    source: ADX
+    description: "FOS (Ferric Oxidation System) or FCP rate at MFL operations."
+    unit: "TPH"
+    sensible_range:
+      min: 0
+      max: 6000
+      typical: "3,000-5,000 TPH"
+    business_impact: "FOS rate affects leach recovery"
+
+  15_mfl_strategy:
+    name: "MFL - Strategy compliance"
+    section: "Lbs on Ground - MFL"
+    source: ADX
+    description: "MFL stockpile levels and operational compliance metrics."
+    unit: "%"
+    sensible_range:
+      min: 0
+      max: 100
+      typical: "50-80%"
+    business_impact: "Strategy compliance ensures optimal leach operations"
+
+  16_rom_tons:
+    name: "ROM - tons delivered"
+    section: "Lbs on Ground - ROM"
+    source: SNOWFLAKE
+    description: "Total tons dumped at ROM (Run of Mine) stockpile locations."
+    unit: "tons"
+    sensible_range:
+      min: 0
+      max: 400000
+      typical: "150,000-300,000 tons/shift"
+    business_impact: "ROM stockpile is strategic buffer for operations"
+
+# =============================================================================
+# SITES - EACH SITE IS INDEPENDENT
+# =============================================================================
+
+# =============================================================================
+# SITE: Morenci (MOR)
+# Location: Arizona, USA
+# Type: Open Pit Copper
+# =============================================================================
+MOR:
+  name: "Morenci"
+  adx_database: Morenci
+  location: "Arizona, USA"
+  type: "Open Pit Copper"
+  has_load_haul_data: true
+  discovered_pi_tags:
+    mill_crusher: "MOR-CR03_WI00317_PV"
+    mfl_crusher: "MOR-CR02_WI01203_PV"
+    ios_main: "MOR-CC06_LI00601_PV"
+    ios_small: "MOR-CC10_LI0102_PV"
   
-  # ===================== MILL IOS - HIGHEST PRIORITY =====================
-  mill_ios:
-    priority: HIGHEST
-    business_description: |
-      Current level of In-Ore Stockpile + direction of change.
-      This is the MOST CRITICAL metric - design focuses on this!
-    adx_availability: FULLY_AVAILABLE
-    confidence: 100%
-    
-    kpis:
-      main_ios_level:
-        pi_tag: "MOR-CC06_LI00601_PV"
-        description: "Main IOS Level - Primary stockpile indicator"
-        adx_database: Morenci
-        adx_source: "database('Morenci').FCTS"
-        kql_filter: "sensor_id =~ 'MOR-CC06_LI00601_PV'"
-        target_uom: "%"
-        
-      small_ios_level:
-        pi_tag: "MOR-CC10_LI0102_PV"
-        description: "Small IOS Level - Secondary stockpile"
-        adx_database: Morenci
-        adx_source: "database('Morenci').FCTS"
-        kql_filter: "sensor_id =~ 'MOR-CC10_LI0102_PV'"
-        target_uom: "%"
-        
-    recommended_kql: |
-      // Mill IOS Level with Direction of Change
-      let lookback = 1h;
-      database("Morenci").FCTS
-      | where sensor_id in~ ("MOR-CC06_LI00601_PV", "MOR-CC10_LI0102_PV")
-      | where timestamp > ago(lookback)
-      | order by sensor_id, timestamp asc
-      | extend prev_value = prev(toreal(value), 1), prev_sensor = prev(sensor_id, 1)
-      | where sensor_id == prev_sensor
-      | summarize arg_max(timestamp, value, prev_value) by sensor_id
-      | extend 
-          current_level = toreal(value),
-          direction = case(
-              toreal(value) > toreal(prev_value), "↑ INCREASING",
-              toreal(value) < toreal(prev_value), "↓ DECREASING",
-              "→ STABLE")
-      | project sensor_id, current_level, direction, timestamp
-      
-  # ===================== MILL CRUSHER RATE - HIGH PRIORITY =====================
-  mill_crusher:
-    priority: HIGH
-    business_description: "Crusher throughput rate monitoring"
-    adx_availability: FULLY_AVAILABLE
-    confidence: 100%
-    
-    kpis:
-      crusher_3_rate:
-        pi_tag: "MOR-CR03_WI00317_PV"
-        description: "Mill Crusher #3 Rate"
-        adx_database: Morenci
-        adx_source: "database('Morenci').FCTS"
-        kql_filter: "sensor_id =~ 'MOR-CR03_WI00317_PV'"
-        target_min: 8500
-        target_max: 9000
-        target_uom: "tph"
-        
-      crushed_leach_rate:
-        pi_tag: "MOR-CR02_WI01203_PV"
-        description: "Crushed Leach Rate"
-        adx_database: Morenci
-        adx_source: "database('Morenci').FCTS"
-        kql_filter: "sensor_id =~ 'MOR-CR02_WI01203_PV'"
-        target_min: 4500
-        target_max: 6000
-        target_uom: "tph"
-        
-    recommended_kql: |
-      // Mill Crusher Rates with Target Comparison
-      database("Morenci").FCTSCURRENT()
-      | where sensor_id in~ ("MOR-CR03_WI00317_PV", "MOR-CR02_WI01203_PV")
-      | extend 
-          metric = case(
-              sensor_id =~ "MOR-CR03_WI00317_PV", "Mill Crusher Rate",
-              "Crushed Leach Rate"),
-          target_min = iff(sensor_id =~ "MOR-CR03_WI00317_PV", 8500.0, 4500.0),
-          target_max = iff(sensor_id =~ "MOR-CR03_WI00317_PV", 9000.0, 6000.0)
-      | extend 
-          current_value = toreal(value),
-          status = case(
-              toreal(value) >= target_min and toreal(value) <= target_max, "✅ ON TARGET",
-              toreal(value) < target_min, "⚠️ BELOW TARGET",
-              "🔴 ABOVE TARGET")
-      | project metric, current_value, target_min, target_max, status, timestamp
-
-  # ===================== PROCESSING - MEDIUM PRIORITY =====================
-  processing:
-    priority: MEDIUM
-    business_description: "Ball mill and concentrator operations"
-    adx_availability: MOSTLY_AVAILABLE
-    confidence: 95%
-    
-    kpis:
-      ball_mill_tph:
-        pi_tag_pattern: "MOR-WIC01XX_PV"
-        description: "Ball Mill TPH (32 mills, sections 1-4)"
-        adx_database: Morenci
-        adx_source: "database('AppIntegration').Morenci_Batman_BallMill_Aggregates()"
-        note: "Pre-built function returns all 32 ball mills"
-        
-      mill_power:
-        pi_tag_pattern: "MOR-JIC32XX_PV"
-        description: "Mill Power readings per ball mill"
-        adx_database: Morenci
-        adx_source: "database('AppIntegration').Morenci_Batman_BallMill_Aggregates()"
-        
-      classifier_ph:
-        pi_tag_pattern: "MOR-AIC91XX_PV"
-        description: "Classifier pH per ball mill"
-        adx_database: Morenci
-        adx_source: "database('AppIntegration').Morenci_Batman_BallMill_Aggregates()"
-        
-      bin_levels:
-        pi_tag_pattern: "MOR-MS01_LIC215XX_PV"
-        description: "Ore bin levels"
-        adx_database: Morenci
-        adx_source: "database('AppIntegration').Morenci_Batman_Mill_Overview()"
-        
-    recommended_kql: |
-      // Ball Mill Aggregates - All sections
-      database("AppIntegration").Morenci_Batman_BallMill_Aggregates()
-      | project section, ballmill, tph_now, tpoh_now, mill_power, classifier_amps, classifier_ph
-
-  # ===================== DRILLING - LOWER PRIORITY =====================
-  drilling:
-    priority: LOWER
-    business_description: "Drill cycle metrics and penetration rates"
-    adx_availability: NOT_AVAILABLE
-    confidence: 0%
-    current_source: "Snowflake PROD_WG.DRILL_BLAST.DRILL_CYCLE"
-    
-    kpis:
-      penetration_rate:
-        column: "AVG_PNTRTN_RATE_FEET_PER_MIN"
-        description: "Average penetration rate"
-        adx_available: false
-        snowflake_table: "PROD_WG.DRILL_BLAST.DRILL_CYCLE"
-        migration_path: "Fleet dispatch integration required"
-        target_range: "Variable by rock type"
-        
-      drill_cycle_time:
-        column: "DRILL_CYCLE_HRS_CYCLE"
-        description: "Total drill cycle time"
-        adx_available: false
-        snowflake_table: "PROD_WG.DRILL_BLAST.DRILL_CYCLE"
-        
-      weight_on_bit:
-        column: "WEIGHT_ON_BIT_RANGE_LBS"
-        description: "Weight on bit for drilling"
-        adx_available: false
-        snowflake_table: "PROD_WG.DRILL_BLAST.DRILL_CYCLE"
-        target_min: 50000
-        target_max: 70000
-        target_uom: "lbs"
-        
-    reason_not_in_adx: |
-      Drilling data comes from fleet dispatch systems (Modular, Wenco, etc.)
-      and equipment telematics, not continuous sensor data.
-      Would require new IoT sensors or fleet integration to ADX.
-
-  # ===================== BLASTING - LOWER PRIORITY =====================
-  blasting:
-    priority: LOWER
-    business_description: "Blast patterns and explosives tracking"
-    adx_availability: NOT_AVAILABLE
-    confidence: 0%
-    current_source: "Snowflake PROD_WG.DRILL_BLAST"
-    
-    kpis:
-      lbs_on_ground:
-        description: "Explosives inventory on ground"
-        adx_available: false
-        snowflake_table: "PROD_WG.DRILL_BLAST"
-        
-      powder_factor:
-        description: "Powder factor calculation"
-        adx_available: false
-        snowflake_table: "Calculated metric"
-        
-    reason_not_in_adx: |
-      Blasting is event-based, not continuous sensor data.
-      Data sources: Blast design software, manual entry, compliance systems.
-
-  # ===================== LOADING - LOWER PRIORITY =====================
-  loading:
-    priority: LOWER
-    business_description: "Shovel/LHD loading operations"
-    adx_availability: PARTIAL
-    confidence: 70%
-    
-    kpis:
-      equipment_hours:
-        description: "Equipment operating hours"
-        adx_available: true
-        adx_source: "database('AppIntegration').HaulTruck()"
-        note: "Via SAP integration"
-        
-      tons_loaded:
-        description: "Tons loaded per cycle"
-        adx_available: false
-        current_source: "Dispatch system"
-        
-    recommended_kql: |
-      // Equipment telemetry from SAP
-      database("AppIntegration").HaulTruck()
-      | project SAPEquipmentID, SAPMeasurementID, timestamp, value, uom
-      | where SAPMeasurementID contains "Hours"
-
-  # ===================== HAULAGE - LOWER PRIORITY =====================
-  haulage:
-    priority: LOWER
-    business_description: "Haul truck cycle and fuel metrics"
-    adx_availability: PARTIAL
-    confidence: 60%
-    
-    kpis:
-      fuel_consumption:
-        description: "Fuel consumption per truck"
-        adx_available: true
-        adx_source: "database('AppIntegration').HaulTruck()"
-        kql_filter: "SAPMeasurementID contains 'Fuel'"
-        
-      cycle_time:
-        description: "Haul cycle time"
-        adx_available: false
-        current_source: "Dispatch system"
-        target_max: 25
-        target_uom: "minutes"
-        
-      dump_compliance:
-        description: "Dump location compliance"
-        adx_available: false
-        current_source: "Dispatch system"
-        
-    recommended_kql: |
-      // Haul truck fuel from SAP
-      database("AppIntegration").HaulTruck()
-      | where SAPMeasurementID contains "Fuel Consumption"
-      | project SAPEquipmentID, timestamp, value = round(value, 2), uom
-
-# =============================================================================
-# KPI AVAILABILITY SUMMARY MATRIX
-# =============================================================================
-
-kpi_availability_matrix:
-  - {value_chain: "Mill IOS", kpi: "Main IOS Level", pi_tag: "MOR-CC06_LI00601_PV", adx: true, confidence: "100%"}
-  - {value_chain: "Mill IOS", kpi: "Small IOS Level", pi_tag: "MOR-CC10_LI0102_PV", adx: true, confidence: "100%"}
-  - {value_chain: "Mill Crusher", kpi: "Crusher #3 Rate", pi_tag: "MOR-CR03_WI00317_PV", adx: true, confidence: "100%"}
-  - {value_chain: "Mill Crusher", kpi: "Crushed Leach Rate", pi_tag: "MOR-CR02_WI01203_PV", adx: true, confidence: "100%"}
-  - {value_chain: "Processing", kpi: "Ball Mill TPH", pi_tag: "MOR-WIC01XX_PV", adx: true, confidence: "100%"}
-  - {value_chain: "Processing", kpi: "Mill Power", pi_tag: "MOR-JIC32XX_PV", adx: true, confidence: "100%"}
-  - {value_chain: "Processing", kpi: "Classifier pH", pi_tag: "MOR-AIC91XX_PV", adx: true, confidence: "100%"}
-  - {value_chain: "Processing", kpi: "Bin Levels", pi_tag: "MOR-MS01_LIC215XX_PV", adx: true, confidence: "100%"}
-  - {value_chain: "Drilling", kpi: "Penetration Rate", column: "AVG_PNTRTN_RATE", adx: false, snowflake: "PROD_WG.DRILL_BLAST"}
-  - {value_chain: "Drilling", kpi: "Drill Cycle Time", column: "DRILL_CYCLE_HRS", adx: false, snowflake: "PROD_WG.DRILL_BLAST"}
-  - {value_chain: "Blasting", kpi: "LBS on Ground", column: "N/A", adx: false, snowflake: "PROD_WG.DRILL_BLAST"}
-  - {value_chain: "Loading", kpi: "Equipment Hours", sap: true, adx: true, confidence: "70%"}
-  - {value_chain: "Haulage", kpi: "Fuel Consumption", sap: true, adx: true, confidence: "90%"}
-  - {value_chain: "Haulage", kpi: "Cycle Time", dispatch: true, adx: false}
+  validation_summary:
+    snowflake: "9/10"
+    adx: "6/6"
+    total: "15/16"
+    validated_at: "2026-01-22T16:02:49.697059"
   
-# =============================================================================
-# SITE DATABASES
-# =============================================================================
-# All site databases share the SAME schema pattern:
-#   - Table: FCTS_INGEST (raw ingestion)
-#   - Function: FCTS (historical data with retention)
-#   - Function: FCTSCURRENT (latest snapshot per sensor)
+  outcomes:
 
-site_databases:
-  - name: Miami
-    site_code: SAM
-    description: Miami site sensor data
-    snowflake_equivalent: PROD_DATALAKE.FCTS.SENSOR_READING_SAM_B
-    
-  - name: Morenci
-    site_code: MOR
-    description: Morenci site sensor data
-    snowflake_equivalent: PROD_DATALAKE.FCTS.SENSOR_READING_MOR_B
-    approximate_row_count: 493000000
-    
-  - name: Climax
-    site_code: CMX
-    description: Climax site sensor data
-    snowflake_equivalent: PROD_DATALAKE.FCTS.SENSOR_READING_CMX_B
-    
-  - name: Sierrita
-    site_code: SIE
-    description: Sierrita site sensor data
-    snowflake_equivalent: PROD_DATALAKE.FCTS.SENSOR_READING_SIE_B
-    
-  - name: NewMexico
-    site_code: NMO
-    description: New Mexico site sensor data
-    snowflake_equivalent: PROD_DATALAKE.FCTS.SENSOR_READING_NMO_B
-    
-  - name: Bagdad
-    site_code: BAG
-    description: Bagdad site sensor data
-    snowflake_equivalent: PROD_DATALAKE.FCTS.SENSOR_READING_BAG_B
-    
-  - name: CerroVerde
-    site_code: CVE
-    description: Cerro Verde site sensor data
-    snowflake_equivalent: PROD_DATALAKE.FCTS.SENSOR_READING_CVE_B
+    01_dig_compliance:
+      name: "Dig compliance (%)"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "%"
+      validated_at: "2026-01-22T16:02:59.402609"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(*) as total_dig_events,
+            COUNT(DISTINCT LOADING_LOC_ID) as unique_dig_locations,
+            COUNT(DISTINCT EXCAV_ID) as active_shovels,
+            ROUND(AVG(LOADING_CYCLE_DIG_ELEV_AVG_FEET), 2) as avg_dig_elevation_ft
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'MOR'
+        GROUP BY SITE_CODE
+      sample_data:
+        - # sample 1
+          SITE_CODE: "MOR"
+          TOTAL_DIG_EVENTS: 2802.0
+          UNIQUE_DIG_LOCATIONS: 20.0
+          ACTIVE_SHOVELS: 14.0
+          AVG_DIG_ELEVATION_FT: 5107.93
+
+    02_dig_rate:
+      name: "Dig rate (TPOH)"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "TPH"
+      validated_at: "2026-01-22T16:03:08.629940"
+      query: |
+        SELECT 
+            SITE_CODE,
+            ROUND(SUM(MEASURED_PAYLOAD_METRIC_TONS), 2) as total_tons_24hr,
+            COUNT(*) as load_count,
+            COUNT(DISTINCT EXCAV_ID) as shovel_count
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'MOR'
+        GROUP BY SITE_CODE
+      sample_data:
+        - # sample 1
+          SITE_CODE: "MOR"
+          TOTAL_TONS_24HR: "619645.34"
+          LOAD_COUNT: 2802.0
+          SHOVEL_COUNT: 14.0
+
+    03_priority_shovels:
+      name: "Priority shovels"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "tons"
+      validated_at: "2026-01-22T16:03:19.252512"
+      query: |
+        SELECT 
+            e.EQUIP_NAME as shovel_name,
+            SUM(lc.MEASURED_PAYLOAD_METRIC_TONS) as total_tons,
+            COUNT(*) as load_count
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE lc
+        LEFT JOIN PROD_WG.LOAD_HAUL.LH_EQUIPMENT e 
+            ON lc.EXCAV_ID = e.EQUIP_ID AND lc.SITE_CODE = e.SITE_CODE
+        WHERE lc.CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND lc.SITE_CODE = 'MOR'
+        GROUP BY e.EQUIP_NAME
+        ORDER BY total_tons DESC
+        LIMIT 5
+      sample_data:
+        - # sample 1
+          SHOVEL_NAME: "S39"
+          TOTAL_TONS: "77747.704214"
+          LOAD_COUNT: 348.0
+        - # sample 2
+          SHOVEL_NAME: "S42"
+          TOTAL_TONS: "72932.609980"
+          LOAD_COUNT: 287.0
+
+    04_truck_count:
+      name: "Number of trucks (qty)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "count"
+      validated_at: "2026-01-22T16:03:34.734739"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(DISTINCT TRUCK_ID) as active_trucks,
+            COUNT(*) as total_cycles,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons_hauled
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'MOR'
+        GROUP BY SITE_CODE
+      sample_data:
+        - # sample 1
+          SITE_CODE: "MOR"
+          ACTIVE_TRUCKS: 125.0
+          TOTAL_CYCLES: 2653.0
+          TOTAL_TONS_HAULED: "715006.00"
+
+    05_cycle_time:
+      name: "Cycle Time (min)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "minutes"
+      validated_at: "2026-01-22T16:03:49.812531"
+      query: |
+        SELECT 
+            SITE_CODE,
+            ROUND(AVG(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as avg_cycle_time_mins,
+            ROUND(MIN(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as min_cycle_time,
+            ROUND(MAX(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as max_cycle_time,
+            COUNT(*) as total_cycles
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'MOR'
+          AND TOTAL_CYCLE_DURATION_CALENDAR_MINS > 0
+          AND TOTAL_CYCLE_DURATION_CALENDAR_MINS < 180
+        GROUP BY SITE_CODE
+      sample_data:
+        - # sample 1
+          SITE_CODE: "MOR"
+          AVG_CYCLE_TIME_MINS: "55.19"
+          MIN_CYCLE_TIME: "8.00"
+          MAX_CYCLE_TIME: "179.00"
+          TOTAL_CYCLES: 2607.0
+
+    06_asset_efficiency:
+      name: "Asset Efficiency"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "cycles/truck"
+      validated_at: "2026-01-22T16:04:22.421258"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(DISTINCT TRUCK_ID) as unique_trucks,
+            COUNT(*) as total_cycles,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_payload_tons,
+            ROUND(COUNT(*) * 1.0 / NULLIF(COUNT(DISTINCT TRUCK_ID), 0), 2) as cycles_per_truck
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'MOR'
+        GROUP BY SITE_CODE
+      sample_data:
+        - # sample 1
+          SITE_CODE: "MOR"
+          UNIQUE_TRUCKS: 125.0
+          TOTAL_CYCLES: 2650.0
+          TOTAL_PAYLOAD_TONS: "714232.00"
+          CYCLES_PER_TRUCK: "21.20"
+
+    07_dump_compliance:
+      name: "Dump plan compliance (%)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "%"
+      validated_at: "2026-01-22T16:04:55.440621"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            COUNT(*) as dump_count,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'MOR'
+          AND DUMP_LOC_NAME IS NOT NULL
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+        LIMIT 5
+      sample_data:
+        - # sample 1
+          DUMP_LOC_NAME: "CUP6700L"
+          DUMP_COUNT: 511.0
+          TOTAL_TONS: "136437.00"
+        - # sample 2
+          DUMP_LOC_NAME: "C3MIL"
+          DUMP_COUNT: 479.0
+          TOTAL_TONS: "127218.00"
+
+    08_mill_tons:
+      name: "Mill - tons delivered"
+      section: "Lbs on Ground - Mill"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "tons"
+      validated_at: "2026-01-22T16:05:37.338374"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'MOR'
+          AND (DUMP_LOC_NAME ILIKE '%mill%' OR DUMP_LOC_NAME ILIKE '%crusher%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+      sample_data:
+        - # sample 1
+          DUMP_LOC_NAME: "859-MILL"
+          TOTAL_TONS: "3471.00"
+          DUMP_COUNT: 13.0
+
+    12_mfl_tons:
+      name: "MFL - tons delivered"
+      section: "Lbs on Ground - MFL"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "tons"
+      validated_at: "2026-01-22T16:06:41.374919"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'MOR'
+          AND (DUMP_LOC_NAME ILIKE '%mfl%' OR DUMP_LOC_NAME ILIKE '%leach%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+      sample_data:
+        - # sample 1
+          DUMP_LOC_NAME: "C2MFL"
+          TOTAL_TONS: "62100.00"
+          DUMP_COUNT: 234.0
+        - # sample 2
+          DUMP_LOC_NAME: "849-MFL"
+          TOTAL_TONS: "6675.00"
+          DUMP_COUNT: 25.0
+
+    16_rom_tons:
+      name: "ROM - tons delivered"
+      section: "Lbs on Ground - ROM"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'MOR'
+          AND (DUMP_LOC_NAME ILIKE '%rom%' OR DUMP_LOC_NAME ILIKE '%stockpile%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+
+    09_mill_crusher:
+      name: "Mill - Crusher Rate (TPOH)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: Morenci
+      discovered_sensor: "MOR-CR03_WI00317_PV"
+      validated_at: "2026-01-22T16:09:35.835881"
+      query: |
+        FCTSCURRENT() | where sensor_id == 'MOR-CR03_WI00317_PV' | project sensor_id, rate_tph=todouble(value), timestamp, uom
+      sample_data:
+        - # sample 1
+          sensor_id: "MOR-CR03_WI00317_PV"
+          rate_tph: 8709.375
+          timestamp: "2026-01-22 22:07:00.048004+00:00"
+          uom: "TONS"
+
+    10_mill_rate:
+      name: "Mill - Mill Rate (TPOH)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: Morenci
+      discovered_sensor: "MOR-CR03_WI00317_PV_Tot12H"
+      validated_at: "2026-01-22T16:09:36.893829"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'CR03' and sensor_id contains 'WI' | project sensor_id, rate_tph=todouble(value), timestamp | order by rate_tph desc | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "MOR-CR03_WI00317_PV_Tot12H"
+          rate_tph: 57336.09
+          timestamp: "2026-01-22 22:07:06.048004+00:00"
+        - # sample 2
+          sensor_id: "mor-cr03_wic00317_sp"
+          rate_tph: 8775.0
+          timestamp: "2023-03-16 22:48:58.045013+00:00"
+
+    11_mill_strategy:
+      name: "Mill - Strategy compliance (IOS Level)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "%"
+      database: Morenci
+      discovered_sensor: "MOR-CC06_LI00601_PV"
+      validated_at: "2026-01-22T16:09:37.640124"
+      query: |
+        FCTSCURRENT() | where sensor_id in ('MOR-CC06_LI00601_PV', 'MOR-CC10_LI0102_PV') | project sensor_id, level_pct=todouble(value), timestamp
+      sample_data:
+        - # sample 1
+          sensor_id: "MOR-CC06_LI00601_PV"
+          level_pct: 30.59829
+          timestamp: "2026-01-22 22:06:05.062011+00:00"
+        - # sample 2
+          sensor_id: "MOR-CC10_LI0102_PV"
+          level_pct: 87.93429
+          timestamp: "2026-01-22 22:05:05.061004+00:00"
+
+    13_mfl_crusher:
+      name: "MFL - Crusher Rate (TPOH)"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: Morenci
+      discovered_sensor: "MOR-CR02_WI01203_PV"
+      validated_at: "2026-01-22T16:09:38.285270"
+      query: |
+        FCTSCURRENT() | where sensor_id == 'MOR-CR02_WI01203_PV' or sensor_id == 'MOR-CR02_WI01201_PV' | project sensor_id, rate_tph=todouble(value), timestamp, uom
+      sample_data:
+        - # sample 1
+          sensor_id: "MOR-CR02_WI01203_PV"
+          rate_tph: 4109.89
+          timestamp: "2026-01-22 22:06:35.063003+00:00"
+          uom: "TPH"
+
+    14_mfl_fos:
+      name: "MFL - FOS Rate (TPOH)"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: Morenci
+      discovered_sensor: "MOR-CR02_WI01203_PV_Tot12H_1min_test"
+      validated_at: "2026-01-22T16:09:40.384315"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'FOS' or sensor_id contains 'LEACH' or sensor_id contains 'CR02' | where todouble(value) > 50 | project sensor_id, rate_tph=todouble(value), timestamp | order by rate_tph desc | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "MOR-CR02_WI01203_PV_Tot12H_1min_test"
+          rate_tph: 1351754.0
+          timestamp: "2025-03-04 20:57:00+00:00"
+        - # sample 2
+          sensor_id: "MOR-CR02_WI01203_PV_Tot12H_nat_test"
+          rate_tph: 1351455.0
+          timestamp: "2025-03-04 20:55:05.069000+00:00"
+
+    15_mfl_strategy:
+      name: "MFL - Strategy compliance"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: SUCCESS
+      unit: "%"
+      database: Morenci
+      discovered_sensor: "MOR-LIC-0374_OT"
+      validated_at: "2026-01-22T16:09:42.814521"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'LI' or sensor_id contains 'MFL' | where todouble(value) > 0 and todouble(value) < 100 | project sensor_id, level_pct=todouble(value), timestamp | order by level_pct desc | take 5
+      sample_data:
+        - # sample 1
+          sensor_id: "MOR-LIC-0374_OT"
+          level_pct: 99.99905
+          timestamp: "2026-01-22 21:54:12.017013+00:00"
+        - # sample 2
+          sensor_id: "MOR-LIC-0274_OT"
+          level_pct: 99.99905
+          timestamp: "2026-01-22 21:54:12.017013+00:00"
 
 # =============================================================================
-# COMMON SCHEMA (applies to ALL site databases)
+# SITE: Bagdad (BAG)
+# Location: Arizona, USA
+# Type: Open Pit Copper
 # =============================================================================
-
-common_entities:
-  FCTS_INGEST:
-    description: |
-      Raw sensor data ingestion table. Data streams directly from Event Hub.
-      Use FCTS or FCTSCURRENT functions for querying - they add retention policies.
-    type: table
-    columns:
-      - name: site_code
-        type: string
-        description: Site identifier (MOR, BAG, SAM, etc.)
-        
-      - name: sensor_id
-        type: string
-        description: Unique sensor identifier / PI Point name
-        is_primary_key: true
-        examples:
-          - "mor-cr03_wi00317_pv"
-          - "BLNKPNTRCHR_OPC.SMOHYD.PI_SLP_RATE"
-          
-      - name: data_source
-        type: string
-        description: Source system identifier
-        
-      - name: timestamp
-        type: datetime
-        description: Reading timestamp (UTC)
-        is_temporal: true
-        
-      - name: value
-        type: string
-        description: Sensor reading value (as string, may need casting)
-        is_measure: true
-        
-      - name: uom
-        type: string
-        description: Unit of measure
-        
-      - name: quality
-        type: int
-        description: Data quality indicator (0 = good)
-        
-      - name: annotations
-        type: dynamic
-        description: Additional metadata as JSON
-        
-      - name: stream_details
-        type: dynamic
-        description: Stream configuration details as JSON
-        
-      - name: enqueuedtime
-        type: datetime
-        description: Event Hub ingestion timestamp
-        
-  FCTS:
-    description: |
-      Historical sensor data function with retention policy.
-      Use for time-series analysis and historical queries.
-    type: function
-    returns: Sensor readings with retention
-    usage: |
-      database('Morenci').FCTS
-      | where timestamp > ago(30d)
-      | where sensor_id == "sensor_name"
-    output_columns:
-      - site_code
-      - sensor_id
-      - data_source
-      - timestamp
-      - value
-      - uom
-      - quality
-      
-  FCTSCURRENT:
-    description: |
-      Latest snapshot per sensor. Most efficient for current values.
-      Equivalent to Snowflake SENSOR_SNAPSHOT_GET function.
-    type: function
-    returns: One row per sensor with latest value
-    usage: |
-      database('Morenci').FCTSCURRENT
-      | where sensor_id in ("sensor1", "sensor2")
-    output_columns:
-      - sensor_id
-      - timestamp
-      - value
-      - uom
-      - quality
-
-# =============================================================================
-# GLOBAL DATABASE (Metadata & Registry)
-# =============================================================================
-
-global_database:
-  name: Global
-  description: Central registry, metadata, and cross-site functions
+BAG:
+  name: "Bagdad"
+  adx_database: Bagdad
+  location: "Arizona, USA"
+  type: "Open Pit Copper"
+  has_load_haul_data: true
+  discovered_pi_tags:
+    crusher: "BAG-GL4CrusherMotorMotorLoad"
+    level: "BAG-MD_BAG_CC_Crusher2_TonsPerHourTarget"
   
-  tables:
-    FaeLogsIngest:
-      description: FAE (Factory Automation Engine) job execution logs
-      approximate_row_count: 442000000
-      columns:
-        - {name: id, type: guid, is_primary_key: true}
-        - {name: siteCode, type: string}
-        - {name: jobId, type: guid}
-        - {name: name, type: string}
-        - {name: scheduled, type: datetime}
-        - {name: start, type: datetime}
-        - {name: end, type: datetime}
-        - {name: status, type: string}
-        - {name: errors, type: bool}
-        - {name: actionLogs, type: dynamic}
-        
-    RegistryIngest:
-      description: Sensor/device registry with metadata
-      columns:
-        - {name: id, type: string, is_primary_key: true}
-        - {name: registryType, type: string}
-        - {name: displayName, type: string}
-        - {name: siteCode, type: string}
-        - {name: process, type: string}
-        - {name: version, type: int}
-        - {name: status, type: string}
-        - {name: deviceType, type: string}
-        - {name: dataModel, type: string}
-        - {name: sensors, type: dynamic}
-        
-    JobsIngest:
-      description: FAE job definitions and schedules
-      columns:
-        - {name: id, type: guid, is_primary_key: true}
-        - {name: name, type: string}
-        - {name: siteCode, type: string}
-        - {name: schedule, type: string}
-        - {name: enabled, type: bool}
-        
-  functions:
-    # Cross-site sensor functions
-    FCTS_CURRENT_VALUE:
-      description: Get current value for any sensor across sites
-      parameters: [site_code, sensor_id]
-      
-    RegistryStreams:
-      description: List all registered sensor streams
-      
-    RegistryDevices:
-      description: List all registered devices
-      
-    RegistryConstants:
-      description: Configuration constants
-      
-    # ConSmelter functions (Cerro Verde Smelter)
-    ConSmelter:
-      description: Smelter operations functions for Cerro Verde
-      functions:
-        - GetCopperAssay
-        - GetCopperAssayByTotalBatchId
-        - GetCopperBlowProtocolExecution
-        - GetFlashFurnaceStatus
-        - GetFlashFurnaceTHRate
-        - GetHalfTimeKpi
-        - GetHalfTimeKpi_Chip
-        - GetHalfTimeKpi_CrushedMaterial
-        - GetHalfTimeKpi_Silica
-        - GetMaterialInputTons
-        - GetRefiningBurnerMinMax
-        - GetRefiningNaturalGasRatio
-        - GetRefiningTuyereAirFlow
-        - GetRefiningTuyereGasFlow
-        - GetRefiningTuyere1AirFlow
-        - GetRefiningTuyere1GasFlow
-        - GetRefiningTuyere2AirFlow
-        - GetRefiningTuyere2GasFlow
-        - GetSlagBlowProtocolExecutionFirstHalf
-        - GetSlagBlowProtocolExecutionSecondHalf
-        - GetSlagCopperBlowAvgFlowRate
-        - GetSO2Peaks
-        - GetOperationalParametersFollowUps
-        - GetCastingLadleHeating
-        - GetCastingSpeed
-        - GetCastingTaskDefaultValueByStartEnd
-        - GetUpperBottomTempPreparation
-        - GetFlashFurnaceMatteAssayManualReader
-        - GetFlashFurnaceTargetAssay
-        - GetPisDefaultValue
-        
-    # MillOps functions (Mill Operations KPIs)
-    MillOps:
-      description: Mill operations KPI functions
-      functions:
-        - GetKpisValue
-        - GetKpiDetailValue
-        - GetKpisColumnNpsWater
-        - GetKpisRougherRecovery
-        - GetKpisCanyonRecycle
-        - GetKpis5010Densinometer
-        - GetKpis5011Densinometer
-        
-    # PI System Integration
-    PISystem:
-      description: Direct PI System data access
-      functions:
-        - PISystem_MOR_Raw_Data
-        - PISystem_MOR_Daily_Averages
-        - PISystem_NMO_Raw_Data
-        - PISystem_NMO_Daily_Averages
-        
-    # FAE Job Monitoring
-    FaeJobs:
-      description: FAE job monitoring functions
-      functions:
-        - FaeJobLog
-        - FaeJobsStatus
-        - FaeRunIDLog
-        - FaeUi_GetRecentJobLogs
-        - FaeUi_GetJobInvocationLog
-        
-    # Utility functions
-    Utilities:
-      functions:
-        - GetDynamicHierarchy
-        - PI_Integration_DataSources
-        - time_weighted_avg_fl
-        - TimeEq
-        - UDETripLogs
-        - AllUDETripLogs
-
-# =============================================================================
-# APP INTEGRATION DATABASE
-# =============================================================================
-
-app_integration_database:
-  name: AppIntegration
-  description: Application-specific integration functions for dashboards and APIs
+  validation_summary:
+    snowflake: "9/10"
+    adx: "6/6"
+    total: "15/16"
+    validated_at: "2026-01-22T16:02:49.697059"
   
-  functions:
-    AcidTankLevels:
-      description: Acid tank level monitoring for all sites
-      usage: database('AppIntegration').AcidTankLevels()
-      
-    HaulTruck:
-      description: Haul truck telemetry data
-      usage: database('AppIntegration').HaulTruck()
-      
-    HaulTruck_DEV:
-      description: Development version of HaulTruck function
-      
-    Morenci_Batman:
-      description: Morenci Batman mill monitoring
-      functions:
-        - Morenci_Batman_BallMill_Aggregates
-        - Morenci_Batman_Section_Aggregates
-        - Morenci_Batman_Mill_Overview
+  outcomes:
+
+    01_dig_compliance:
+      name: "Dig compliance (%)"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "%"
+      validated_at: "2026-01-22T16:10:29.873872"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(*) as total_dig_events,
+            COUNT(DISTINCT LOADING_LOC_ID) as unique_dig_locations,
+            COUNT(DISTINCT EXCAV_ID) as active_shovels,
+            ROUND(AVG(LOADING_CYCLE_DIG_ELEV_AVG_FEET), 2) as avg_dig_elevation_ft
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'BAG'
+        GROUP BY SITE_CODE
+      sample_data:
+        - # sample 1
+          SITE_CODE: "BAG"
+          TOTAL_DIG_EVENTS: 693.0
+          UNIQUE_DIG_LOCATIONS: 11.0
+          ACTIVE_SHOVELS: 8.0
+          AVG_DIG_ELEVATION_FT: 2554.91
+
+    02_dig_rate:
+      name: "Dig rate (TPOH)"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "TPH"
+      validated_at: "2026-01-22T16:11:19.158358"
+      query: |
+        SELECT 
+            SITE_CODE,
+            ROUND(SUM(MEASURED_PAYLOAD_METRIC_TONS), 2) as total_tons_24hr,
+            COUNT(*) as load_count,
+            COUNT(DISTINCT EXCAV_ID) as shovel_count
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'BAG'
+        GROUP BY SITE_CODE
+      sample_data:
+        - # sample 1
+          SITE_CODE: "BAG"
+          TOTAL_TONS_24HR: "164324.09"
+          LOAD_COUNT: 693.0
+          SHOVEL_COUNT: 8.0
+
+    03_priority_shovels:
+      name: "Priority shovels"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "tons"
+      validated_at: "2026-01-22T16:11:51.846384"
+      query: |
+        SELECT 
+            e.EQUIP_NAME as shovel_name,
+            SUM(lc.MEASURED_PAYLOAD_METRIC_TONS) as total_tons,
+            COUNT(*) as load_count
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE lc
+        LEFT JOIN PROD_WG.LOAD_HAUL.LH_EQUIPMENT e 
+            ON lc.EXCAV_ID = e.EQUIP_ID AND lc.SITE_CODE = e.SITE_CODE
+        WHERE lc.CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND lc.SITE_CODE = 'BAG'
+        GROUP BY e.EQUIP_NAME
+        ORDER BY total_tons DESC
+        LIMIT 5
+      sample_data:
+        - # sample 1
+          SHOVEL_NAME: "S11"
+          TOTAL_TONS: "41743.991640"
+          LOAD_COUNT: 171.0
+        - # sample 2
+          SHOVEL_NAME: "S08"
+          TOTAL_TONS: "29434.063351"
+          LOAD_COUNT: 128.0
+
+    04_truck_count:
+      name: "Number of trucks (qty)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "count"
+      validated_at: "2026-01-22T16:12:29.553991"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(DISTINCT TRUCK_ID) as active_trucks,
+            COUNT(*) as total_cycles,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons_hauled
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'BAG'
+        GROUP BY SITE_CODE
+      sample_data:
+        - # sample 1
+          SITE_CODE: "BAG"
+          ACTIVE_TRUCKS: 38.0
+          TOTAL_CYCLES: 695.0
+          TOTAL_TONS_HAULED: "180700.00"
+
+    05_cycle_time:
+      name: "Cycle Time (min)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "minutes"
+      validated_at: "2026-01-22T16:13:00.817167"
+      query: |
+        SELECT 
+            SITE_CODE,
+            ROUND(AVG(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as avg_cycle_time_mins,
+            ROUND(MIN(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as min_cycle_time,
+            ROUND(MAX(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as max_cycle_time,
+            COUNT(*) as total_cycles
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'BAG'
+          AND TOTAL_CYCLE_DURATION_CALENDAR_MINS > 0
+          AND TOTAL_CYCLE_DURATION_CALENDAR_MINS < 180
+        GROUP BY SITE_CODE
+      sample_data:
+        - # sample 1
+          SITE_CODE: "BAG"
+          AVG_CYCLE_TIME_MINS: "62.93"
+          MIN_CYCLE_TIME: "10.00"
+          MAX_CYCLE_TIME: "180.00"
+          TOTAL_CYCLES: 667.0
+
+    06_asset_efficiency:
+      name: "Asset Efficiency"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "cycles/truck"
+      validated_at: "2026-01-22T16:13:37.601339"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(DISTINCT TRUCK_ID) as unique_trucks,
+            COUNT(*) as total_cycles,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_payload_tons,
+            ROUND(COUNT(*) * 1.0 / NULLIF(COUNT(DISTINCT TRUCK_ID), 0), 2) as cycles_per_truck
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'BAG'
+        GROUP BY SITE_CODE
+      sample_data:
+        - # sample 1
+          SITE_CODE: "BAG"
+          UNIQUE_TRUCKS: 38.0
+          TOTAL_CYCLES: 694.0
+          TOTAL_PAYLOAD_TONS: "180440.00"
+          CYCLES_PER_TRUCK: "18.26"
+
+    07_dump_compliance:
+      name: "Dump plan compliance (%)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "%"
+      validated_at: "2026-01-22T16:13:58.239513"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            COUNT(*) as dump_count,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'BAG'
+          AND DUMP_LOC_NAME IS NOT NULL
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+        LIMIT 5
+      sample_data:
+        - # sample 1
+          DUMP_LOC_NAME: "CRUSHER 2"
+          DUMP_COUNT: 298.0
+          TOTAL_TONS: "77480.00"
+        - # sample 2
+          DUMP_LOC_NAME: "KIM-DMP-3950-M"
+          DUMP_COUNT: 113.0
+          TOTAL_TONS: "29380.00"
+
+    08_mill_tons:
+      name: "Mill - tons delivered"
+      section: "Lbs on Ground - Mill"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "tons"
+      validated_at: "2026-01-22T16:14:18.364328"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'BAG'
+          AND (DUMP_LOC_NAME ILIKE '%mill%' OR DUMP_LOC_NAME ILIKE '%crusher%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+      sample_data:
+        - # sample 1
+          DUMP_LOC_NAME: "CRUSHER 2"
+          TOTAL_TONS: "77480.00"
+          DUMP_COUNT: 298.0
+
+    12_mfl_tons:
+      name: "MFL - tons delivered"
+      section: "Lbs on Ground - MFL"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'BAG'
+          AND (DUMP_LOC_NAME ILIKE '%mfl%' OR DUMP_LOC_NAME ILIKE '%leach%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+
+    16_rom_tons:
+      name: "ROM - tons delivered"
+      section: "Lbs on Ground - ROM"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "tons"
+      validated_at: "2026-01-22T16:14:34.125902"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'BAG'
+          AND (DUMP_LOC_NAME ILIKE '%rom%' OR DUMP_LOC_NAME ILIKE '%stockpile%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+      sample_data:
+        - # sample 1
+          DUMP_LOC_NAME: "SX STOCKPILE"
+          TOTAL_TONS: "1300.00"
+          DUMP_COUNT: 5.0
+
+    09_mill_crusher:
+      name: "Mill - Crusher Rate (TPOH)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: Bagdad
+      discovered_sensor: "BAG-GL4CrusherMotorMotorLoad"
+      validated_at: "2026-01-22T16:14:34.807670"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'Crusher' and sensor_id contains 'Motor' | where todouble(value) > 50 | project sensor_id, rate_tph=todouble(value), timestamp | order by rate_tph desc | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "BAG-GL4CrusherMotorMotorLoad"
+          rate_tph: 3.402823e+38
+          timestamp: "2026-01-22 22:03:28.026000+00:00"
+        - # sample 2
+          sensor_id: "BAG-GL4CrusherMotorCurrentUnbalance"
+          rate_tph: 3.402823e+38
+          timestamp: "2026-01-22 22:03:38.026000+00:00"
+
+    10_mill_rate:
+      name: "Mill - Mill Rate (TPOH)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: Bagdad
+      discovered_sensor: "BAG-GL4CrusherMotorCurrentUnbalance"
+      validated_at: "2026-01-22T16:14:35.027964"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'MILL' or sensor_id contains 'CR' | where todouble(value) > 50 | project sensor_id, rate_tph=todouble(value), timestamp | order by rate_tph desc | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "BAG-GL4CrusherMotorCurrentUnbalance"
+          rate_tph: 3.402823e+38
+          timestamp: "2026-01-22 22:03:38.026000+00:00"
+        - # sample 2
+          sensor_id: "BAG-GL4CrusherMotorMotorLoad"
+          rate_tph: 3.402823e+38
+          timestamp: "2026-01-22 22:03:28.026000+00:00"
+
+    11_mill_strategy:
+      name: "Mill - Strategy compliance (IOS Level)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "%"
+      database: Bagdad
+      discovered_sensor: "BAG-CuMoConcentrateCuCalibration-osa"
+      validated_at: "2026-01-22T16:14:35.182888"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'LI' or sensor_id contains 'CC' | where todouble(value) > 0 and todouble(value) < 100 | project sensor_id, level_pct=todouble(value), timestamp | take 5
+      sample_data:
+        - # sample 1
+          sensor_id: "BAG-CuMoConcentrateCuCalibration-osa"
+          level_pct: 13.68
+          timestamp: "2025-07-03 15:16:00+00:00"
+        - # sample 2
+          sensor_id: "BAG-APC Optimization  Performance Rougher Line B-Constraint ..."
+          level_pct: 1.0
+          timestamp: "1970-01-01 00:00:00+00:00"
+
+    13_mfl_crusher:
+      name: "MFL - Crusher Rate (TPOH)"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: Bagdad
+      discovered_sensor: "BAG-GCR02-machine-position-y"
+      validated_at: "2026-01-22T16:14:35.310058"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'CR02' or sensor_id contains 'MFL' | where todouble(value) > 50 | project sensor_id, rate_tph=todouble(value), timestamp | order by rate_tph desc | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "BAG-GCR02-machine-position-y"
+          rate_tph: 96632.25
+          timestamp: "2025-11-17 17:18:37+00:00"
+        - # sample 2
+          sensor_id: "BAG-GCR02-machine-position-x"
+          rate_tph: 94575.75
+          timestamp: "2025-11-17 17:18:37+00:00"
+
+    14_mfl_fos:
+      name: "MFL - FOS Rate (TPOH)"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: Bagdad
+      discovered_sensor: "BAG-Concentrate Leach-Provisional-e7f3ec3c-0f25-4c1b-89d7-8f091a8f6530"
+      validated_at: "2026-01-22T16:14:35.439113"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'Leach' or sensor_id contains 'FOS' | where todouble(value) > 0 | project sensor_id, rate_tph=todouble(value), timestamp | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "BAG-Concentrate Leach-Provisional-e7f3ec3c-0f25-4c1b-89d7-8f..."
+          rate_tph: 1832509.62114143
+          timestamp: "2026-01-22 22:04:54+00:00"
+        - # sample 2
+          sensor_id: "BAG-SIE_Temperature_Average_Leaching"
+          rate_tph: 186.783309936523
+          timestamp: "2026-01-22 22:08:41+00:00"
+
+    15_mfl_strategy:
+      name: "MFL - Strategy compliance"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: SUCCESS
+      unit: "%"
+      database: Bagdad
+      discovered_sensor: "BAG-CuMoConcentrateCuCalibration-osa"
+      validated_at: "2026-01-22T16:14:35.580190"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'LI' | where todouble(value) > 0 and todouble(value) < 100 | project sensor_id, level_pct=todouble(value), timestamp | take 5
+      sample_data:
+        - # sample 1
+          sensor_id: "BAG-CuMoConcentrateCuCalibration-osa"
+          level_pct: 13.68
+          timestamp: "2025-07-03 15:16:00+00:00"
+        - # sample 2
+          sensor_id: "BAG-APC Optimization  Performance Rougher Line B-Constraint ..."
+          level_pct: 1.0
+          timestamp: "1970-01-01 00:00:00+00:00"
 
 # =============================================================================
-# QUERY PATTERNS
+# SITE: Miami (SAM)
+# Location: Arizona, USA
+# Type: Underground/Processing
 # =============================================================================
+SAM:
+  name: "Miami"
+  adx_database: Miami
+  location: "Arizona, USA"
+  type: "Underground/Processing"
+  has_load_haul_data: false
+  note: "No surface Load/Haul operations - processing facility only"
+  
+  validation_summary:
+    snowflake: "0/10"
+    adx: "6/6"
+    total: "6/16"
+    validated_at: "2026-01-22T16:02:49.697059"
+  
+  outcomes:
 
-query_patterns:
-  # Get current value for specific sensors at a site
-  current_value_single_site:
-    description: Get latest sensor values from a specific site
-    kql: |
-      database('Morenci').FCTSCURRENT
-      | where sensor_id in ("sensor1", "sensor2", "sensor3")
-      | project TAG_NAME = sensor_id, VALUE_UTC_TS = timestamp, 
-                SENSOR_VALUE = tostring(value), UOM = uom, QUALITY = quality
-                
-  # Historical time-series query
-  historical_timeseries:
-    description: Get sensor history for time-series analysis
-    kql: |
-      database('Morenci').FCTS
-      | where timestamp > ago(24h)
-      | where sensor_id == "mor-cr03_wi00317_pv"
-      | summarize avg(todouble(value)) by bin(timestamp, 5m)
-      
-  # Cross-site comparison
-  cross_site_current:
-    description: Compare current values across multiple sites
-    kql: |
+    01_dig_compliance:
+      name: "Dig compliance (%)"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "%"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(*) as total_dig_events,
+            COUNT(DISTINCT LOADING_LOC_ID) as unique_dig_locations,
+            COUNT(DISTINCT EXCAV_ID) as active_shovels,
+            ROUND(AVG(LOADING_CYCLE_DIG_ELEV_AVG_FEET), 2) as avg_dig_elevation_ft
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'SAM'
+        GROUP BY SITE_CODE
+
+    02_dig_rate:
+      name: "Dig rate (TPOH)"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "TPH"
+      query: |
+        SELECT 
+            SITE_CODE,
+            ROUND(SUM(MEASURED_PAYLOAD_METRIC_TONS), 2) as total_tons_24hr,
+            COUNT(*) as load_count,
+            COUNT(DISTINCT EXCAV_ID) as shovel_count
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'SAM'
+        GROUP BY SITE_CODE
+
+    03_priority_shovels:
+      name: "Priority shovels"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            e.EQUIP_NAME as shovel_name,
+            SUM(lc.MEASURED_PAYLOAD_METRIC_TONS) as total_tons,
+            COUNT(*) as load_count
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE lc
+        LEFT JOIN PROD_WG.LOAD_HAUL.LH_EQUIPMENT e 
+            ON lc.EXCAV_ID = e.EQUIP_ID AND lc.SITE_CODE = e.SITE_CODE
+        WHERE lc.CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND lc.SITE_CODE = 'SAM'
+        GROUP BY e.EQUIP_NAME
+        ORDER BY total_tons DESC
+        LIMIT 5
+
+    04_truck_count:
+      name: "Number of trucks (qty)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "count"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(DISTINCT TRUCK_ID) as active_trucks,
+            COUNT(*) as total_cycles,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons_hauled
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'SAM'
+        GROUP BY SITE_CODE
+
+    05_cycle_time:
+      name: "Cycle Time (min)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "minutes"
+      query: |
+        SELECT 
+            SITE_CODE,
+            ROUND(AVG(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as avg_cycle_time_mins,
+            ROUND(MIN(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as min_cycle_time,
+            ROUND(MAX(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as max_cycle_time,
+            COUNT(*) as total_cycles
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'SAM'
+          AND TOTAL_CYCLE_DURATION_CALENDAR_MINS > 0
+          AND TOTAL_CYCLE_DURATION_CALENDAR_MINS < 180
+        GROUP BY SITE_CODE
+
+    06_asset_efficiency:
+      name: "Asset Efficiency"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "cycles/truck"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(DISTINCT TRUCK_ID) as unique_trucks,
+            COUNT(*) as total_cycles,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_payload_tons,
+            ROUND(COUNT(*) * 1.0 / NULLIF(COUNT(DISTINCT TRUCK_ID), 0), 2) as cycles_per_truck
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'SAM'
+        GROUP BY SITE_CODE
+
+    07_dump_compliance:
+      name: "Dump plan compliance (%)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "%"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            COUNT(*) as dump_count,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'SAM'
+          AND DUMP_LOC_NAME IS NOT NULL
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+        LIMIT 5
+
+    08_mill_tons:
+      name: "Mill - tons delivered"
+      section: "Lbs on Ground - Mill"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'SAM'
+          AND (DUMP_LOC_NAME ILIKE '%mill%' OR DUMP_LOC_NAME ILIKE '%crusher%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+
+    12_mfl_tons:
+      name: "MFL - tons delivered"
+      section: "Lbs on Ground - MFL"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'SAM'
+          AND (DUMP_LOC_NAME ILIKE '%mfl%' OR DUMP_LOC_NAME ILIKE '%leach%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+
+    16_rom_tons:
+      name: "ROM - tons delivered"
+      section: "Lbs on Ground - ROM"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'SAM'
+          AND (DUMP_LOC_NAME ILIKE '%rom%' OR DUMP_LOC_NAME ILIKE '%stockpile%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+
+    09_mill_crusher:
+      name: "Mill - Crusher Rate (TPOH)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: Miami
+      discovered_sensor: "MIA-RTAC_AisleScrb22_BDBA.I15"
+      validated_at: "2026-01-22T16:15:44.329217"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'CR' and todouble(value) > 50 | project sensor_id, rate_tph=todouble(value), timestamp | order by rate_tph desc | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "MIA-RTAC_AisleScrb22_BDBA.I15"
+          rate_tph: 41222273501.25
+          timestamp: "2025-12-21 04:28:37+00:00"
+        - # sample 2
+          sensor_id: "MIA-RTAC_AisleScrb22_BDBA.I09"
+          rate_tph: 41079247428.0938
+          timestamp: "2025-11-26 11:44:21+00:00"
+
+    10_mill_rate:
+      name: "Mill - Mill Rate (TPOH)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: Miami
+      discovered_sensor: "MIA-RTAC_AisleScrb22_BDBA.I15"
+      validated_at: "2026-01-22T16:15:44.482506"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'MILL' or sensor_id contains 'CR' | where todouble(value) > 50 | project sensor_id, rate_tph=todouble(value), timestamp | order by rate_tph desc | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "MIA-RTAC_AisleScrb22_BDBA.I15"
+          rate_tph: 41222273501.25
+          timestamp: "2025-12-21 04:28:37+00:00"
+        - # sample 2
+          sensor_id: "MIA-RTAC_AisleScrb22_BDBA.I09"
+          rate_tph: 41079247428.0938
+          timestamp: "2025-11-26 11:44:21+00:00"
+
+    11_mill_strategy:
+      name: "Mill - Strategy compliance (IOS Level)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "%"
+      database: Miami
+      discovered_sensor: "MIA-LIC171_KI_CV"
+      validated_at: "2026-01-22T16:15:44.591028"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'LI' or sensor_id contains 'Level' | where todouble(value) > 0 and todouble(value) < 100 | project sensor_id, level_pct=todouble(value), timestamp | take 5
+      sample_data:
+        - # sample 1
+          sensor_id: "MIA-LIC171_KI_CV"
+          level_pct: 0.046
+          timestamp: "2026-01-22 21:55:20.560012+00:00"
+        - # sample 2
+          sensor_id: "MIA-LIC156_OUT_CV"
+          level_pct: 45.0
+          timestamp: "2026-01-22 21:55:22.819000+00:00"
+
+    13_mfl_crusher:
+      name: "MFL - Crusher Rate (TPOH)"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: Miami
+      discovered_sensor: "MIA-RTAC_AisleScrb22_BDBA.I15"
+      validated_at: "2026-01-22T16:15:44.731064"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'CR' and todouble(value) > 50 | project sensor_id, rate_tph=todouble(value), timestamp | order by rate_tph desc | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "MIA-RTAC_AisleScrb22_BDBA.I15"
+          rate_tph: 41222273501.25
+          timestamp: "2025-12-21 04:28:37+00:00"
+        - # sample 2
+          sensor_id: "MIA-RTAC_AisleScrb22_BDBA.I09"
+          rate_tph: 41079247428.0938
+          timestamp: "2025-11-26 11:44:21+00:00"
+
+    14_mfl_fos:
+      name: "MFL - FOS Rate (TPOH)"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: Miami
+      discovered_sensor: "MIA-LeachVat-455109-wind_speed_avg"
+      validated_at: "2026-01-22T16:15:44.854601"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'Leach' or sensor_id contains 'FOS' | where todouble(value) > 0 | project sensor_id, rate_tph=todouble(value), timestamp | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "MIA-LeachVat-455109-wind_speed_avg"
+          rate_tph: 1.0
+          timestamp: "2026-01-22 01:35:00+00:00"
+        - # sample 2
+          sensor_id: "MIA-LeachVat-455109-rain_accum_in"
+          rate_tph: 1.36
+          timestamp: "2026-01-22 01:35:00+00:00"
+
+    15_mfl_strategy:
+      name: "MFL - Strategy compliance"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: SUCCESS
+      unit: "%"
+      database: Miami
+      discovered_sensor: "MIA-LIC171_KI_CV"
+      validated_at: "2026-01-22T16:15:44.958119"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'LI' | where todouble(value) > 0 and todouble(value) < 100 | project sensor_id, level_pct=todouble(value), timestamp | take 5
+      sample_data:
+        - # sample 1
+          sensor_id: "MIA-LIC171_KI_CV"
+          level_pct: 0.046
+          timestamp: "2026-01-22 21:55:20.560012+00:00"
+        - # sample 2
+          sensor_id: "MIA-LIC156_OUT_CV"
+          level_pct: 45.0
+          timestamp: "2026-01-22 21:55:22.819000+00:00"
+
+# =============================================================================
+# SITE: Climax (CMX)
+# Location: Colorado, USA
+# Type: Molybdenum Mine
+# =============================================================================
+CMX:
+  name: "Climax"
+  adx_database: Climax
+  location: "Colorado, USA"
+  type: "Molybdenum Mine"
+  has_load_haul_data: false
+  note: "Molybdenum operation - different fleet system"
+  discovered_pi_tags:
+    level: "CMX-FTHME09.CLX09_1_0.LIT_82005.PVEU"
+  
+  validation_summary:
+    snowflake: "0/10"
+    adx: "5/6"
+    total: "5/16"
+    validated_at: "2026-01-22T16:02:49.697059"
+  
+  outcomes:
+
+    01_dig_compliance:
+      name: "Dig compliance (%)"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "%"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(*) as total_dig_events,
+            COUNT(DISTINCT LOADING_LOC_ID) as unique_dig_locations,
+            COUNT(DISTINCT EXCAV_ID) as active_shovels,
+            ROUND(AVG(LOADING_CYCLE_DIG_ELEV_AVG_FEET), 2) as avg_dig_elevation_ft
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'CMX'
+        GROUP BY SITE_CODE
+
+    02_dig_rate:
+      name: "Dig rate (TPOH)"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "TPH"
+      query: |
+        SELECT 
+            SITE_CODE,
+            ROUND(SUM(MEASURED_PAYLOAD_METRIC_TONS), 2) as total_tons_24hr,
+            COUNT(*) as load_count,
+            COUNT(DISTINCT EXCAV_ID) as shovel_count
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'CMX'
+        GROUP BY SITE_CODE
+
+    03_priority_shovels:
+      name: "Priority shovels"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            e.EQUIP_NAME as shovel_name,
+            SUM(lc.MEASURED_PAYLOAD_METRIC_TONS) as total_tons,
+            COUNT(*) as load_count
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE lc
+        LEFT JOIN PROD_WG.LOAD_HAUL.LH_EQUIPMENT e 
+            ON lc.EXCAV_ID = e.EQUIP_ID AND lc.SITE_CODE = e.SITE_CODE
+        WHERE lc.CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND lc.SITE_CODE = 'CMX'
+        GROUP BY e.EQUIP_NAME
+        ORDER BY total_tons DESC
+        LIMIT 5
+
+    04_truck_count:
+      name: "Number of trucks (qty)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "count"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(DISTINCT TRUCK_ID) as active_trucks,
+            COUNT(*) as total_cycles,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons_hauled
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'CMX'
+        GROUP BY SITE_CODE
+
+    05_cycle_time:
+      name: "Cycle Time (min)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "minutes"
+      query: |
+        SELECT 
+            SITE_CODE,
+            ROUND(AVG(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as avg_cycle_time_mins,
+            ROUND(MIN(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as min_cycle_time,
+            ROUND(MAX(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as max_cycle_time,
+            COUNT(*) as total_cycles
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'CMX'
+          AND TOTAL_CYCLE_DURATION_CALENDAR_MINS > 0
+          AND TOTAL_CYCLE_DURATION_CALENDAR_MINS < 180
+        GROUP BY SITE_CODE
+
+    06_asset_efficiency:
+      name: "Asset Efficiency"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "cycles/truck"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(DISTINCT TRUCK_ID) as unique_trucks,
+            COUNT(*) as total_cycles,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_payload_tons,
+            ROUND(COUNT(*) * 1.0 / NULLIF(COUNT(DISTINCT TRUCK_ID), 0), 2) as cycles_per_truck
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'CMX'
+        GROUP BY SITE_CODE
+
+    07_dump_compliance:
+      name: "Dump plan compliance (%)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "%"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            COUNT(*) as dump_count,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'CMX'
+          AND DUMP_LOC_NAME IS NOT NULL
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+        LIMIT 5
+
+    08_mill_tons:
+      name: "Mill - tons delivered"
+      section: "Lbs on Ground - Mill"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'CMX'
+          AND (DUMP_LOC_NAME ILIKE '%mill%' OR DUMP_LOC_NAME ILIKE '%crusher%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+
+    12_mfl_tons:
+      name: "MFL - tons delivered"
+      section: "Lbs on Ground - MFL"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'CMX'
+          AND (DUMP_LOC_NAME ILIKE '%mfl%' OR DUMP_LOC_NAME ILIKE '%leach%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+
+    16_rom_tons:
+      name: "ROM - tons delivered"
+      section: "Lbs on Ground - ROM"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'CMX'
+          AND (DUMP_LOC_NAME ILIKE '%rom%' OR DUMP_LOC_NAME ILIKE '%stockpile%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+
+    09_mill_crusher:
+      name: "Mill - Crusher Rate (TPOH)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: Climax
+      discovered_sensor: "CMX-cr800.WxStation.AirTC_TMx"
+      validated_at: "2026-01-22T16:17:02.934369"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'CR' and todouble(value) > 50 | project sensor_id, rate_tph=todouble(value), timestamp | order by rate_tph desc | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "CMX-cr800.WxStation.AirTC_TMx"
+          rate_tph: 1769026000.0
+          timestamp: "2026-01-22 07:00:00+00:00"
+        - # sample 2
+          sensor_id: "CMX-cr800.WxStation.Temp_Evap_TMx"
+          rate_tph: 1769026000.0
+          timestamp: "2026-01-22 07:00:00+00:00"
+
+    10_mill_rate:
+      name: "Mill - Mill Rate (TPOH)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: Climax
+      discovered_sensor: "CMX-cr800.WxStation.AirTC_TMx"
+      validated_at: "2026-01-22T16:17:03.110403"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'MILL' or sensor_id contains 'CR' | where todouble(value) > 50 | project sensor_id, rate_tph=todouble(value), timestamp | order by rate_tph desc | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "CMX-cr800.WxStation.AirTC_TMx"
+          rate_tph: 1769026000.0
+          timestamp: "2026-01-22 07:00:00+00:00"
+        - # sample 2
+          sensor_id: "CMX-cr800.WxStation.Temp_Evap_TMx"
+          rate_tph: 1769026000.0
+          timestamp: "2026-01-22 07:00:00+00:00"
+
+    11_mill_strategy:
+      name: "Mill - Strategy compliance (IOS Level)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "%"
+      database: Climax
+      discovered_sensor: "CMX-FTHME09.CLX09_1_0.LIT_82005.PVEU"
+      validated_at: "2026-01-22T16:17:03.255927"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'LI' or sensor_id contains 'LIT' | where todouble(value) > 0 | project sensor_id, level_pct=todouble(value), timestamp | take 5
+      sample_data:
+        - # sample 1
+          sensor_id: "CMX-FTHME09.CLX09_1_0.LIT_82005.PVEU"
+          level_pct: 793.0
+          timestamp: "2025-08-26 06:28:07.985214+00:00"
+        - # sample 2
+          sensor_id: "CMX-Nokes Usage prior to Delivery.pe4"
+          level_pct: 99.99236
+          timestamp: "2025-08-26 06:28:09.974670+00:00"
+
+    13_mfl_crusher:
+      name: "MFL - Crusher Rate (TPOH)"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: Climax
+      discovered_sensor: "CMX-cr800.WxStation.AirTC_TMx"
+      validated_at: "2026-01-22T16:17:03.563103"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'CR' and todouble(value) > 50 | project sensor_id, rate_tph=todouble(value), timestamp | order by rate_tph desc | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "CMX-cr800.WxStation.AirTC_TMx"
+          rate_tph: 1769026000.0
+          timestamp: "2026-01-22 07:00:00+00:00"
+        - # sample 2
+          sensor_id: "CMX-cr800.WxStation.Temp_Evap_TMx"
+          rate_tph: 1769026000.0
+          timestamp: "2026-01-22 07:00:00+00:00"
+
+    14_mfl_fos:
+      name: "MFL - FOS Rate (TPOH)"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: NO_DATA
+      unit: "TPH"
+      database: Climax
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'Leach' or sensor_id contains 'FOS' | where todouble(value) > 0 | project sensor_id, rate_tph=todouble(value), timestamp | take 3
+
+    15_mfl_strategy:
+      name: "MFL - Strategy compliance"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: SUCCESS
+      unit: "%"
+      database: Climax
+      discovered_sensor: "CMX-Nokes Usage prior to Delivery.pe4"
+      validated_at: "2026-01-22T16:17:04.536460"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'LI' | where todouble(value) > 0 and todouble(value) < 100 | project sensor_id, level_pct=todouble(value), timestamp | take 5
+      sample_data:
+        - # sample 1
+          sensor_id: "CMX-Nokes Usage prior to Delivery.pe4"
+          level_pct: 99.99236
+          timestamp: "2025-08-26 06:28:09.974670+00:00"
+        - # sample 2
+          sensor_id: "CMX-PCS001:RSLinx Enterprise:CLX015._805_HSH_1001B.PV"
+          level_pct: 14.0
+          timestamp: "2025-08-26 06:28:35.006011+00:00"
+
+# =============================================================================
+# SITE: Sierrita (SIE)
+# Location: Arizona, USA
+# Type: Open Pit Copper
+# =============================================================================
+SIE:
+  name: "Sierrita"
+  adx_database: Sierrita
+  location: "Arizona, USA"
+  type: "Open Pit Copper"
+  has_load_haul_data: true
+  discovered_pi_tags:
+    flow: "SIE-cr6.WI_2_Flow.Well_W_WI_2"
+  
+  validation_summary:
+    snowflake: "7/10"
+    adx: "6/6"
+    total: "13/16"
+    validated_at: "2026-01-22T16:02:49.697059"
+  
+  outcomes:
+
+    01_dig_compliance:
+      name: "Dig compliance (%)"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "%"
+      validated_at: "2026-01-22T16:17:08.047292"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(*) as total_dig_events,
+            COUNT(DISTINCT LOADING_LOC_ID) as unique_dig_locations,
+            COUNT(DISTINCT EXCAV_ID) as active_shovels,
+            ROUND(AVG(LOADING_CYCLE_DIG_ELEV_AVG_FEET), 2) as avg_dig_elevation_ft
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'SIE'
+        GROUP BY SITE_CODE
+      sample_data:
+        - # sample 1
+          SITE_CODE: "SIE"
+          TOTAL_DIG_EVENTS: 504.0
+          UNIQUE_DIG_LOCATIONS: 7.0
+          ACTIVE_SHOVELS: 5.0
+          AVG_DIG_ELEVATION_FT: 3443.27
+
+    02_dig_rate:
+      name: "Dig rate (TPOH)"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "TPH"
+      validated_at: "2026-01-22T16:17:11.405863"
+      query: |
+        SELECT 
+            SITE_CODE,
+            ROUND(SUM(MEASURED_PAYLOAD_METRIC_TONS), 2) as total_tons_24hr,
+            COUNT(*) as load_count,
+            COUNT(DISTINCT EXCAV_ID) as shovel_count
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'SIE'
+        GROUP BY SITE_CODE
+      sample_data:
+        - # sample 1
+          SITE_CODE: "SIE"
+          TOTAL_TONS_24HR: "114723.16"
+          LOAD_COUNT: 504.0
+          SHOVEL_COUNT: 5.0
+
+    03_priority_shovels:
+      name: "Priority shovels"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "tons"
+      validated_at: "2026-01-22T16:17:13.025808"
+      query: |
+        SELECT 
+            e.EQUIP_NAME as shovel_name,
+            SUM(lc.MEASURED_PAYLOAD_METRIC_TONS) as total_tons,
+            COUNT(*) as load_count
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE lc
+        LEFT JOIN PROD_WG.LOAD_HAUL.LH_EQUIPMENT e 
+            ON lc.EXCAV_ID = e.EQUIP_ID AND lc.SITE_CODE = e.SITE_CODE
+        WHERE lc.CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND lc.SITE_CODE = 'SIE'
+        GROUP BY e.EQUIP_NAME
+        ORDER BY total_tons DESC
+        LIMIT 5
+      sample_data:
+        - # sample 1
+          SHOVEL_NAME: "S48"
+          TOTAL_TONS: "43006.547242"
+          LOAD_COUNT: 191.0
+        - # sample 2
+          SHOVEL_NAME: "S45"
+          TOTAL_TONS: "40357.050610"
+          LOAD_COUNT: 174.0
+
+    04_truck_count:
+      name: "Number of trucks (qty)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "count"
+      validated_at: "2026-01-22T16:17:19.218236"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(DISTINCT TRUCK_ID) as active_trucks,
+            COUNT(*) as total_cycles,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons_hauled
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'SIE'
+        GROUP BY SITE_CODE
+      sample_data:
+        - # sample 1
+          SITE_CODE: "SIE"
+          ACTIVE_TRUCKS: 26.0
+          TOTAL_CYCLES: 480.0
+          TOTAL_TONS_HAULED: "128928.00"
+
+    05_cycle_time:
+      name: "Cycle Time (min)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "minutes"
+      validated_at: "2026-01-22T16:17:25.570545"
+      query: |
+        SELECT 
+            SITE_CODE,
+            ROUND(AVG(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as avg_cycle_time_mins,
+            ROUND(MIN(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as min_cycle_time,
+            ROUND(MAX(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as max_cycle_time,
+            COUNT(*) as total_cycles
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'SIE'
+          AND TOTAL_CYCLE_DURATION_CALENDAR_MINS > 0
+          AND TOTAL_CYCLE_DURATION_CALENDAR_MINS < 180
+        GROUP BY SITE_CODE
+      sample_data:
+        - # sample 1
+          SITE_CODE: "SIE"
+          AVG_CYCLE_TIME_MINS: "34.75"
+          MIN_CYCLE_TIME: "9.00"
+          MAX_CYCLE_TIME: "160.00"
+          TOTAL_CYCLES: 443.0
+
+    06_asset_efficiency:
+      name: "Asset Efficiency"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "cycles/truck"
+      validated_at: "2026-01-22T16:17:33.477224"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(DISTINCT TRUCK_ID) as unique_trucks,
+            COUNT(*) as total_cycles,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_payload_tons,
+            ROUND(COUNT(*) * 1.0 / NULLIF(COUNT(DISTINCT TRUCK_ID), 0), 2) as cycles_per_truck
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'SIE'
+        GROUP BY SITE_CODE
+      sample_data:
+        - # sample 1
+          SITE_CODE: "SIE"
+          UNIQUE_TRUCKS: 26.0
+          TOTAL_CYCLES: 480.0
+          TOTAL_PAYLOAD_TONS: "128928.00"
+          CYCLES_PER_TRUCK: "18.46"
+
+    07_dump_compliance:
+      name: "Dump plan compliance (%)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: SUCCESS
+      unit: "%"
+      validated_at: "2026-01-22T16:17:42.893246"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            COUNT(*) as dump_count,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'SIE'
+          AND DUMP_LOC_NAME IS NOT NULL
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+        LIMIT 5
+      sample_data:
+        - # sample 1
+          DUMP_LOC_NAME: "P534280W"
+          DUMP_COUNT: 154.0
+          TOTAL_TONS: "41364.40"
+        - # sample 2
+          DUMP_LOC_NAME: "A-SIDE"
+          DUMP_COUNT: 113.0
+          TOTAL_TONS: "30351.80"
+
+    08_mill_tons:
+      name: "Mill - tons delivered"
+      section: "Lbs on Ground - Mill"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'SIE'
+          AND (DUMP_LOC_NAME ILIKE '%mill%' OR DUMP_LOC_NAME ILIKE '%crusher%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+
+    12_mfl_tons:
+      name: "MFL - tons delivered"
+      section: "Lbs on Ground - MFL"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'SIE'
+          AND (DUMP_LOC_NAME ILIKE '%mfl%' OR DUMP_LOC_NAME ILIKE '%leach%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+
+    16_rom_tons:
+      name: "ROM - tons delivered"
+      section: "Lbs on Ground - ROM"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'SIE'
+          AND (DUMP_LOC_NAME ILIKE '%rom%' OR DUMP_LOC_NAME ILIKE '%stockpile%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+
+    09_mill_crusher:
+      name: "Mill - Crusher Rate (TPOH)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: Sierrita
+      discovered_sensor: "SIE-LoRaWAN-Gateway-TwinButtes-lastPongTs"
+      validated_at: "2026-01-22T16:18:11.544581"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'CR' or sensor_id contains 'WI' | where todouble(value) > 50 | project sensor_id, rate_tph=todouble(value), timestamp | order by rate_tph desc | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "SIE-LoRaWAN-Gateway-TwinButtes-lastPongTs"
+          rate_tph: 1769117622313.0
+          timestamp: "2026-01-22 21:41:09.057121+00:00"
+        - # sample 2
+          sensor_id: "SIE-LoRaWAN-Gateway-Twin Buttes-lastPongTs"
+          rate_tph: 1740760298766.0
+          timestamp: "2025-02-28 16:41:02.196638+00:00"
+
+    10_mill_rate:
+      name: "Mill - Mill Rate (TPOH)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: Sierrita
+      discovered_sensor: "SIE-LoRaWAN-Gateway-HalfMill-lastPongTs"
+      validated_at: "2026-01-22T16:18:12.578730"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'MILL' or sensor_id contains 'CR' | where todouble(value) > 50 | project sensor_id, rate_tph=todouble(value), timestamp | order by rate_tph desc | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "SIE-LoRaWAN-Gateway-HalfMill-lastPongTs"
+          rate_tph: 1769117912361.0
+          timestamp: "2026-01-22 21:41:09.059724+00:00"
+        - # sample 2
+          sensor_id: "SIE-LoRaWAN-Gateway-Half Mill-lastPongTs"
+          rate_tph: 1740760717255.0
+          timestamp: "2025-02-28 16:41:02.193200+00:00"
+
+    11_mill_strategy:
+      name: "Mill - Strategy compliance (IOS Level)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "%"
+      database: Sierrita
+      discovered_sensor: "SIE-SIE-60-LIC0302-DVB-OUT"
+      validated_at: "2026-01-22T16:18:13.163466"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'LI' or sensor_id contains 'Level' | where todouble(value) > 0 and todouble(value) < 100 | project sensor_id, level_pct=todouble(value), timestamp | take 5
+      sample_data:
+        - # sample 1
+          sensor_id: "SIE-SIE-60-LIC0302-DVB-OUT"
+          level_pct: 92.96848
+          timestamp: "2026-01-22 22:00:47+00:00"
+        - # sample 2
+          sensor_id: "SIE-Tailings-Thermistor-PZ_2013_14_DegC"
+          level_pct: 20.467818885958398
+          timestamp: "2026-01-22 22:00:00+00:00"
+
+    13_mfl_crusher:
+      name: "MFL - Crusher Rate (TPOH)"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: Sierrita
+      discovered_sensor: "SIE-SIE-60-CHARMS-SCRUB"
+      validated_at: "2026-01-22T16:18:13.709570"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'CR' and todouble(value) > 50 | project sensor_id, rate_tph=todouble(value), timestamp | order by rate_tph desc | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "SIE-SIE-60-CHARMS-SCRUB"
+          rate_tph: 117787612.0
+          timestamp: "2026-01-22 22:12:10+00:00"
+        - # sample 2
+          sensor_id: "SIE-cr6.W_ESP_11.Flow_W_ESP_11_Totalized"
+          rate_tph: 1293416.0
+          timestamp: "2026-01-22 20:00:00+00:00"
+
+    14_mfl_fos:
+      name: "MFL - FOS Rate (TPOH)"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: Sierrita
+      discovered_sensor: "SIE-XWLeachDump-4185-Thermistor_PZ_2024_08_01_Ohms"
+      validated_at: "2026-01-22T16:18:15.127280"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'Leach' or sensor_id contains 'FOS' | where todouble(value) > 0 | project sensor_id, rate_tph=todouble(value), timestamp | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "SIE-XWLeachDump-4185-Thermistor_PZ_2024_08_01_Ohms"
+          rate_tph: 3828.0
+          timestamp: "2026-01-22 22:00:00+00:00"
+        - # sample 2
+          sensor_id: "SIE-XWLeachDump-4185-Thermistor_PZ_2024_08_02_Ohms"
+          rate_tph: 3796.0
+          timestamp: "2026-01-22 22:00:00+00:00"
+
+    15_mfl_strategy:
+      name: "MFL - Strategy compliance"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: SUCCESS
+      unit: "%"
+      database: Sierrita
+      discovered_sensor: "SIE-SIE-60-LIC0302-DVB-OUT"
+      validated_at: "2026-01-22T16:18:15.461209"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'LI' | where todouble(value) > 0 and todouble(value) < 100 | project sensor_id, level_pct=todouble(value), timestamp | take 5
+      sample_data:
+        - # sample 1
+          sensor_id: "SIE-SIE-60-LIC0302-DVB-OUT"
+          level_pct: 92.96848
+          timestamp: "2026-01-22 22:00:47+00:00"
+        - # sample 2
+          sensor_id: "SIE-Tailings-Thermistor-PZ_2013_14_DegC"
+          level_pct: 20.467818885958398
+          timestamp: "2026-01-22 22:00:00+00:00"
+
+# =============================================================================
+# SITE: NewMexico (NMO)
+# Location: New Mexico, USA
+# Type: Open Pit Copper
+# =============================================================================
+NMO:
+  name: "NewMexico"
+  adx_database: NewMexico
+  location: "New Mexico, USA"
+  type: "Open Pit Copper"
+  has_load_haul_data: false
+  note: "Different dispatch system - not in Snowflake LOAD_HAUL"
+  discovered_pi_tags:
+    crusher: "NMO-Primary Crusher Total Run Time"
+    sag: "NMO-SAG2_MTD_TOT"
+  
+  validation_summary:
+    snowflake: "0/10"
+    adx: "6/6"
+    total: "6/16"
+    validated_at: "2026-01-22T16:02:49.697059"
+  
+  outcomes:
+
+    01_dig_compliance:
+      name: "Dig compliance (%)"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "%"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(*) as total_dig_events,
+            COUNT(DISTINCT LOADING_LOC_ID) as unique_dig_locations,
+            COUNT(DISTINCT EXCAV_ID) as active_shovels,
+            ROUND(AVG(LOADING_CYCLE_DIG_ELEV_AVG_FEET), 2) as avg_dig_elevation_ft
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'NMO'
+        GROUP BY SITE_CODE
+
+    02_dig_rate:
+      name: "Dig rate (TPOH)"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "TPH"
+      query: |
+        SELECT 
+            SITE_CODE,
+            ROUND(SUM(MEASURED_PAYLOAD_METRIC_TONS), 2) as total_tons_24hr,
+            COUNT(*) as load_count,
+            COUNT(DISTINCT EXCAV_ID) as shovel_count
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'NMO'
+        GROUP BY SITE_CODE
+
+    03_priority_shovels:
+      name: "Priority shovels"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            e.EQUIP_NAME as shovel_name,
+            SUM(lc.MEASURED_PAYLOAD_METRIC_TONS) as total_tons,
+            COUNT(*) as load_count
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE lc
+        LEFT JOIN PROD_WG.LOAD_HAUL.LH_EQUIPMENT e 
+            ON lc.EXCAV_ID = e.EQUIP_ID AND lc.SITE_CODE = e.SITE_CODE
+        WHERE lc.CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND lc.SITE_CODE = 'NMO'
+        GROUP BY e.EQUIP_NAME
+        ORDER BY total_tons DESC
+        LIMIT 5
+
+    04_truck_count:
+      name: "Number of trucks (qty)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "count"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(DISTINCT TRUCK_ID) as active_trucks,
+            COUNT(*) as total_cycles,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons_hauled
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'NMO'
+        GROUP BY SITE_CODE
+
+    05_cycle_time:
+      name: "Cycle Time (min)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "minutes"
+      query: |
+        SELECT 
+            SITE_CODE,
+            ROUND(AVG(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as avg_cycle_time_mins,
+            ROUND(MIN(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as min_cycle_time,
+            ROUND(MAX(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as max_cycle_time,
+            COUNT(*) as total_cycles
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'NMO'
+          AND TOTAL_CYCLE_DURATION_CALENDAR_MINS > 0
+          AND TOTAL_CYCLE_DURATION_CALENDAR_MINS < 180
+        GROUP BY SITE_CODE
+
+    06_asset_efficiency:
+      name: "Asset Efficiency"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "cycles/truck"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(DISTINCT TRUCK_ID) as unique_trucks,
+            COUNT(*) as total_cycles,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_payload_tons,
+            ROUND(COUNT(*) * 1.0 / NULLIF(COUNT(DISTINCT TRUCK_ID), 0), 2) as cycles_per_truck
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'NMO'
+        GROUP BY SITE_CODE
+
+    07_dump_compliance:
+      name: "Dump plan compliance (%)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "%"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            COUNT(*) as dump_count,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'NMO'
+          AND DUMP_LOC_NAME IS NOT NULL
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+        LIMIT 5
+
+    08_mill_tons:
+      name: "Mill - tons delivered"
+      section: "Lbs on Ground - Mill"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'NMO'
+          AND (DUMP_LOC_NAME ILIKE '%mill%' OR DUMP_LOC_NAME ILIKE '%crusher%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+
+    12_mfl_tons:
+      name: "MFL - tons delivered"
+      section: "Lbs on Ground - MFL"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'NMO'
+          AND (DUMP_LOC_NAME ILIKE '%mfl%' OR DUMP_LOC_NAME ILIKE '%leach%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+
+    16_rom_tons:
+      name: "ROM - tons delivered"
+      section: "Lbs on Ground - ROM"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'NMO'
+          AND (DUMP_LOC_NAME ILIKE '%rom%' OR DUMP_LOC_NAME ILIKE '%stockpile%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+
+    09_mill_crusher:
+      name: "Mill - Crusher Rate (TPOH)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: NewMexico
+      discovered_sensor: "NMO-Primary Crusher Total Run Time"
+      validated_at: "2026-01-22T16:23:18.930001"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'Crusher' | project sensor_id, value=todouble(value), timestamp | order by value desc | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "NMO-Primary Crusher Total Run Time"
+          value: 61130210.0
+          timestamp: "2024-08-15 20:00:00+00:00"
+        - # sample 2
+          sensor_id: "NMO-Primary Crusher Total Previous Month Run Time"
+          value: 1205863.0
+          timestamp: "2024-08-01 07:00:00+00:00"
+
+    10_mill_rate:
+      name: "Mill - Mill Rate (TPOH)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: NewMexico
+      discovered_sensor: "NMO-SAG2_MTD_TOT"
+      validated_at: "2026-01-22T16:23:19.237452"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'SAG' or sensor_id contains 'MILL' | where todouble(value) > 50 | project sensor_id, rate_tph=todouble(value), timestamp | order by rate_tph desc | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "NMO-SAG2_MTD_TOT"
+          rate_tph: 587737400.0
+          timestamp: "2026-01-22 22:19:00+00:00"
+        - # sample 2
+          sensor_id: "NMO-SAG1_MTD_TOT"
+          rate_tph: 516704100.0
+          timestamp: "2026-01-22 22:19:00+00:00"
+
+    11_mill_strategy:
+      name: "Mill - Strategy compliance (IOS Level)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "%"
+      database: NewMexico
+      discovered_sensor: "NMO-LIMS.B2HA.CuOx"
+      validated_at: "2026-01-22T16:23:19.396166"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'LI' or sensor_id contains 'LIMS' | where todouble(value) > 0 | project sensor_id, level_pct=todouble(value), timestamp | take 5
+      sample_data:
+        - # sample 1
+          sensor_id: "NMO-LIMS.B2HA.CuOx"
+          level_pct: 0.003
+          timestamp: "2024-01-26 07:00:00+00:00"
+        - # sample 2
+          sensor_id: "NMO-LIMS.B2HA.Fe"
+          level_pct: 17.97
+          timestamp: "2024-01-26 07:00:00+00:00"
+
+    13_mfl_crusher:
+      name: "MFL - Crusher Rate (TPOH)"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: NewMexico
+      discovered_sensor: "NMO-Primary Crusher Total Run Time"
+      validated_at: "2026-01-22T16:23:19.849369"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'Crusher' | project sensor_id, rate_tph=todouble(value), timestamp | order by rate_tph desc | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "NMO-Primary Crusher Total Run Time"
+          rate_tph: 61130210.0
+          timestamp: "2024-08-15 20:00:00+00:00"
+        - # sample 2
+          sensor_id: "NMO-Primary Crusher Total Previous Month Run Time"
+          rate_tph: 1205863.0
+          timestamp: "2024-08-01 07:00:00+00:00"
+
+    14_mfl_fos:
+      name: "MFL - FOS Rate (TPOH)"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: NewMexico
+      discovered_sensor: "NMO-PTRAFF__"
+      validated_at: "2026-01-22T16:23:20.254013"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'Leach' or sensor_id contains 'Raff' | where todouble(value) > 0 | project sensor_id, rate_tph=todouble(value), timestamp | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "NMO-PTRAFF__"
+          rate_tph: 132.2042
+          timestamp: "2026-01-22 22:00:26.011001+00:00"
+        - # sample 2
+          sensor_id: "NMO-NB_Raff_LD_FIT"
+          rate_tph: 43.75625
+          timestamp: "2026-01-22 22:05:20.045013+00:00"
+
+    15_mfl_strategy:
+      name: "MFL - Strategy compliance"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: SUCCESS
+      unit: "%"
+      database: NewMexico
+      discovered_sensor: "NMO-LIMS.B2HA.CuOx"
+      validated_at: "2026-01-22T16:23:20.495363"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'LI' | where todouble(value) > 0 and todouble(value) < 100 | project sensor_id, level_pct=todouble(value), timestamp | take 5
+      sample_data:
+        - # sample 1
+          sensor_id: "NMO-LIMS.B2HA.CuOx"
+          level_pct: 0.003
+          timestamp: "2024-01-26 07:00:00+00:00"
+        - # sample 2
+          sensor_id: "NMO-LIMS.B2HA.Fe"
+          level_pct: 17.97
+          timestamp: "2024-01-26 07:00:00+00:00"
+
+# =============================================================================
+# SITE: CerroVerde (CVE)
+# Location: Arequipa, Peru
+# Type: Open Pit Copper
+# =============================================================================
+CVE:
+  name: "CerroVerde"
+  adx_database: CerroVerde
+  location: "Arequipa, Peru"
+  type: "Open Pit Copper"
+  has_load_haul_data: false
+  note: "Peru operation - separate data systems"
+  discovered_pi_tags:
+    level: "CVE-C1_38_LIC_2833.PV"
+  
+  validation_summary:
+    snowflake: "0/10"
+    adx: "6/6"
+    total: "6/16"
+    validated_at: "2026-01-22T16:02:49.697059"
+  
+  outcomes:
+
+    01_dig_compliance:
+      name: "Dig compliance (%)"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "%"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(*) as total_dig_events,
+            COUNT(DISTINCT LOADING_LOC_ID) as unique_dig_locations,
+            COUNT(DISTINCT EXCAV_ID) as active_shovels,
+            ROUND(AVG(LOADING_CYCLE_DIG_ELEV_AVG_FEET), 2) as avg_dig_elevation_ft
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'CVE'
+        GROUP BY SITE_CODE
+
+    02_dig_rate:
+      name: "Dig rate (TPOH)"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "TPH"
+      query: |
+        SELECT 
+            SITE_CODE,
+            ROUND(SUM(MEASURED_PAYLOAD_METRIC_TONS), 2) as total_tons_24hr,
+            COUNT(*) as load_count,
+            COUNT(DISTINCT EXCAV_ID) as shovel_count
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'CVE'
+        GROUP BY SITE_CODE
+
+    03_priority_shovels:
+      name: "Priority shovels"
+      section: "Loading"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            e.EQUIP_NAME as shovel_name,
+            SUM(lc.MEASURED_PAYLOAD_METRIC_TONS) as total_tons,
+            COUNT(*) as load_count
+        FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE lc
+        LEFT JOIN PROD_WG.LOAD_HAUL.LH_EQUIPMENT e 
+            ON lc.EXCAV_ID = e.EQUIP_ID AND lc.SITE_CODE = e.SITE_CODE
+        WHERE lc.CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND lc.SITE_CODE = 'CVE'
+        GROUP BY e.EQUIP_NAME
+        ORDER BY total_tons DESC
+        LIMIT 5
+
+    04_truck_count:
+      name: "Number of trucks (qty)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "count"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(DISTINCT TRUCK_ID) as active_trucks,
+            COUNT(*) as total_cycles,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons_hauled
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'CVE'
+        GROUP BY SITE_CODE
+
+    05_cycle_time:
+      name: "Cycle Time (min)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "minutes"
+      query: |
+        SELECT 
+            SITE_CODE,
+            ROUND(AVG(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as avg_cycle_time_mins,
+            ROUND(MIN(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as min_cycle_time,
+            ROUND(MAX(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as max_cycle_time,
+            COUNT(*) as total_cycles
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'CVE'
+          AND TOTAL_CYCLE_DURATION_CALENDAR_MINS > 0
+          AND TOTAL_CYCLE_DURATION_CALENDAR_MINS < 180
+        GROUP BY SITE_CODE
+
+    06_asset_efficiency:
+      name: "Asset Efficiency"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "cycles/truck"
+      query: |
+        SELECT 
+            SITE_CODE,
+            COUNT(DISTINCT TRUCK_ID) as unique_trucks,
+            COUNT(*) as total_cycles,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_payload_tons,
+            ROUND(COUNT(*) * 1.0 / NULLIF(COUNT(DISTINCT TRUCK_ID), 0), 2) as cycles_per_truck
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'CVE'
+        GROUP BY SITE_CODE
+
+    07_dump_compliance:
+      name: "Dump plan compliance (%)"
+      section: "Haulage"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "%"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            COUNT(*) as dump_count,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'CVE'
+          AND DUMP_LOC_NAME IS NOT NULL
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+        LIMIT 5
+
+    08_mill_tons:
+      name: "Mill - tons delivered"
+      section: "Lbs on Ground - Mill"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'CVE'
+          AND (DUMP_LOC_NAME ILIKE '%mill%' OR DUMP_LOC_NAME ILIKE '%crusher%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+
+    12_mfl_tons:
+      name: "MFL - tons delivered"
+      section: "Lbs on Ground - MFL"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'CVE'
+          AND (DUMP_LOC_NAME ILIKE '%mfl%' OR DUMP_LOC_NAME ILIKE '%leach%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+
+    16_rom_tons:
+      name: "ROM - tons delivered"
+      section: "Lbs on Ground - ROM"
+      source: SNOWFLAKE
+      status: NO_DATA
+      unit: "tons"
+      query: |
+        SELECT 
+            DUMP_LOC_NAME,
+            ROUND(SUM(REPORT_PAYLOAD_SHORT_TONS), 2) as total_tons,
+            COUNT(*) as dump_count
+        FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+        WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+          AND SITE_CODE = 'CVE'
+          AND (DUMP_LOC_NAME ILIKE '%rom%' OR DUMP_LOC_NAME ILIKE '%stockpile%')
+        GROUP BY DUMP_LOC_NAME
+        ORDER BY total_tons DESC
+
+    09_mill_crusher:
+      name: "Mill - Crusher Rate (TPOH)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: CerroVerde
+      discovered_sensor: "CVE-cr1000.GT23_05I.PakBusRoutes"
+      validated_at: "2026-01-22T16:24:07.984506"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'CR' and todouble(value) > 100 | project sensor_id, rate_tph=todouble(value), timestamp | order by rate_tph desc | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "CVE-cr1000.GT23_05I.PakBusRoutes"
+          rate_tph: 1409441000000.0
+          timestamp: "2026-01-22 20:59:01.810012+00:00"
+        - # sample 2
+          sensor_id: "CVE-cr1000.GT23_05I.LastSystemScan"
+          rate_tph: 1769098000.0
+          timestamp: "2026-01-22 20:59:01.810012+00:00"
+
+    10_mill_rate:
+      name: "Mill - Mill Rate (TPOH)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: CerroVerde
+      discovered_sensor: "CVE-cr1000.GT23_05I.PakBusRoutes"
+      validated_at: "2026-01-22T16:24:08.279581"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'MILL' or sensor_id contains 'CR' | where todouble(value) > 50 | project sensor_id, rate_tph=todouble(value), timestamp | order by rate_tph desc | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "CVE-cr1000.GT23_05I.PakBusRoutes"
+          rate_tph: 1409441000000.0
+          timestamp: "2026-01-22 20:59:01.810012+00:00"
+        - # sample 2
+          sensor_id: "CVE-cr1000.GT23_05I.LastSystemScan"
+          rate_tph: 1769098000.0
+          timestamp: "2026-01-22 20:59:01.810012+00:00"
+
+    11_mill_strategy:
+      name: "Mill - Strategy compliance (IOS Level)"
+      section: "Lbs on Ground - Mill"
+      source: ADX
+      status: SUCCESS
+      unit: "%"
+      database: CerroVerde
+      discovered_sensor: "CVE-KP16_12A-Alarm Duplicate"
+      validated_at: "2026-01-22T16:24:08.761695"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'LIC' or sensor_id contains 'LI' | where todouble(value) > 0 and todouble(value) < 100 | project sensor_id, level_pct=todouble(value), timestamp | take 5
+      sample_data:
+        - # sample 1
+          sensor_id: "CVE-KP16_12A-Alarm Duplicate"
+          level_pct: 1.0
+          timestamp: "2023-09-18 18:07:52.234262+00:00"
+        - # sample 2
+          sensor_id: "CVE-PP18ST_09-Alarm Duplicate"
+          level_pct: 1.0
+          timestamp: "2023-09-18 18:07:52.235175+00:00"
+
+    13_mfl_crusher:
+      name: "MFL - Crusher Rate (TPOH)"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: CerroVerde
+      discovered_sensor: "CVE-cr1000.GT23_05I.PakBusRoutes"
+      validated_at: "2026-01-22T16:24:09.065286"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'CR' and todouble(value) > 50 | project sensor_id, rate_tph=todouble(value), timestamp | order by rate_tph desc | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "CVE-cr1000.GT23_05I.PakBusRoutes"
+          rate_tph: 1409441000000.0
+          timestamp: "2026-01-22 20:59:01.810012+00:00"
+        - # sample 2
+          sensor_id: "CVE-cr1000.GT23_05I.LastSystemScan"
+          rate_tph: 1769098000.0
+          timestamp: "2026-01-22 20:59:01.810012+00:00"
+
+    14_mfl_fos:
+      name: "MFL - FOS Rate (TPOH)"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: SUCCESS
+      unit: "TPH"
+      database: CerroVerde
+      discovered_sensor: "CVE-RSSQL_112._CLX_TREN_05_Tot.Ant_Flujo_Grundfos_Sumidero_Tren3_M3"
+      validated_at: "2026-01-22T16:24:09.816995"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'Leach' or sensor_id contains 'FOS' | where todouble(value) > 0 | project sensor_id, rate_tph=todouble(value), timestamp | take 3
+      sample_data:
+        - # sample 1
+          sensor_id: "CVE-RSSQL_112._CLX_TREN_05_Tot.Ant_Flujo_Grundfos_Sumidero_T..."
+          rate_tph: 0.3584867
+          timestamp: "2026-01-22 22:20:08.322006+00:00"
+        - # sample 2
+          sensor_id: "CVE-RSSQL_SXEW21.ANT_FQIGRUNDFOS3"
+          rate_tph: 0.144646
+          timestamp: "2026-01-22 22:20:15.322006+00:00"
+
+    15_mfl_strategy:
+      name: "MFL - Strategy compliance"
+      section: "Lbs on Ground - MFL"
+      source: ADX
+      status: SUCCESS
+      unit: "%"
+      database: CerroVerde
+      discovered_sensor: "CVE-KP16_12A-Alarm Duplicate"
+      validated_at: "2026-01-22T16:24:10.472984"
+      query: |
+        FCTSCURRENT() | where sensor_id contains 'LI' or sensor_id contains 'LIC' | where todouble(value) > 0 and todouble(value) < 100 | project sensor_id, level_pct=todouble(value), timestamp | take 5
+      sample_data:
+        - # sample 1
+          sensor_id: "CVE-KP16_12A-Alarm Duplicate"
+          level_pct: 1.0
+          timestamp: "2023-09-18 18:07:52.234262+00:00"
+        - # sample 2
+          sensor_id: "CVE-PP18ST_09-Alarm Duplicate"
+          level_pct: 1.0
+          timestamp: "2023-09-18 18:07:52.235175+00:00"
+
+# =============================================================================
+# CROSS-SITE COMPARISON QUERIES
+# =============================================================================
+cross_site_queries:
+
+  all_sites_dig_rate:
+    name: "Dig Rate Comparison - All Sites"
+    source: SNOWFLAKE
+    description: "Compare dig rates across all active sites"
+    query: |
+      SELECT 
+          SITE_CODE,
+          ROUND(SUM(MEASURED_PAYLOAD_METRIC_TONS), 2) as total_tons,
+          COUNT(*) as load_count,
+          COUNT(DISTINCT EXCAV_ID) as shovel_count
+      FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE
+      WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+      GROUP BY SITE_CODE
+      ORDER BY total_tons DESC
+
+  all_sites_cycle_time:
+    name: "Cycle Time Comparison - All Sites"
+    source: SNOWFLAKE
+    description: "Compare average cycle times across sites"
+    query: |
+      SELECT 
+          SITE_CODE,
+          ROUND(AVG(TOTAL_CYCLE_DURATION_CALENDAR_MINS), 2) as avg_cycle_mins,
+          COUNT(*) as cycles,
+          COUNT(DISTINCT TRUCK_ID) as trucks
+      FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+      WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+        AND TOTAL_CYCLE_DURATION_CALENDAR_MINS > 0
+        AND TOTAL_CYCLE_DURATION_CALENDAR_MINS < 180
+      GROUP BY SITE_CODE
+      ORDER BY avg_cycle_mins
+
+  all_sites_crusher_rates:
+    name: "Crusher Rates - All Sites (ADX)"
+    source: ADX
+    description: "Compare crusher rates across sites using ADX union"
+    query: |
       union
-        (database('Morenci').FCTSCURRENT | extend site = "MOR"),
-        (database('Bagdad').FCTSCURRENT | extend site = "BAG"),
-        (database('Miami').FCTSCURRENT | extend site = "SAM")
-      | where sensor_id contains "CRUSHER"
-      | project site, sensor_id, timestamp, value
-      
-  # Aggregated statistics
-  daily_statistics:
-    description: Calculate daily statistics for a sensor
-    kql: |
-      database('Morenci').FCTS
-      | where timestamp > ago(7d)
-      | where sensor_id == "sensor_name"
-      | summarize 
-          avg_value = avg(todouble(value)),
-          min_value = min(todouble(value)),
-          max_value = max(todouble(value)),
-          reading_count = count()
-        by bin(timestamp, 1d)
+        database('Morenci').FCTSCURRENT() | extend site='MOR',
+        database('Bagdad').FCTSCURRENT() | extend site='BAG',
+        database('Sierrita').FCTSCURRENT() | extend site='SIE',
+        database('Climax').FCTSCURRENT() | extend site='CMX',
+        database('CerroVerde').FCTSCURRENT() | extend site='CVE',
+        database('NewMexico').FCTSCURRENT() | extend site='NMO',
+        database('Miami').FCTSCURRENT() | extend site='SAM'
+      | where sensor_id contains 'CR' and sensor_id contains 'WI'
+      | where todouble(value) > 100
+      | summarize max_rate=max(todouble(value)) by site
+      | order by max_rate desc
 
 # =============================================================================
-# SNOWFLAKE TO ADX MIGRATION MAPPING
+# COLUMN MAPPINGS REFERENCE
 # =============================================================================
-
-migration_mapping:
-  description: |
-    Mapping from Snowflake SENSOR_READING tables to ADX databases.
-    The SENSOR_READING_*_B tables in Snowflake are being deprecated.
+column_mappings:
+  snowflake:
+    loading_cycle:
+      table: LH_LOADING_CYCLE
+      site_filter: "SITE_CODE = '{site}'"
+      key_columns:
+        - EXCAV_ID           # Shovel equipment ID
+        - LOADING_LOC_ID     # Dig location
+        - MEASURED_PAYLOAD_METRIC_TONS  # Actual payload
+        - CYCLE_START_TS_LOCAL          # Timestamp
+        - LOADING_CYCLE_DIG_ELEV_AVG_FEET  # Dig elevation
     
-  mappings:
-    - snowflake: PROD_DATALAKE.FCTS.SENSOR_READING_MOR_B
-      adx_database: Morenci
-      adx_function: FCTS / FCTSCURRENT
-      
-    - snowflake: PROD_DATALAKE.FCTS.SENSOR_READING_BAG_B
-      adx_database: Bagdad
-      adx_function: FCTS / FCTSCURRENT
-      
-    - snowflake: PROD_DATALAKE.FCTS.SENSOR_READING_SAM_B
-      adx_database: Miami
-      adx_function: FCTS / FCTSCURRENT
-      
-    - snowflake: PROD_DATALAKE.FCTS.SENSOR_READING_CMX_B
-      adx_database: Climax
-      adx_function: FCTS / FCTSCURRENT
-      
-    - snowflake: PROD_DATALAKE.FCTS.SENSOR_READING_SIE_B
-      adx_database: Sierrita
-      adx_function: FCTS / FCTSCURRENT
-      
-    - snowflake: PROD_DATALAKE.FCTS.SENSOR_READING_NMO_B
-      adx_database: NewMexico
-      adx_function: FCTS / FCTSCURRENT
-      
-    - snowflake: PROD_DATALAKE.FCTS.SENSOR_READING_CVE_B
-      adx_database: CerroVerde
-      adx_function: FCTS / FCTSCURRENT
-      
-  snowflake_function_equivalent:
-    function: PROD_API_REF.CONNECTED_OPERATIONS.SENSOR_SNAPSHOT_GET
-    adx_equivalent: database('{site_db}').FCTSCURRENT
-    performance_improvement: "~200x faster"
-
-# =============================================================================
-# MEASURES (Standard Aggregations)
-# =============================================================================
-
-measures:
-  - name: current_value
-    description: Latest sensor reading
-    expression: FCTSCURRENT | summarize Value=take_any(value) by sensor_id
+    haul_cycle:
+      table: LH_HAUL_CYCLE
+      site_filter: "SITE_CODE = '{site}'"
+      key_columns:
+        - TRUCK_ID                        # Truck equipment ID
+        - DUMP_LOC_NAME                   # Dump destination
+        - REPORT_PAYLOAD_SHORT_TONS       # Payload
+        - TOTAL_CYCLE_DURATION_CALENDAR_MINS  # Cycle time
+        - CYCLE_START_TS_LOCAL            # Timestamp
     
-  - name: avg_24h
-    description: 24-hour rolling average
-    expression: FCTS | where timestamp > ago(24h) | summarize avg(todouble(value)) by sensor_id
+    equipment:
+      table: LH_EQUIPMENT
+      join_key: "EQUIP_ID = EXCAV_ID or EQUIP_ID = TRUCK_ID"
+      
+  adx:
+    current_values:
+      function: FCTSCURRENT()
+      key_columns:
+        - sensor_id   # PI Point name
+        - value       # Reading (string - use todouble())
+        - timestamp   # Reading time
+        - uom         # Unit of measure
+        - quality     # Data quality (0 = good)
     
-  - name: max_24h
-    description: 24-hour maximum
-    expression: FCTS | where timestamp > ago(24h) | summarize max(todouble(value)) by sensor_id
-    
-  - name: min_24h
-    description: 24-hour minimum
-    expression: FCTS | where timestamp > ago(24h) | summarize min(todouble(value)) by sensor_id
-    
-  - name: reading_count_24h
-    description: Number of readings in last 24 hours
-    expression: FCTS | where timestamp > ago(24h) | summarize count() by sensor_id
-    
-  - name: data_freshness
-    description: Time since last reading
-    expression: FCTSCURRENT | extend freshness = now() - timestamp | project sensor_id, freshness
+    historical:
+      function: FCTS()
+      additional: Same columns with full history
 
 # =============================================================================
-# DIMENSIONS
+# USAGE EXAMPLES
 # =============================================================================
+usage_examples:
 
-dimensions:
-  - name: site
-    description: Mining site
-    values: [MOR, BAG, SAM, CMX, SIE, NMO, CVE]
-    
-  - name: sensor_id
-    description: Unique PI Point / sensor identifier
-    
-  - name: timestamp
-    description: Reading time (UTC)
-    time_grains: [second, minute, hour, day, week, month]
-    
-  - name: quality
-    description: Data quality code (0 = good)
-    
-  - name: uom
-    description: Unit of measure
+  python_snowflake:
+    description: "Query Snowflake for a specific site"
+    code: |
+      import snowflake.connector
+      
+      conn = snowflake.connector.connect(
+          account='FCX-NA',
+          authenticator='externalbrowser',
+          user='your_user@fmi.com'
+      )
+      cursor = conn.cursor()
+      cursor.execute("USE WAREHOUSE WH_BATCH_DE_NONPROD")
+      
+      # Get dig rate for Morenci
+      cursor.execute("""
+          SELECT SITE_CODE, SUM(MEASURED_PAYLOAD_METRIC_TONS) as tons
+          FROM PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE
+          WHERE CYCLE_START_TS_LOCAL >= DATEADD(hour, -24, CURRENT_TIMESTAMP())
+            AND SITE_CODE = 'MOR'
+          GROUP BY SITE_CODE
+      """)
+      print(cursor.fetchall())
+
+  python_adx:
+    description: "Query ADX for crusher rate"
+    code: |
+      from azure.identity import InteractiveBrowserCredential
+      from azure.kusto.data import KustoClient, KustoConnectionStringBuilder
+      
+      cluster = "https://fctsnaproddatexp02.westus2.kusto.windows.net"
+      credential = InteractiveBrowserCredential()
+      kcsb = KustoConnectionStringBuilder.with_azure_token_credential(cluster, credential)
+      client = KustoClient(kcsb)
+      
+      # Get Mill Crusher rate for Morenci
+      result = client.execute("Morenci", 
+          "FCTSCURRENT() | where sensor_id == 'MOR-CR03_WI00317_PV'")
+      for row in result.primary_results[0]:
+          print(row)
 
 # =============================================================================
-# CONNECTION INFO
+# VALIDATION SUMMARY
 # =============================================================================
-
-connection:
-  cluster: https://fctsnaproddatexp02.westus2.kusto.windows.net
-  authentication: Azure AD (Interactive Browser / Service Principal)
-  required_packages:
-    - azure-kusto-data
-    - azure-identity
-  security_group: SG-ENT-FCTS-ADX-Viewer
+validation_summary:
+  generated_at: "2026-01-22T16:02:49.697059"
+  total_outcomes: 16
+  total_sites: 7
+  total_queries: 112
   
-  python_example: |
-    from azure.identity import InteractiveBrowserCredential
-    from azure.kusto.data import KustoClient, KustoConnectionStringBuilder
-    
-    cluster = "https://fctsnaproddatexp02.westus2.kusto.windows.net"
-    credential = InteractiveBrowserCredential()
-    kcsb = KustoConnectionStringBuilder.with_azure_token_credential(cluster, credential)
-    client = KustoClient(kcsb)
-    
-    # Query example
-    result = client.execute("Morenci", "FCTSCURRENT | take 10")
+  by_site:
+    MOR: "15/16"
+    BAG: "15/16"
+    SAM: "6/16"
+    CMX: "5/16"
+    SIE: "13/16"
+    NMO: "6/16"
+    CVE: "6/16"
 
 # =============================================================================
-# RECOMMENDED ADX FUNCTIONS TO CREATE
+# END OF SEMANTIC MODEL
 # =============================================================================
-# These functions should be created in the Global or AppIntegration database
-# to support the business KPIs defined in knowledge_base.json
-
-recommended_functions:
-
-  MillIOS_Current:
-    priority: HIGHEST
-    description: "Returns current IOS levels with trend direction"
-    target_database: Global
-    parameters: "(site_code:string = 'MOR')"
-    kql_body: |
-      // Function: MillIOS_Current
-      // Returns: Current IOS levels with trend direction
-      let ios_sensors = dynamic(["MOR-CC06_LI00601_PV", "MOR-CC10_LI0102_PV"]);
-      database("Morenci").FCTS
-      | where sensor_id in~ (ios_sensors)
-      | where timestamp > ago(2h)
-      | order by sensor_id, timestamp asc
-      | serialize 
-      | extend prev_value = prev(value, 1), prev_sensor = prev(sensor_id, 1)
-      | where sensor_id == prev_sensor or isnull(prev_sensor)
-      | summarize arg_max(timestamp, value, prev_value) by sensor_id
-      | extend 
-          current = toreal(value),
-          previous = toreal(prev_value),
-          direction = case(
-              toreal(value) > toreal(prev_value), "INCREASING",
-              toreal(value) < toreal(prev_value), "DECREASING",
-              "STABLE")
-      | project sensor_id, level = current, direction, timestamp
-      
-  MillCrusher_Current:
-    priority: HIGH
-    description: "Returns crusher rates with target status"
-    target_database: Global
-    parameters: "()"
-    kql_body: |
-      // Function: MillCrusher_Current
-      let crusher_sensors = dynamic(["MOR-CR03_WI00317_PV", "MOR-CR02_WI01203_PV"]);
-      database("Morenci").FCTSCURRENT()
-      | where sensor_id in~ (crusher_sensors)
-      | extend 
-          kpi_name = case(
-              sensor_id =~ "MOR-CR03_WI00317_PV", "Crusher_Rate_TPH",
-              sensor_id =~ "MOR-CR02_WI01203_PV", "Leach_Rate_TPH",
-              sensor_id),
-          target_min = case(
-              sensor_id =~ "MOR-CR03_WI00317_PV", 8500.0,
-              sensor_id =~ "MOR-CR02_WI01203_PV", 4500.0, 0.0),
-          target_max = case(
-              sensor_id =~ "MOR-CR03_WI00317_PV", 9000.0,
-              sensor_id =~ "MOR-CR02_WI01203_PV", 6000.0, 0.0)
-      | extend 
-          current_value = toreal(value),
-          status = case(
-              toreal(value) >= target_min and toreal(value) <= target_max, "ON_TARGET",
-              toreal(value) < target_min, "BELOW_TARGET",
-              "ABOVE_TARGET")
-      | project kpi_name, current_value, target_min, target_max, status, timestamp
-
-  MiningKPIs_Dashboard:
-    priority: HIGH
-    description: "Unified dashboard view of all critical KPIs"
-    target_database: AppIntegration
-    parameters: "()"
-    kql_body: |
-      // Function: MiningKPIs_Dashboard
-      // Combines all critical processing KPIs for dashboard display
-      let ios_data = database("Morenci").FCTSCURRENT()
-          | where sensor_id in~ ("MOR-CC06_LI00601_PV", "MOR-CC10_LI0102_PV")
-          | extend category = "IOS_Level";
-      let crusher_data = database("Morenci").FCTSCURRENT()
-          | where sensor_id in~ ("MOR-CR03_WI00317_PV", "MOR-CR02_WI01203_PV")
-          | extend category = "Crusher_Rate";
-      union ios_data, crusher_data
-      | extend 
-          kpi_name = case(
-              sensor_id =~ "MOR-CC06_LI00601_PV", "Main_IOS_Level",
-              sensor_id =~ "MOR-CC10_LI0102_PV", "Small_IOS_Level",
-              sensor_id =~ "MOR-CR03_WI00317_PV", "Mill_Crusher_Rate",
-              sensor_id =~ "MOR-CR02_WI01203_PV", "Crushed_Leach_Rate",
-              sensor_id)
-      | project category, kpi_name, value = toreal(value), uom, timestamp
-      | order by category asc, kpi_name asc
-
-# =============================================================================
-# GAP ANALYSIS SUMMARY
-# =============================================================================
-
-gap_analysis:
-  adx_fully_available:
-    description: "KPIs that can be 100% served from ADX"
-    count: 8
-    kpis:
-      - Mill IOS Main Level
-      - Mill IOS Small Level
-      - Mill Crusher Rate
-      - Crushed Leach Rate
-      - Ball Mill TPH (32 mills)
-      - Mill Power
-      - Classifier pH
-      - Bin Levels
-      
-  snowflake_only:
-    description: "KPIs that require Snowflake (no ADX path)"
-    count: 5
-    kpis:
-      - Drill Penetration Rate
-      - Drill Cycle Time
-      - LBS on Ground (Blasting)
-      - Powder Factor
-      - Haulage Cycle Time
-    reason: "Fleet dispatch and computed metrics not in ADX"
-    
-  hybrid_partial:
-    description: "KPIs with partial ADX coverage"
-    count: 2
-    kpis:
-      - Equipment Hours (via SAP integration)
-      - Fuel Consumption (via SAP integration)
-    note: "Available in HaulTruck() function but limited scope"
-
-# =============================================================================
-# IMPLEMENTATION ROADMAP
-# =============================================================================
-
-implementation_roadmap:
-  phase_1:
-    name: "Mill IOS Dashboard"
-    priority: HIGHEST
-    timeframe: "Week 1-2"
-    tasks:
-      - Create MillIOS_Current() function
-      - Build ADX dashboard for IOS levels + direction
-      - Configure alerts for rapid changes (>5% in 15 min)
-      - Test integration with existing workflows
-      
-  phase_2:
-    name: "Processing Metrics Dashboard"
-    priority: HIGH
-    timeframe: "Week 2-3"
-    tasks:
-      - Leverage existing Morenci_Batman_* functions
-      - Add target thresholds to crusher queries
-      - Build section-by-section monitoring
-      - Create MillCrusher_Current() function
-      
-  phase_3:
-    name: "Unified Mining Dashboard"
-    priority: MEDIUM
-    timeframe: "Week 3-4"
-    tasks:
-      - Create MiningKPIs_Dashboard() function
-      - ADX for sensor data (IOS, crusher, mills)
-      - Federated view with Snowflake for computed metrics
-      - Drill/Blast/Haul metrics from Snowflake API
-      
-  phase_4:
-    name: "Full Integration"
-    priority: LOWER
-    timeframe: "Week 4+"
-    tasks:
-      - Evaluate fleet dispatch integration to ADX
-      - Consider IoT sensors for drilling equipment
-      - Unified API layer for all KPIs
-
-# =============================================================================
-# RELATED DOCUMENTATION
-# =============================================================================
-
-related_files:
-  knowledge_base: "../knowledge_base.json"
-  kpi_mapping_analysis: "../KPI_ADX_MAPPING_ANALYSIS.md"
-  database_snapshots: "../adx_snapshots/"
-  individual_semantic_models:
-    - Morenci.semantic.yaml
-    - Global.semantic.yaml
-    - AppIntegration.semantic.yaml
-    - Miami.semantic.yaml
-    - Bagdad.semantic.yaml
-    - Climax.semantic.yaml
-    - Sierrita.semantic.yaml
-    - NewMexico.semantic.yaml
-    - CerroVerde.semantic.yaml
