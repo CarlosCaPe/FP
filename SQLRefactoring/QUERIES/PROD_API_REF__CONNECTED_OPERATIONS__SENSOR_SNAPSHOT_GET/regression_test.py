@@ -1,21 +1,21 @@
 """
 Regression Test: SENSOR_SNAPSHOT_GET - 3 Versions
 ==================================================
-Compara las 3 versiones de la función:
+Compares the 3 versions of the function:
   1. Baseline (Snowflake original) - PROD_API_REF.CONNECTED_OPERATIONS.SENSOR_SNAPSHOT_GET
-  2. Refactor (Snowflake optimizado) - SANDBOX_DATA_ENGINEER.CCARRILL2.SENSOR_SNAPSHOT_GET
+  2. Refactor (Snowflake optimized) - SANDBOX_DATA_ENGINEER.CCARRILL2.SENSOR_SNAPSHOT_GET
   3. ADX Function - database('Morenci').FCTSCURRENT
 
 Output:
-  - Tiempos de ejecución
-  - Columnas (deben ser iguales)
-  - Row counts (pueden variar por timing)
-  - Muestra de datos
+  - Execution times
+  - Columns (should match)
+  - Row counts (may vary due to timing)
+  - Data sample
 
-Requiere:
+Requires:
   pip install snowflake-connector-python azure-kusto-data azure-identity pandas tabulate
 
-Uso:
+Usage:
   python regression_test.py --site MOR --sensors "sensor1,sensor2"
 """
 
@@ -51,7 +51,7 @@ EXPECTED_COLUMNS = ["TAG_NAME", "VALUE_UTC_TS", "SENSOR_VALUE", "UOM", "QUALITY"
 
 
 def get_snowflake_connection():
-    """Crea conexión a Snowflake usando variables de entorno."""
+    """Create Snowflake connection using environment variables."""
     import os
     from dotenv import load_dotenv
     import snowflake.connector
@@ -70,7 +70,7 @@ def get_snowflake_connection():
 
 
 def get_kusto_client():
-    """Crea cliente Kusto con autenticación de browser."""
+    """Create Kusto client with browser authentication."""
     from azure.identity import InteractiveBrowserCredential
     from azure.kusto.data import KustoClient, KustoConnectionStringBuilder
     
@@ -80,7 +80,7 @@ def get_kusto_client():
 
 
 def run_snowflake_query(conn, func_name: str, site_code: str, sensors: list[str]) -> tuple[pd.DataFrame, float]:
-    """Ejecuta query en Snowflake y retorna DataFrame + tiempo."""
+    """Execute query in Snowflake and return DataFrame + elapsed time."""
     sensors_array = ", ".join([f"'{s}'" for s in sensors])
     query = f"""
     SELECT * FROM TABLE({func_name}(
@@ -105,10 +105,10 @@ def run_snowflake_query(conn, func_name: str, site_code: str, sensors: list[str]
 
 
 def run_adx_query(client, site_code: str, sensors: list[str]) -> tuple[pd.DataFrame, float]:
-    """Ejecuta query en ADX y retorna DataFrame + tiempo."""
+    """Execute query in ADX and return DataFrame + elapsed time."""
     database = SITE_TO_DATABASE.get(site_code.upper())
     if not database:
-        raise ValueError(f"Site code '{site_code}' no reconocido")
+        raise ValueError(f"Site code '{site_code}' not recognized")
     
     sensor_list = ", ".join([f"'{s}'" for s in sensors])
     query = f"""

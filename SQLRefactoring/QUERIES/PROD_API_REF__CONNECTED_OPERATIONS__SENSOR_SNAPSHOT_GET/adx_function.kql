@@ -1,19 +1,19 @@
 // ============================================================================
 // VERSION 3: ADX FUNCTION - SENSOR_SNAPSHOT_GET
 // ============================================================================
-// Firma equivalente a Snowflake:
+// Equivalent signature to Snowflake:
 //   SENSOR_SNAPSHOT_GET(site_code, is_af_path_flag, attribute_paths, pi_points)
 //
-// Output columns (mismas que Snowflake):
+// Output columns (same as Snowflake):
 //   TAG_NAME, VALUE_UTC_TS, SENSOR_VALUE, UOM, QUALITY
 //
 // Cluster: fctsnaproddatexp02.westus2.kusto.windows.net
 // ============================================================================
 
 // -----------------------------------------------------------------------------
-// STEP 1: Crear la función en ADX (ejecutar en Azure Data Explorer)
+// STEP 1: Create the function in ADX (run in Azure Data Explorer)
 // -----------------------------------------------------------------------------
-// Nota: Ejecutar este comando en el database "Global" o en cada site database
+// Note: Run this command in the "Global" database or in each site database
 
 .create-or-alter function with (folder = "FCTS", docstring = "Equivalent to Snowflake SENSOR_SNAPSHOT_GET") 
 SENSOR_SNAPSHOT_GET(

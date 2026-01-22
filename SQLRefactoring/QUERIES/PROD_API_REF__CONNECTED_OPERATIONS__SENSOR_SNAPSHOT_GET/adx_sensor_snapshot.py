@@ -38,7 +38,7 @@ SITE_TO_DATABASE = {
 
 
 def get_kusto_client() -> KustoClient:
-    """Crea cliente Kusto con autenticación de browser (SSO)."""
+    """Create Kusto client with browser authentication (SSO)."""
     credential = InteractiveBrowserCredential()
     kcsb = KustoConnectionStringBuilder.with_azure_token_credential(
         CLUSTER_URL, credential
@@ -96,11 +96,11 @@ def sensor_snapshot_get(
             TAG_NAME = sensor_id,
             VALUE_UTC_TS = timestamp,
             SENSOR_VALUE = tostring(value),
-            UOM = unit,
+            UOM = uom,
             QUALITY = quality
         """
     
-    print(f"Ejecutando query en {database}...")
+    print(f"Executing query on {database}...")
     print(f"Query:\n{query}\n")
     
     response = client.execute(database, query)
