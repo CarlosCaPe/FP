@@ -72,10 +72,10 @@ SENSOR_SNAPSHOT_GET_V2(
 }
 
 // -----------------------------------------------------------------------------
-// STEP 2: Llamada de ejemplo (para testing)
+// STEP 2: Example call (for testing)
 // -----------------------------------------------------------------------------
 
-// Ejemplo 1: Snapshot de MOR con PI Points
+// Example 1: Snapshot from MOR with PI Points
 let sensor_list = dynamic([
     'BLNKPNTRCHR_OPC.SMOHYD.PI_SLP_RATE',
     'BLNKPNTRCHR_OPC.SMOHYD.PI_MAN_HOIST_FLTRTE',

@@ -16,11 +16,11 @@
 // | SENSOR_READING_CVE_B         | CerroVerde   | FCTSCURRENT       |
 //
 // Cluster: fctsnaproddatexp01.westus2.kusto.windows.net
-// (o fctsnaproddatexp02 según permisos)
+// (or fctsnaproddatexp02 depending on permissions)
 // ============================================================================
 
 // -----------------------------------------------------------------------------
-// EJEMPLO 1: Snapshot de un sensor específico (equivalente a SENSOR_SNAPSHOT_GET con PI_POINT)
+// EXAMPLE 1: Snapshot of a specific sensor (equivalent to SENSOR_SNAPSHOT_GET with PI_POINT)
 // -----------------------------------------------------------------------------
 
 // Snowflake original:
@@ -38,7 +38,7 @@ database('Morenci').FCTSCURRENT
     QUALITY = quality
 
 // -----------------------------------------------------------------------------
-// EJEMPLO 2: Snapshot de múltiples sensores
+// EXAMPLE 2: Snapshot of multiple sensors
 // -----------------------------------------------------------------------------
 
 // Snowflake original:
@@ -67,10 +67,10 @@ database('Morenci').FCTSCURRENT
     QUALITY = quality
 
 // -----------------------------------------------------------------------------
-// EJEMPLO 3: Histórico de los últimos 30 días (si no existe FCTSCURRENT)
+// EXAMPLE 3: Historical data for the last 30 days (if FCTSCURRENT doesn't exist)
 // -----------------------------------------------------------------------------
 
-// Si necesitas histórico en vez de snapshot, usa FCTS:
+// If you need historical data instead of snapshot, use FCTS:
 let sensor_list = dynamic(['BLNKPNTRCHR_OPC.SMOHYD.PI_SLP_RATE']);
 database('Morenci').FCTS
 | where timestamp > ago(30d)
@@ -84,7 +84,7 @@ database('Morenci').FCTS
     QUALITY = quality
 
 // -----------------------------------------------------------------------------
-// EJEMPLO 4: Buscar sensor_id en el Registry (si no conoces el nombre exacto)
+// EXAMPLE 4: Search sensor_id in the Registry (if you don't know the exact name)
 // -----------------------------------------------------------------------------
 
 database('Global').RegistryStreams
@@ -115,4 +115,4 @@ database('Global').RegistryStreams
 //               SENSOR_VALUE = tostring(value), UOM = uom, QUALITY = quality
 // }
 //
-// Uso: SENSOR_SNAPSHOT_GET("MOR", dynamic(['sensor1', 'sensor2']))
+// Usage: SENSOR_SNAPSHOT_GET("MOR", dynamic(['sensor1', 'sensor2']))
