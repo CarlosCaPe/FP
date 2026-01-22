@@ -1,10 +1,11 @@
 # =============================================================================
-# ADX UNIFIED SEMANTIC MODEL
+# ADX UNIFIED SEMANTIC MODEL - WITH BUSINESS KPI MAPPING
 # =============================================================================
 # Single reference for all ADX databases in the FCTS cluster
 # Cluster: fctsnaproddatexp02.westus2.kusto.windows.net
 #
 # Use this as the primary reference for understanding ADX data architecture
+# INCLUDES: Business KPI mappings from knowledge_base.json
 # =============================================================================
 
 semantic_model:
@@ -12,9 +13,291 @@ semantic_model:
   description: |
     Unified semantic model for all FCTS Azure Data Explorer databases.
     This is the primary real-time sensor data platform replacing Snowflake SENSOR_READING_* tables.
+    
+    INCLUDES BUSINESS KPI MAPPING:
+    - Mill IOS (HIGHEST PRIORITY) → ADX Available
+    - Mill Crusher Rate → ADX Available
+    - Processing Metrics → ADX Available
+    - Drilling/Blasting → Snowflake Only
+    - Load/Haul → Partial (SAP Integration)
+    
   cluster: https://fctsnaproddatexp02.westus2.kusto.windows.net
-  version: "1.0.0"
+  version: "2.0.0"
   updated_at: "2026-01-22"
+  knowledge_base_ref: "../knowledge_base.json"
+
+# =============================================================================
+# 🎯 BUSINESS KPI TO ADX MAPPING
+# =============================================================================
+# Maps business requirements from knowledge_base.json to ADX data sources
+# Priority: HIGHEST → HIGH → MEDIUM → LOWER
+
+business_kpis:
+  
+  # ===================== MILL IOS - HIGHEST PRIORITY =====================
+  mill_ios:
+    priority: HIGHEST
+    business_description: |
+      Current level of In-Ore Stockpile + direction of change.
+      This is the MOST CRITICAL metric - design focuses on this!
+    adx_availability: FULLY_AVAILABLE
+    confidence: 100%
+    
+    kpis:
+      main_ios_level:
+        pi_tag: "MOR-CC06_LI00601_PV"
+        description: "Main IOS Level - Primary stockpile indicator"
+        adx_database: Morenci
+        adx_source: "database('Morenci').FCTS"
+        kql_filter: "sensor_id =~ 'MOR-CC06_LI00601_PV'"
+        target_uom: "%"
+        
+      small_ios_level:
+        pi_tag: "MOR-CC10_LI0102_PV"
+        description: "Small IOS Level - Secondary stockpile"
+        adx_database: Morenci
+        adx_source: "database('Morenci').FCTS"
+        kql_filter: "sensor_id =~ 'MOR-CC10_LI0102_PV'"
+        target_uom: "%"
+        
+    recommended_kql: |
+      // Mill IOS Level with Direction of Change
+      let lookback = 1h;
+      database("Morenci").FCTS
+      | where sensor_id in~ ("MOR-CC06_LI00601_PV", "MOR-CC10_LI0102_PV")
+      | where timestamp > ago(lookback)
+      | order by sensor_id, timestamp asc
+      | extend prev_value = prev(toreal(value), 1), prev_sensor = prev(sensor_id, 1)
+      | where sensor_id == prev_sensor
+      | summarize arg_max(timestamp, value, prev_value) by sensor_id
+      | extend 
+          current_level = toreal(value),
+          direction = case(
+              toreal(value) > toreal(prev_value), "↑ INCREASING",
+              toreal(value) < toreal(prev_value), "↓ DECREASING",
+              "→ STABLE")
+      | project sensor_id, current_level, direction, timestamp
+      
+  # ===================== MILL CRUSHER RATE - HIGH PRIORITY =====================
+  mill_crusher:
+    priority: HIGH
+    business_description: "Crusher throughput rate monitoring"
+    adx_availability: FULLY_AVAILABLE
+    confidence: 100%
+    
+    kpis:
+      crusher_3_rate:
+        pi_tag: "MOR-CR03_WI00317_PV"
+        description: "Mill Crusher #3 Rate"
+        adx_database: Morenci
+        adx_source: "database('Morenci').FCTS"
+        kql_filter: "sensor_id =~ 'MOR-CR03_WI00317_PV'"
+        target_min: 8500
+        target_max: 9000
+        target_uom: "tph"
+        
+      crushed_leach_rate:
+        pi_tag: "MOR-CR02_WI01203_PV"
+        description: "Crushed Leach Rate"
+        adx_database: Morenci
+        adx_source: "database('Morenci').FCTS"
+        kql_filter: "sensor_id =~ 'MOR-CR02_WI01203_PV'"
+        target_min: 4500
+        target_max: 6000
+        target_uom: "tph"
+        
+    recommended_kql: |
+      // Mill Crusher Rates with Target Comparison
+      database("Morenci").FCTSCURRENT()
+      | where sensor_id in~ ("MOR-CR03_WI00317_PV", "MOR-CR02_WI01203_PV")
+      | extend 
+          metric = case(
+              sensor_id =~ "MOR-CR03_WI00317_PV", "Mill Crusher Rate",
+              "Crushed Leach Rate"),
+          target_min = iff(sensor_id =~ "MOR-CR03_WI00317_PV", 8500.0, 4500.0),
+          target_max = iff(sensor_id =~ "MOR-CR03_WI00317_PV", 9000.0, 6000.0)
+      | extend 
+          current_value = toreal(value),
+          status = case(
+              toreal(value) >= target_min and toreal(value) <= target_max, "✅ ON TARGET",
+              toreal(value) < target_min, "⚠️ BELOW TARGET",
+              "🔴 ABOVE TARGET")
+      | project metric, current_value, target_min, target_max, status, timestamp
+
+  # ===================== PROCESSING - MEDIUM PRIORITY =====================
+  processing:
+    priority: MEDIUM
+    business_description: "Ball mill and concentrator operations"
+    adx_availability: MOSTLY_AVAILABLE
+    confidence: 95%
+    
+    kpis:
+      ball_mill_tph:
+        pi_tag_pattern: "MOR-WIC01XX_PV"
+        description: "Ball Mill TPH (32 mills, sections 1-4)"
+        adx_database: Morenci
+        adx_source: "database('AppIntegration').Morenci_Batman_BallMill_Aggregates()"
+        note: "Pre-built function returns all 32 ball mills"
+        
+      mill_power:
+        pi_tag_pattern: "MOR-JIC32XX_PV"
+        description: "Mill Power readings per ball mill"
+        adx_database: Morenci
+        adx_source: "database('AppIntegration').Morenci_Batman_BallMill_Aggregates()"
+        
+      classifier_ph:
+        pi_tag_pattern: "MOR-AIC91XX_PV"
+        description: "Classifier pH per ball mill"
+        adx_database: Morenci
+        adx_source: "database('AppIntegration').Morenci_Batman_BallMill_Aggregates()"
+        
+      bin_levels:
+        pi_tag_pattern: "MOR-MS01_LIC215XX_PV"
+        description: "Ore bin levels"
+        adx_database: Morenci
+        adx_source: "database('AppIntegration').Morenci_Batman_Mill_Overview()"
+        
+    recommended_kql: |
+      // Ball Mill Aggregates - All sections
+      database("AppIntegration").Morenci_Batman_BallMill_Aggregates()
+      | project section, ballmill, tph_now, tpoh_now, mill_power, classifier_amps, classifier_ph
+
+  # ===================== DRILLING - LOWER PRIORITY =====================
+  drilling:
+    priority: LOWER
+    business_description: "Drill cycle metrics and penetration rates"
+    adx_availability: NOT_AVAILABLE
+    confidence: 0%
+    current_source: "Snowflake PROD_WG.DRILL_BLAST.DRILL_CYCLE"
+    
+    kpis:
+      penetration_rate:
+        column: "AVG_PNTRTN_RATE_FEET_PER_MIN"
+        description: "Average penetration rate"
+        adx_available: false
+        snowflake_table: "PROD_WG.DRILL_BLAST.DRILL_CYCLE"
+        migration_path: "Fleet dispatch integration required"
+        target_range: "Variable by rock type"
+        
+      drill_cycle_time:
+        column: "DRILL_CYCLE_HRS_CYCLE"
+        description: "Total drill cycle time"
+        adx_available: false
+        snowflake_table: "PROD_WG.DRILL_BLAST.DRILL_CYCLE"
+        
+      weight_on_bit:
+        column: "WEIGHT_ON_BIT_RANGE_LBS"
+        description: "Weight on bit for drilling"
+        adx_available: false
+        snowflake_table: "PROD_WG.DRILL_BLAST.DRILL_CYCLE"
+        target_min: 50000
+        target_max: 70000
+        target_uom: "lbs"
+        
+    reason_not_in_adx: |
+      Drilling data comes from fleet dispatch systems (Modular, Wenco, etc.)
+      and equipment telematics, not continuous sensor data.
+      Would require new IoT sensors or fleet integration to ADX.
+
+  # ===================== BLASTING - LOWER PRIORITY =====================
+  blasting:
+    priority: LOWER
+    business_description: "Blast patterns and explosives tracking"
+    adx_availability: NOT_AVAILABLE
+    confidence: 0%
+    current_source: "Snowflake PROD_WG.DRILL_BLAST"
+    
+    kpis:
+      lbs_on_ground:
+        description: "Explosives inventory on ground"
+        adx_available: false
+        snowflake_table: "PROD_WG.DRILL_BLAST"
+        
+      powder_factor:
+        description: "Powder factor calculation"
+        adx_available: false
+        snowflake_table: "Calculated metric"
+        
+    reason_not_in_adx: |
+      Blasting is event-based, not continuous sensor data.
+      Data sources: Blast design software, manual entry, compliance systems.
+
+  # ===================== LOADING - LOWER PRIORITY =====================
+  loading:
+    priority: LOWER
+    business_description: "Shovel/LHD loading operations"
+    adx_availability: PARTIAL
+    confidence: 70%
+    
+    kpis:
+      equipment_hours:
+        description: "Equipment operating hours"
+        adx_available: true
+        adx_source: "database('AppIntegration').HaulTruck()"
+        note: "Via SAP integration"
+        
+      tons_loaded:
+        description: "Tons loaded per cycle"
+        adx_available: false
+        current_source: "Dispatch system"
+        
+    recommended_kql: |
+      // Equipment telemetry from SAP
+      database("AppIntegration").HaulTruck()
+      | project SAPEquipmentID, SAPMeasurementID, timestamp, value, uom
+      | where SAPMeasurementID contains "Hours"
+
+  # ===================== HAULAGE - LOWER PRIORITY =====================
+  haulage:
+    priority: LOWER
+    business_description: "Haul truck cycle and fuel metrics"
+    adx_availability: PARTIAL
+    confidence: 60%
+    
+    kpis:
+      fuel_consumption:
+        description: "Fuel consumption per truck"
+        adx_available: true
+        adx_source: "database('AppIntegration').HaulTruck()"
+        kql_filter: "SAPMeasurementID contains 'Fuel'"
+        
+      cycle_time:
+        description: "Haul cycle time"
+        adx_available: false
+        current_source: "Dispatch system"
+        target_max: 25
+        target_uom: "minutes"
+        
+      dump_compliance:
+        description: "Dump location compliance"
+        adx_available: false
+        current_source: "Dispatch system"
+        
+    recommended_kql: |
+      // Haul truck fuel from SAP
+      database("AppIntegration").HaulTruck()
+      | where SAPMeasurementID contains "Fuel Consumption"
+      | project SAPEquipmentID, timestamp, value = round(value, 2), uom
+
+# =============================================================================
+# KPI AVAILABILITY SUMMARY MATRIX
+# =============================================================================
+
+kpi_availability_matrix:
+  - {value_chain: "Mill IOS", kpi: "Main IOS Level", pi_tag: "MOR-CC06_LI00601_PV", adx: true, confidence: "100%"}
+  - {value_chain: "Mill IOS", kpi: "Small IOS Level", pi_tag: "MOR-CC10_LI0102_PV", adx: true, confidence: "100%"}
+  - {value_chain: "Mill Crusher", kpi: "Crusher #3 Rate", pi_tag: "MOR-CR03_WI00317_PV", adx: true, confidence: "100%"}
+  - {value_chain: "Mill Crusher", kpi: "Crushed Leach Rate", pi_tag: "MOR-CR02_WI01203_PV", adx: true, confidence: "100%"}
+  - {value_chain: "Processing", kpi: "Ball Mill TPH", pi_tag: "MOR-WIC01XX_PV", adx: true, confidence: "100%"}
+  - {value_chain: "Processing", kpi: "Mill Power", pi_tag: "MOR-JIC32XX_PV", adx: true, confidence: "100%"}
+  - {value_chain: "Processing", kpi: "Classifier pH", pi_tag: "MOR-AIC91XX_PV", adx: true, confidence: "100%"}
+  - {value_chain: "Processing", kpi: "Bin Levels", pi_tag: "MOR-MS01_LIC215XX_PV", adx: true, confidence: "100%"}
+  - {value_chain: "Drilling", kpi: "Penetration Rate", column: "AVG_PNTRTN_RATE", adx: false, snowflake: "PROD_WG.DRILL_BLAST"}
+  - {value_chain: "Drilling", kpi: "Drill Cycle Time", column: "DRILL_CYCLE_HRS", adx: false, snowflake: "PROD_WG.DRILL_BLAST"}
+  - {value_chain: "Blasting", kpi: "LBS on Ground", column: "N/A", adx: false, snowflake: "PROD_WG.DRILL_BLAST"}
+  - {value_chain: "Loading", kpi: "Equipment Hours", sap: true, adx: true, confidence: "70%"}
+  - {value_chain: "Haulage", kpi: "Fuel Consumption", sap: true, adx: true, confidence: "90%"}
+  - {value_chain: "Haulage", kpi: "Cycle Time", dispatch: true, adx: false}
   
 # =============================================================================
 # SITE DATABASES
@@ -483,3 +766,191 @@ connection:
     
     # Query example
     result = client.execute("Morenci", "FCTSCURRENT | take 10")
+
+# =============================================================================
+# RECOMMENDED ADX FUNCTIONS TO CREATE
+# =============================================================================
+# These functions should be created in the Global or AppIntegration database
+# to support the business KPIs defined in knowledge_base.json
+
+recommended_functions:
+
+  MillIOS_Current:
+    priority: HIGHEST
+    description: "Returns current IOS levels with trend direction"
+    target_database: Global
+    parameters: "(site_code:string = 'MOR')"
+    kql_body: |
+      // Function: MillIOS_Current
+      // Returns: Current IOS levels with trend direction
+      let ios_sensors = dynamic(["MOR-CC06_LI00601_PV", "MOR-CC10_LI0102_PV"]);
+      database("Morenci").FCTS
+      | where sensor_id in~ (ios_sensors)
+      | where timestamp > ago(2h)
+      | order by sensor_id, timestamp asc
+      | serialize 
+      | extend prev_value = prev(value, 1), prev_sensor = prev(sensor_id, 1)
+      | where sensor_id == prev_sensor or isnull(prev_sensor)
+      | summarize arg_max(timestamp, value, prev_value) by sensor_id
+      | extend 
+          current = toreal(value),
+          previous = toreal(prev_value),
+          direction = case(
+              toreal(value) > toreal(prev_value), "INCREASING",
+              toreal(value) < toreal(prev_value), "DECREASING",
+              "STABLE")
+      | project sensor_id, level = current, direction, timestamp
+      
+  MillCrusher_Current:
+    priority: HIGH
+    description: "Returns crusher rates with target status"
+    target_database: Global
+    parameters: "()"
+    kql_body: |
+      // Function: MillCrusher_Current
+      let crusher_sensors = dynamic(["MOR-CR03_WI00317_PV", "MOR-CR02_WI01203_PV"]);
+      database("Morenci").FCTSCURRENT()
+      | where sensor_id in~ (crusher_sensors)
+      | extend 
+          kpi_name = case(
+              sensor_id =~ "MOR-CR03_WI00317_PV", "Crusher_Rate_TPH",
+              sensor_id =~ "MOR-CR02_WI01203_PV", "Leach_Rate_TPH",
+              sensor_id),
+          target_min = case(
+              sensor_id =~ "MOR-CR03_WI00317_PV", 8500.0,
+              sensor_id =~ "MOR-CR02_WI01203_PV", 4500.0, 0.0),
+          target_max = case(
+              sensor_id =~ "MOR-CR03_WI00317_PV", 9000.0,
+              sensor_id =~ "MOR-CR02_WI01203_PV", 6000.0, 0.0)
+      | extend 
+          current_value = toreal(value),
+          status = case(
+              toreal(value) >= target_min and toreal(value) <= target_max, "ON_TARGET",
+              toreal(value) < target_min, "BELOW_TARGET",
+              "ABOVE_TARGET")
+      | project kpi_name, current_value, target_min, target_max, status, timestamp
+
+  MiningKPIs_Dashboard:
+    priority: HIGH
+    description: "Unified dashboard view of all critical KPIs"
+    target_database: AppIntegration
+    parameters: "()"
+    kql_body: |
+      // Function: MiningKPIs_Dashboard
+      // Combines all critical processing KPIs for dashboard display
+      let ios_data = database("Morenci").FCTSCURRENT()
+          | where sensor_id in~ ("MOR-CC06_LI00601_PV", "MOR-CC10_LI0102_PV")
+          | extend category = "IOS_Level";
+      let crusher_data = database("Morenci").FCTSCURRENT()
+          | where sensor_id in~ ("MOR-CR03_WI00317_PV", "MOR-CR02_WI01203_PV")
+          | extend category = "Crusher_Rate";
+      union ios_data, crusher_data
+      | extend 
+          kpi_name = case(
+              sensor_id =~ "MOR-CC06_LI00601_PV", "Main_IOS_Level",
+              sensor_id =~ "MOR-CC10_LI0102_PV", "Small_IOS_Level",
+              sensor_id =~ "MOR-CR03_WI00317_PV", "Mill_Crusher_Rate",
+              sensor_id =~ "MOR-CR02_WI01203_PV", "Crushed_Leach_Rate",
+              sensor_id)
+      | project category, kpi_name, value = toreal(value), uom, timestamp
+      | order by category asc, kpi_name asc
+
+# =============================================================================
+# GAP ANALYSIS SUMMARY
+# =============================================================================
+
+gap_analysis:
+  adx_fully_available:
+    description: "KPIs that can be 100% served from ADX"
+    count: 8
+    kpis:
+      - Mill IOS Main Level
+      - Mill IOS Small Level
+      - Mill Crusher Rate
+      - Crushed Leach Rate
+      - Ball Mill TPH (32 mills)
+      - Mill Power
+      - Classifier pH
+      - Bin Levels
+      
+  snowflake_only:
+    description: "KPIs that require Snowflake (no ADX path)"
+    count: 5
+    kpis:
+      - Drill Penetration Rate
+      - Drill Cycle Time
+      - LBS on Ground (Blasting)
+      - Powder Factor
+      - Haulage Cycle Time
+    reason: "Fleet dispatch and computed metrics not in ADX"
+    
+  hybrid_partial:
+    description: "KPIs with partial ADX coverage"
+    count: 2
+    kpis:
+      - Equipment Hours (via SAP integration)
+      - Fuel Consumption (via SAP integration)
+    note: "Available in HaulTruck() function but limited scope"
+
+# =============================================================================
+# IMPLEMENTATION ROADMAP
+# =============================================================================
+
+implementation_roadmap:
+  phase_1:
+    name: "Mill IOS Dashboard"
+    priority: HIGHEST
+    timeframe: "Week 1-2"
+    tasks:
+      - Create MillIOS_Current() function
+      - Build ADX dashboard for IOS levels + direction
+      - Configure alerts for rapid changes (>5% in 15 min)
+      - Test integration with existing workflows
+      
+  phase_2:
+    name: "Processing Metrics Dashboard"
+    priority: HIGH
+    timeframe: "Week 2-3"
+    tasks:
+      - Leverage existing Morenci_Batman_* functions
+      - Add target thresholds to crusher queries
+      - Build section-by-section monitoring
+      - Create MillCrusher_Current() function
+      
+  phase_3:
+    name: "Unified Mining Dashboard"
+    priority: MEDIUM
+    timeframe: "Week 3-4"
+    tasks:
+      - Create MiningKPIs_Dashboard() function
+      - ADX for sensor data (IOS, crusher, mills)
+      - Federated view with Snowflake for computed metrics
+      - Drill/Blast/Haul metrics from Snowflake API
+      
+  phase_4:
+    name: "Full Integration"
+    priority: LOWER
+    timeframe: "Week 4+"
+    tasks:
+      - Evaluate fleet dispatch integration to ADX
+      - Consider IoT sensors for drilling equipment
+      - Unified API layer for all KPIs
+
+# =============================================================================
+# RELATED DOCUMENTATION
+# =============================================================================
+
+related_files:
+  knowledge_base: "../knowledge_base.json"
+  kpi_mapping_analysis: "../KPI_ADX_MAPPING_ANALYSIS.md"
+  database_snapshots: "../adx_snapshots/"
+  individual_semantic_models:
+    - Morenci.semantic.yaml
+    - Global.semantic.yaml
+    - AppIntegration.semantic.yaml
+    - Miami.semantic.yaml
+    - Bagdad.semantic.yaml
+    - Climax.semantic.yaml
+    - Sierrita.semantic.yaml
+    - NewMexico.semantic.yaml
+    - CerroVerde.semantic.yaml
