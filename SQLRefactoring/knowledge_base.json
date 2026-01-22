@@ -1,0 +1,992 @@
+{
+  "metadata": {
+    "title": "Mining Operations Data Model - Knowledge Base",
+    "description": "Comprehensive specification of mining value chain metrics, KPIs, data sources, and business definitions for the SQL refactoring project",
+    "version": "1.0.0",
+    "created_date": "2026-01-22",
+    "last_updated": "2026-01-22",
+    "purpose": "Guide SQL refactoring work to align with business objectives and data architecture"
+  },
+  "project_context": {
+    "objective": "Build a near real-time mining operations dashboard that tracks production performance across the entire value chain",
+    "data_refresh_types": [
+      "Actuals - Near Real-Time",
+      "Planned - 12 hours shift",
+      "Projected by end of shift",
+      "Active Information - Near Real-Time"
+    ],
+    "primary_data_sources": {
+      "snowflake": "Primary data warehouse",
+      "adx": "Azure Data Explorer for real-time streaming",
+      "power_bi": "Legacy reporting and semantic models"
+    }
+  },
+  "value_chain": {
+    "drilling": {
+      "step_type": "Process",
+      "section": "Production Performance",
+      "primary_indicators": {
+        "rate": {
+          "metric": "Drill rate (ft/min)",
+          "description": "Total distance drilled (meters) - How quickly drilling advances toward planned blast patterns",
+          "business_question": "Is it drilling fast enough? What could affect a drop in the drill rate?",
+          "sensible_range": null,
+          "snowflake_tables": [
+            "PROD_WG.DRILL_BLAST.DRILL_CYCLE"
+          ],
+          "key_columns": [
+            "X,Y,Z coordinates",
+            "AVG_PNTRTN_RATE_FEET_PER_MIN"
+          ],
+          "additional_sources": "PowerBI 'Drill Pattern Progress'",
+          "status": "In progress"
+        },
+        "operational_quality": {
+          "metrics": [
+            "Average drill quality",
+            "Number of drills digging in the right pattern",
+            "Drilling spatial compliance to plan (%)"
+          ],
+          "description": "Captures average offset from center (x&y), average error in drill depth (z), average error of drill angle, pattern completion compliance",
+          "business_question": "Are we drilling holes to their design? Are we drilling out the pattern that was scheduled?",
+          "snowflake_tables": [
+            "PROD_WG.DRILL_BLAST.DRILL_CYCLE",
+            "PROD_WG.DRILL_BLAST.RCS_DRILLED_HOLE"
+          ],
+          "key_columns": [
+            "DRILL_HOLE_ID",
+            "START_POINT_X",
+            "START_POINT_Y",
+            "START_POINT_Z",
+            "END_POINT_X",
+            "END_POINT_Y",
+            "END_POINT_Z",
+            "ACTUAL_DRILL_HOLE_DEPTH_FEET",
+            "DRILL_HOLE_OFF_TARGET_FEET",
+            "DRILL_HOLE_OFF_TARGET_METERS",
+            "DRILL_HOLE_HORIZONTAL_ACCURACY_PCT",
+            "DRILL_HOLE_VERTICAL_ACCURACY_PCT",
+            "OVERDRILL_UNDERDRILL_FLAG"
+          ],
+          "plan_table": "PROD_WG.DRILL_BLAST.DRILL_PLAN",
+          "notes": "2 source systems: RCS and Cat terrain. Cat terrain doesn't have plan only actuals. Check column 'system version' to know which one"
+        }
+      },
+      "secondary_indicators": {
+        "availability": "Drill Rig Equipment Availability",
+        "spatial_compliance": {
+          "metrics": [
+            "Average offset from center (x&y)",
+            "Average error in drill depth (z)",
+            "Average error of drill angle"
+          ],
+          "question": "Are we drilling at the right place, at the right time?"
+        }
+      },
+      "risk_indicators": [
+        "Weather",
+        "Equipment Health",
+        "Worker Availability",
+        "Hardness",
+        "Ground water",
+        "Equipment breakdown",
+        "Rain",
+        "Lightning"
+      ]
+    },
+    "drilled_holes_buffer": {
+      "step_type": "Buffer",
+      "section": "Production Performance",
+      "primary_indicators": {
+        "quantity": {
+          "metric": "Count of total number of patterns ready for explosive loading",
+          "description": "Available Meters of Drilled Holes in the ground ready to be loaded with explosives",
+          "business_question": "Will we be able to execute the planned blasts with completed patterns on the planned date?",
+          "snowflake_tables": [
+            "PROD_WG.DRILL_BLAST.DRILL_CYCLE",
+            "PROD_WG.DRILL_BLAST.BLAST_PLAN_EXECUTION"
+          ]
+        },
+        "quality": {
+          "metric": "Count of patterns that will need to be blasted on incomplete patterns"
+        }
+      }
+    },
+    "blasting": {
+      "step_type": "Process",
+      "section": "Production Performance",
+      "primary_indicators": {
+        "rate": {
+          "metric": "Count of number of holes loaded with explosives",
+          "description": "Blasted material (tonnes)",
+          "business_question": "Will we maintain target broken materials?",
+          "snowflake_tables": [
+            "PROD_WG.DRILL_BLAST.BLAST_PLAN_EXECUTION"
+          ]
+        },
+        "operational_quality": {
+          "metrics": [
+            "Percent of planned blasts expected to be on time",
+            "iFrag predicted P80",
+            "Fragmentation size compliance (%)"
+          ],
+          "business_question": "Are we on track to execute blasts in target time window? How well did the blasts go?",
+          "snowflake_tables": [
+            "PROD_WG.DRILL_BLAST.BLAST_PERFORMANCE"
+          ],
+          "plan_table": "PROD_WG.DRILL_BLAST.BLAST_PLAN",
+          "status": "Being created"
+        }
+      },
+      "secondary_indicators": {
+        "explosive_weight_deviation": "Track deviation from planned explosive weight"
+      },
+      "risk_indicators": [
+        "Weather",
+        "Accessibility (shovel locations)",
+        "Explosive availability",
+        "Loader availability"
+      ],
+      "notes": "Blast plan date, line up on when we want to mine it, loading rate"
+    },
+    "broken_reserves_buffer": {
+      "step_type": "Buffer",
+      "section": "Production Performance",
+      "primary_indicators": {
+        "quantity": {
+          "metric": "Sum of broken reserves (by pit and color)",
+          "description": "Breakdown of available reserves and their locations",
+          "business_question": "Is total broken material meeting required tonnage for upcoming shifts? Can we provide the right blend of materials?",
+          "snowflake_tables": [
+            "[MOR_OC_MSPD2_ReportArchive].[dbo].*"
+          ],
+          "additional_sources": "PowerBI - Broken reserves breakdown",
+          "breakdown_by": [
+            "MFL",
+            "Mill",
+            "ROM"
+          ]
+        },
+        "quality": {
+          "metric": "Spatial overlap of planned vs actual volumes",
+          "business_question": "Does actual broken material align spatially with planned blast design?",
+          "snowflake_tables": [
+            "PROD_WG.DRILL_BLAST.MMPRO_PARTICLE_SIZE",
+            "prod_wg.mine_planning.xe_sched_geometry"
+          ],
+          "key_columns": [
+            "P80_INCHES"
+          ]
+        }
+      }
+    },
+    "loading": {
+      "step_type": "Process",
+      "section": "Production Performance",
+      "primary_indicators": {
+        "dig_compliance": {
+          "metric": "Dig compliance (%)",
+          "description": "Spatial compliance of shovel dig events relative to dig zones defined for current shift",
+          "sensible_range": "0-100%"
+        },
+        "dig_rate": {
+          "metric": "Dig rate (TPOH)",
+          "description": "Total amount of material loaded by entire shovel fleet each hour",
+          "sensible_range": "30,000-35,000",
+          "secondary_indicators": [
+            "Payload"
+          ]
+        },
+        "priority_shovels": {
+          "metric": "Top 5 Shovels",
+          "description": "Not by material type"
+        },
+        "rate": {
+          "metric": "Average digging rate",
+          "business_question": "Are there any risks of bottlenecks? Could we see blend issue due to rate deviations at specific shovels?",
+          "snowflake_tables": [
+            "PROD_GENERAL.target.lh2_load_c (legacy)",
+            "PROD_WG.LOAD_HAUL.LOADING_CYCLE"
+          ],
+          "notes": "Show deviation alerts by shovels. In decision rights, we talk about loading rate, but metric tends to be about digging rate"
+        },
+        "operational_quality": {
+          "metrics": [
+            "Percent of shovels in their planned locations",
+            "Average P80"
+          ],
+          "business_question": "Are shovels loading from the right place? Are loaded materials of right size relative to plan?",
+          "snowflake_tables": [
+            "PROD_WG.LOAD_HAUL.LH_MINE_LOCATION",
+            "PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE"
+          ],
+          "plan_sources": {
+            "semantic_model": "SM - RPM_Xecute",
+            "rates": "prod_wg.mine_planning.xe_sched_result",
+            "volumes": "prod_wg.mine_planning.xe_sched_geometry"
+          },
+          "notes": "Shovel rates expressed as 'task' rates by shovel-dump pair. Need to sum over simultaneously active tasks"
+        }
+      },
+      "secondary_indicators": {
+        "availability": [
+          "Shovel availability",
+          "Truck availability"
+        ],
+        "dispatch": "Dispatch trucks",
+        "utilization": "Utilization rate (shovel)",
+        "fill_factor": "Fill factor",
+        "breakdown": "Breakdown of shovels by material type / location (pit)"
+      },
+      "risk_indicators": [
+        "Weather",
+        "Equipment Health",
+        "Operator availability",
+        "Geotech event",
+        "Loader breakdown"
+      ]
+    },
+    "truck_queue_at_loaders": {
+      "step_type": "Buffer",
+      "section": "Production Performance",
+      "primary_indicators": {
+        "quantity": {
+          "metrics": [
+            "Average current count of trucks queued at shovels",
+            "Hang time for shovels"
+          ],
+          "description": "Average number of trucks waiting at loading points during the shift",
+          "business_question": "Is there any bottlenecks? Is dispatch optimizing route planning?",
+          "snowflake_tables": [
+            "Truck frequency table (query from Joe Black)"
+          ]
+        }
+      },
+      "secondary_indicators": {
+        "breakdown": "By shovels"
+      },
+      "quality_question": "Is Operational coordination efficient?"
+    },
+    "haulage": {
+      "step_type": "Process",
+      "section": "Production Performance",
+      "primary_indicators": {
+        "number_of_trucks": {
+          "metric": "Number of trucks (qty)",
+          "description": "Multiple calculation alternatives based on shift performance vs plan",
+          "sensible_range": "100-120 (mechanically available: higher end)",
+          "alternatives": [
+            "Performance for shift so far, relative to plan for shift so far",
+            "Performance for shift so far, relative to total shift plan average",
+            "Current performance relative to plan for this point in shift"
+          ],
+          "clarification": "Definition of 'active operation' or 'being utilized' - Engine on?",
+          "secondary_indicators": [
+            "Slow trucks"
+          ]
+        },
+        "cycle_time": {
+          "metric": "Cycle Time (min)",
+          "sensible_range": "35-45 minutes",
+          "secondary_indicators": [
+            "Spillage"
+          ]
+        },
+        "asset_efficiency": {
+          "metric": "Asset Efficiency",
+          "description": "Is this Utilization of Availability? AE=PA×UA",
+          "sensible_range": "65%-100%",
+          "secondary_indicators": [
+            "Intersection"
+          ]
+        },
+        "dump_plan_compliance": {
+          "metric": "Dump plan compliance (%)",
+          "description": "Total tons moved from correct source to correct destination, divided by total tons moved",
+          "sensible_range": "0%-100%",
+          "notes": [
+            "In-shift color change results in 'non-compliant movement'",
+            "Misroute results in 'non-compliant movement'",
+            "Tonnes moved ahead of time still compliant if aligned to color definition at shift start"
+          ]
+        },
+        "rate": {
+          "metric": "Sum of tons dumped per hour",
+          "business_question": "Are we moving enough tons?",
+          "snowflake_tables": [
+            "PROD_WG.LOAD_HAUL.LH_SHIFT",
+            "PROD_GENERAL.target.lh2_shift_date_c (legacy)",
+            "DEV_PRODSIM.APPS.HIST_DUMPS"
+          ],
+          "key_columns": [
+            "TIMEDUMP_DS",
+            "MEASURETON"
+          ],
+          "plan_sources": {
+            "semantic_model": "SM - RPM_Xecute",
+            "rates": "prod_wg.mine_planning.xe_sched_result"
+          }
+        },
+        "operational_quality": {
+          "metric": "Percent of materials dumped to planned location by volume",
+          "business_question": "Are we dumping to planned locations?",
+          "snowflake_tables": [
+            "PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE"
+          ],
+          "key_columns": [
+            "GPSX",
+            "GPSY",
+            "DUMPLOC"
+          ],
+          "notes": "Will require stockpile plan with shapes + x,y,z coordinates"
+        }
+      },
+      "secondary_indicators": {
+        "delta_c": {
+          "table": "prod_wg.load_haul.lh_haul_cycle",
+          "column": "DELTA_C_MINS"
+        },
+        "availability": "Truck availability",
+        "utilization": "Utilization rate (truck)",
+        "cycle_time": {
+          "table": "prod_wg.load_haul.lh_haul_cycle",
+          "columns": [
+            "CYCLE_START_TS_LOCAL",
+            "CYCLE_END_TS_LOCAL"
+          ]
+        },
+        "oee": "Truck's manned (hours) / asset efficiency (OEE)"
+      },
+      "risk_indicators": [
+        "Road conditions",
+        "Weather (rain, lightning)",
+        "Operator availability",
+        "Operator fatigue",
+        "Geotech event",
+        "Equipment failure"
+      ]
+    },
+    "haul_to_dump_queue": {
+      "step_type": "Buffer",
+      "section": "Production Performance",
+      "primary_indicators": {
+        "quantity": {
+          "metrics": [
+            "Average current count of trucks queued at dump locations",
+            "Crusher time without active dump"
+          ],
+          "description": "Average number of trucks waiting at dumping locations during the shift",
+          "business_question": "Are we facing any bottlenecks? Is dispatch optimized for stockpile management?",
+          "snowflake_tables": [
+            "PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE"
+          ],
+          "additional_sources": "prod_haultruck.app.ht_detailed_timeline (truck travel time)"
+        },
+        "quality": {
+          "notes": "Andy Dahmen will have details for misroute data. Xecute haulage output table does not yet exist in SF"
+        }
+      }
+    },
+    "lbs_on_ground": {
+      "section": "Production Performance",
+      "subsections": {
+        "mill": {
+          "tons_delivered": {
+            "description": "Total lbs of copper delivered to Mill Crusher (CR2 or CR3)",
+            "secondary_indicators": [
+              "Mill - Time building up (%)"
+            ]
+          },
+          "crusher_rate": {
+            "metric": "Mill - Crusher Rate (TPOH)",
+            "sensible_range": "7,000-9,000",
+            "calculation_options": [
+              "Current rate vs rate planned at this point in shift",
+              "Average rate for shift so far vs average rate planned for shift so far"
+            ]
+          },
+          "mill_rate": {
+            "metric": "Mill - Mill Rate (TPOH)",
+            "sensible_range": "7,000-9,000",
+            "secondary_indicators": [
+              "Mill - Time drawing down (%)"
+            ]
+          },
+          "strategy_compliance": {
+            "metric": "Mill - Strategy compliance",
+            "sensible_range": "250,000-500,000",
+            "calculation_options": [
+              "IOS stockpile volume increase/decrease over past hour relative to plan",
+              "IOS stockpile volume increase/decrease over shift so far relative to plan"
+            ],
+            "secondary_indicators": [
+              "Mill - Tons pulled"
+            ]
+          }
+        },
+        "mfl": {
+          "tons_delivered": {
+            "description": "Total lbs of copper delivered to MFL Crusher (CR2 or CR3)",
+            "secondary_indicators": [
+              "MFL - Time building up (%)"
+            ]
+          },
+          "crusher_rate": {
+            "metric": "MFL - Crusher Rate (TPOH)",
+            "sensible_range": "4,000-5,000",
+            "secondary_indicators": [
+              "MFL - Time drawing down (%)"
+            ]
+          },
+          "fos_rate": {
+            "metric": "MFL - FOS Rate (TPOH)",
+            "sensible_range": "4,000-5,000"
+          },
+          "strategy_compliance": {
+            "metric": "MFL - Strategy compliance",
+            "sensible_range": "50,000-180,000 (capacity ?)"
+          }
+        },
+        "rom": {
+          "tons_delivered": {
+            "metric": "ROM - tons delivered",
+            "sensible_range": "Total ~500ktpd, ~21ktph"
+          }
+        }
+      }
+    },
+    "mill_crusher": {
+      "step_type": "Process",
+      "section": "Processing",
+      "primary_indicators": {
+        "rate": {
+          "metrics": [
+            "Sum of tons crushed",
+            "Tons per operating hours"
+          ],
+          "business_question": "Are we going to crush expected amount of material? Is crusher running effectively when available?",
+          "snowflake_tables": [
+            "prod_wg.processing.sensor_reading_mor"
+          ],
+          "pi_tags": [
+            "mor-cr03_wi00317_pv"
+          ],
+          "plan_sources": {
+            "semantic_model": "SM - RPM_Xecute",
+            "rates": "prod_wg.mine_planning.xe_sched_result"
+          },
+          "expected_rate": "8,500-9,000 tph"
+        },
+        "operational_quality": {
+          "metric": "Average P80",
+          "business_question": "Are we crushing to spec? Are there downstream implications?",
+          "secondary_indicators": [
+            "Gap setting"
+          ]
+        }
+      },
+      "secondary_indicators": {
+        "availability": "Crusher availability",
+        "utilization": "Crusher utilization rate"
+      }
+    },
+    "mill_ios": {
+      "step_type": "Buffer",
+      "section": "Processing",
+      "importance": "HIGHEST - This is the most important thing. Design to focus on this!",
+      "primary_indicators": {
+        "quantity": {
+          "metric": "Current level of IOS + direction of change",
+          "business_question": "What is current level? What are min/max 'alarm' levels? What does plan have for the shift?",
+          "snowflake_tables": [
+            "prod_wg.processing.sensor_reading_mor"
+          ],
+          "pi_tags": [
+            "mor-cc06_li00601_pv"
+          ],
+          "notes": "Each additional site may have a different sensor source view"
+        },
+        "quality": {
+          "metric": "Material characteristic that affect grinding or recovery strategy",
+          "business_question": "What quality of materials going to feed downstream process?",
+          "description": "Is material the right size, hardness, grade? Do we capture through MCF?",
+          "data_source": "MCF/spock"
+        }
+      },
+      "secondary_indicators": {
+        "shape_of_cone": "Stockpile shape indicator",
+        "crusher_unavailable_readiness": "Readiness when crusher unavailable"
+      }
+    },
+    "rom_stockpiles": {
+      "step_type": "Process",
+      "section": "Processing",
+      "primary_indicators": {
+        "rate": {
+          "metric": "Sum of tons dumped",
+          "notes": "Covered by Dump Rate"
+        },
+        "operational_quality": {
+          "metric": "Percent of materials dumped to planned location by volume",
+          "snowflake_tables": [
+            "PROD_GENERAL.target.lh2_shift_date_c",
+            "DEV_PRODSIM.APPS.HIST_DUMPS"
+          ],
+          "notes": "GPS info may additionally be handled by MCF - Amy Briggs will have information"
+        }
+      },
+      "risk_indicators": [
+        "Lift development",
+        "Dump space",
+        "Short cycling",
+        "Time under leach",
+        "OHLXR"
+      ],
+      "notes": "Amy Briggs - get time and get feedback"
+    },
+    "crushed_leach": {
+      "step_type": "Process",
+      "section": "Processing",
+      "primary_indicators": {
+        "rate": {
+          "snowflake_tables": [
+            "prod_wg.processing.sensor_reading_mor"
+          ],
+          "pi_tags": [
+            "mor-cr02_wi01203_pv"
+          ],
+          "expected_rate": "4,500-6,000 tph",
+          "notes": "Each additional site may have different sensor source view"
+        }
+      },
+      "risk_indicators": [
+        "Material"
+      ]
+    },
+    "small_ios": {
+      "step_type": "Buffer",
+      "section": "Processing",
+      "primary_indicators": {
+        "quantity": {
+          "metric": "Level/rate of change",
+          "snowflake_tables": [
+            "prod_wg.processing.sensor_reading_mor"
+          ],
+          "pi_tags": [
+            "mor-cc10_li0102_pv"
+          ]
+        },
+        "quality": {
+          "metric": "Shape of cone"
+        }
+      },
+      "secondary_indicators": {
+        "crusher_unavailable_readiness": "Readiness when crusher unavailable"
+      }
+    },
+    "grinding": {
+      "step_type": "Process",
+      "section": "Processing",
+      "primary_indicators": {
+        "rate": {
+          "metric": "Tons per operating hour",
+          "question": "Where in process do we want to measure 'grinding'? Secondary crushing, tertiary crushing, or milling?"
+        },
+        "operational_quality": {
+          "metric": "Grind size"
+        }
+      },
+      "secondary_indicators": [
+        "Bearing pressure",
+        "Cyclone density"
+      ],
+      "risk_indicators": [
+        "Mineralogy"
+      ]
+    },
+    "flotation": {
+      "step_type": "Process",
+      "section": "Processing",
+      "primary_indicators": {
+        "rate": {},
+        "operational_quality": {
+          "metrics": [
+            "Recovery",
+            "Grade"
+          ]
+        }
+      }
+    }
+  },
+  "key_snowflake_tables": {
+    "drill_blast": {
+      "PROD_WG.DRILL_BLAST.DRILL_CYCLE": {
+        "description": "Main drilling cycle data with spatial coordinates and performance metrics",
+        "key_columns": [
+          "DRILL_HOLE_ID",
+          "START_POINT_X",
+          "START_POINT_Y",
+          "START_POINT_Z",
+          "END_POINT_X",
+          "END_POINT_Y",
+          "END_POINT_Z",
+          "AVG_PNTRTN_RATE_FEET_PER_MIN",
+          "ACTUAL_DRILL_HOLE_DEPTH_FEET",
+          "DRILL_HOLE_OFF_TARGET_FEET",
+          "DRILL_HOLE_OFF_TARGET_METERS",
+          "DRILL_HOLE_HORIZONTAL_ACCURACY_PCT",
+          "DRILL_HOLE_VERTICAL_ACCURACY_PCT",
+          "OVERDRILL_UNDERDRILL_FLAG"
+        ],
+        "notes": "2 source systems: RCS and Cat terrain. Check 'system version' column"
+      },
+      "PROD_WG.DRILL_BLAST.DRILL_PLAN": {
+        "description": "Drilling plan data"
+      },
+      "PROD_WG.DRILL_BLAST.RCS_DRILLED_HOLE": {
+        "description": "RCS system drilled hole data"
+      },
+      "PROD_WG.DRILL_BLAST.BLAST_PLAN_EXECUTION": {
+        "description": "Blast plan execution tracking"
+      },
+      "PROD_WG.DRILL_BLAST.BLAST_PERFORMANCE": {
+        "description": "Fragmentation and blast performance data",
+        "status": "Being created"
+      },
+      "PROD_WG.DRILL_BLAST.BLAST_PLAN": {
+        "description": "Blast planning data"
+      },
+      "PROD_WG.DRILL_BLAST.MMPRO_PARTICLE_SIZE": {
+        "description": "Particle size data",
+        "key_columns": [
+          "P80_INCHES"
+        ]
+      }
+    },
+    "load_haul": {
+      "PROD_WG.LOAD_HAUL.LOADING_CYCLE": {
+        "description": "Loading cycle data - replacement for legacy lh2_load_c"
+      },
+      "PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE": {
+        "description": "Main haul cycle table (~350 columns)",
+        "key_columns": [
+          "GPSX",
+          "GPSY",
+          "DUMPLOC",
+          "DELTA_C_MINS",
+          "CYCLE_START_TS_LOCAL",
+          "CYCLE_END_TS_LOCAL"
+        ]
+      },
+      "PROD_WG.LOAD_HAUL.LH_MINE_LOCATION": {
+        "description": "Dig points and mine location data"
+      },
+      "PROD_WG.LOAD_HAUL.LH_SHIFT": {
+        "description": "Shift-level haul data"
+      },
+      "PROD_GENERAL.target.lh2_load_c": {
+        "description": "Legacy loading data",
+        "status": "Legacy"
+      },
+      "PROD_GENERAL.target.lh2_shift_date_c": {
+        "description": "Legacy shift date data",
+        "status": "Legacy"
+      }
+    },
+    "processing": {
+      "prod_wg.processing.sensor_reading_mor": {
+        "description": "Sensor readings from processing equipment",
+        "pi_tags": {
+          "mill_crusher": "mor-cr03_wi00317_pv",
+          "mill_ios_level": "mor-cc06_li00601_pv",
+          "crushed_leach_rate": "mor-cr02_wi01203_pv",
+          "small_ios_level": "mor-cc10_li0102_pv"
+        },
+        "notes": "Each additional site may have different sensor source view"
+      }
+    },
+    "mine_planning": {
+      "prod_wg.mine_planning.xe_sched_result": {
+        "description": "Xecute schedule results - rates and task-level planning",
+        "notes": "Rates expressed as 'task' rates by shovel-dump pair. May need to add scheduled start time to tasks"
+      },
+      "prod_wg.mine_planning.xe_sched_geometry": {
+        "description": "Xecute schedule geometry - volumes and spatial data"
+      }
+    },
+    "simulation": {
+      "DEV_PRODSIM.APPS.HIST_DUMPS": {
+        "description": "Historical dump data processed for DES (Discrete Event Simulation)"
+      }
+    },
+    "haultruck": {
+      "prod_haultruck.app.ht_detailed_timeline": {
+        "description": "Truck travel time and detailed timeline data"
+      }
+    }
+  },
+  "semantic_models": {
+    "SM_RPM_Xecute": {
+      "description": "RPM Xecute semantic model",
+      "contains": [
+        "Mine planning rates",
+        "Shovel rates by task",
+        "Dump rates",
+        "Crusher rates"
+      ]
+    }
+  },
+  "status_legend": {
+    "in_progress": "Currently being developed",
+    "to_be_created": "Planned for development",
+    "created": "Development complete",
+    "implemented": "Deployed to production",
+    "no_action_needed": "No development required"
+  },
+  "coal_operations_variant": {
+    "description": "Alternative value chain for coal mining operations",
+    "value_chain_steps": [
+      {
+        "step": "Drilling",
+        "category": "Waste Removal and Coal Extraction",
+        "type": "Process",
+        "indicators": {
+          "rate": "Total distance drilled (meters)",
+          "compliance": "Drilling spatial compliance to plan (%)"
+        },
+        "risk_indicators": [
+          "Weather",
+          "Road blocks",
+          "Rail blocks"
+        ]
+      },
+      {
+        "step": "Blasting",
+        "category": "Waste Removal and Coal Extraction",
+        "type": "Buffer",
+        "indicators": {
+          "rate": "Blasted material (tonnes)",
+          "compliance": "Fragmentation size compliance (%)"
+        }
+      },
+      {
+        "step": "Waste Loading",
+        "category": "Waste Removal and Coal Extraction",
+        "type": "Process",
+        "indicators": {
+          "rate": "Loaded waste material (tonnes)",
+          "compliance": "Waste loaded from scheduled location (spatial compliance %)"
+        }
+      },
+      {
+        "step": "Waste Haulage",
+        "category": "Waste Removal and Coal Extraction",
+        "type": "Process",
+        "indicators": {
+          "rate": "Hauled waste material (tonnes)",
+          "compliance": "Waste material hauled to correct destination (%)"
+        }
+      },
+      {
+        "step": "Coal Loading",
+        "category": "Waste Removal and Coal Extraction",
+        "type": "Process",
+        "indicators": {
+          "rate": "Loaded coal (tonnes)",
+          "compliance": "Coal loaded from scheduled location (%)"
+        }
+      },
+      {
+        "step": "Coal Haulage",
+        "category": "Waste Removal and Coal Extraction",
+        "type": "Process",
+        "indicators": {
+          "rate": "Hauled coal material (tonnes)",
+          "compliance": "Coal hauled to correct destination (%)"
+        }
+      },
+      {
+        "step": "ROM Stock",
+        "category": "Buffer",
+        "indicators": {
+          "quantity": "Total coal stock (tonnes)"
+        }
+      },
+      {
+        "step": "Crushing",
+        "category": "Coal Preparation",
+        "type": "Process",
+        "indicators": {
+          "rate": "Coal crushed (tonnes)",
+          "secondary": "Reprocessing (%)"
+        }
+      },
+      {
+        "step": "Train Loading",
+        "category": "Train Cycle",
+        "type": "Process",
+        "indicators": {
+          "rate": "Coal loaded (tonnes)"
+        }
+      },
+      {
+        "step": "Transport",
+        "category": "Train Cycle",
+        "type": "Process",
+        "indicators": {
+          "rate": "Coal transported (tonnes)"
+        }
+      },
+      {
+        "step": "Ship Loading",
+        "category": "Ship Loading",
+        "type": "Process",
+        "indicators": {
+          "rate": "Coal (tonnes)"
+        }
+      }
+    ]
+  },
+  "spanish_operations_variant": {
+    "description": "Spanish language variant - Colombian coal operations",
+    "process_steps": {
+      "perforacion": {
+        "metrics": [
+          "Metros perforados",
+          "Bloque",
+          "Cumplimiento"
+        ]
+      },
+      "voladura": {
+        "metrics": [
+          "Material Volado",
+          "Cumplimiento del plan de voladura"
+        ]
+      },
+      "cargue_de_esteril": {
+        "metrics": [
+          "BCM/hr Cargando",
+          "BCM acumulado en el turno",
+          "Cobertura de palas",
+          "Disponibilidad equipo de cargue de estéril",
+          "Cumplimiento espacial",
+          "Uso de disponibilidad equipo de cargue de estéril",
+          "Hang",
+          "Cantidad de palas de estéril disponibles"
+        ]
+      },
+      "acarreo_de_esteril": {
+        "metrics": [
+          "BCM/hr Acarreado",
+          "BCM acumulado en el turno",
+          "Disponibilidad equipo de acarreo de estéril",
+          "Cumplimiento secuencia de botado",
+          "Uso de disponibilidad equipo de acarreo de estéril",
+          "Queue",
+          "Cantidad de camiones de estéril disponibles"
+        ]
+      },
+      "cargue_de_carbon": {
+        "metrics": [
+          "TON/hr Cargado",
+          "TON acumulado en el turno",
+          "Disponibilidad equipo de cargue de carbón",
+          "Uso de disponibilidad equipo de cargue de carbón",
+          "Hang",
+          "Cantidad de palas de carbón disponibles"
+        ]
+      },
+      "acarreo_de_carbon": {
+        "metrics": [
+          "TON/hr Acarreado",
+          "TON acumulado en el turno",
+          "Disponibilidad equipo de acarreo de carbón",
+          "Uso de disponibilidad equipo de acarreo de carbón",
+          "Queue",
+          "Cantidad de camiones de carbón disponibles"
+        ]
+      },
+      "trituracion_y_lavado": {
+        "metrics": [
+          "Toneladas x hora trituradas planta 1",
+          "Toneladas x hora trituradas planta 2",
+          "Toneladas x hora lavadas",
+          "Toneladas trituradas",
+          "Toneladas recuperadas",
+          "Disponibilidad de planta 1/2/lavado",
+          "Uso de disponibilidad de planta 1/2/lavado",
+          "Toneladas en silos"
+        ]
+      },
+      "cargue_de_tren": {
+        "metrics": [
+          "Toneladas x hora cargadas",
+          "Toneladas cargadas"
+        ]
+      },
+      "transporte_tren": {
+        "metrics": [
+          "Carbón transportado",
+          "Cantidad de trenes",
+          "Tiempo del ciclo de tren"
+        ]
+      },
+      "carbon_recibido_pbv": {
+        "metrics": [
+          "Toneladas de carbón recibidas",
+          "Rata de descargue del tren",
+          "Volumen de carbón x calidad apilado"
+        ]
+      },
+      "embarque": {
+        "metrics": [
+          "Carbón Exportado",
+          "Rata de cargue muelle 1",
+          "Rata de cargue muelle 2"
+        ]
+      }
+    },
+    "risk_indicators": [
+      "Climático",
+      "Bloqueo de Vías",
+      "Bloqueo Ferreo"
+    ],
+    "indicator_types": [
+      "Tasa",
+      "Cumplimiento",
+      "Cantidad",
+      "Calidad"
+    ]
+  },
+  "contacts_and_references": {
+    "joe_black": "Truck frequency table query",
+    "andy_dahmen": "Misroute data details",
+    "amy_briggs": "MCF and GPS dumping locations for leaching reconciliation"
+  },
+  "refactoring_priorities": {
+    "high": [
+      {
+        "area": "Mill IOS",
+        "reason": "Designated as 'most important thing - design to focus on this!'"
+      },
+      {
+        "area": "Near real-time actuals",
+        "reason": "Core dashboard requirement"
+      },
+      {
+        "area": "Drilling and blasting",
+        "reason": "Foundation of production chain"
+      }
+    ],
+    "medium": [
+      {
+        "area": "Loading/Haulage integration",
+        "reason": "Complex multi-table joins"
+      },
+      {
+        "area": "Plan vs Actual comparisons",
+        "reason": "Requires Xecute data integration"
+      }
+    ]
+  }
+}
