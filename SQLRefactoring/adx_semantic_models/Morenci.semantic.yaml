@@ -1,0 +1,102 @@
+semantic_model:
+  name: ADX_Morenci
+  description: Morenci site sensor data
+  cluster: https://fctsnaproddatexp02.westus2.kusto.windows.net
+  database: Morenci
+  site_code: MOR
+  updated_at: '2026-01-22T08:32:28.386417'
+entities:
+- name: FCTS_INGEST
+  description: null
+  source:
+    type: adx_table
+    database: Morenci
+    table: FCTS_INGEST
+  columns:
+  - name: site_code
+    type: string
+    kusto_type: string
+  - name: sensor_id
+    type: string
+    kusto_type: string
+    is_key: true
+  - name: data_source
+    type: string
+    kusto_type: string
+  - name: timestamp
+    type: timestamp
+    kusto_type: datetime
+    is_temporal: true
+  - name: value
+    type: string
+    kusto_type: string
+    is_measure: true
+  - name: uom
+    type: string
+    kusto_type: string
+  - name: quality
+    type: integer
+    kusto_type: int
+  - name: annotations
+    type: json
+    kusto_type: dynamic
+  - name: stream_details
+    type: json
+    kusto_type: dynamic
+  - name: enqueuedtime
+    type: timestamp
+    kusto_type: datetime
+  primary_key: sensor_id
+  approximate_row_count: 493306757
+measures:
+- name: current_sensor_value
+  description: Current value from FCTSCURRENT for MOR
+  expression: FCTSCURRENT | summarize Value=take_any(value) by sensor_id
+  type: aggregate
+- name: sensor_avg_24h
+  description: 24-hour average sensor value for MOR
+  expression: FCTS | where timestamp > ago(24h) | summarize AvgValue=avg(value) by
+    sensor_id
+  type: aggregate
+- name: sensor_max_24h
+  description: 24-hour maximum sensor value for MOR
+  expression: FCTS | where timestamp > ago(24h) | summarize MaxValue=max(value) by
+    sensor_id
+  type: aggregate
+- name: sensor_min_24h
+  description: 24-hour minimum sensor value for MOR
+  expression: FCTS | where timestamp > ago(24h) | summarize MinValue=min(value) by
+    sensor_id
+  type: aggregate
+- name: sensor_reading_count_24h
+  description: Count of readings in last 24 hours for MOR
+  expression: FCTS | where timestamp > ago(24h) | summarize Count=count() by sensor_id
+  type: aggregate
+dimensions:
+- name: sensor_id
+  description: Unique sensor identifier / PI Point name
+  source_column: sensor_id
+- name: timestamp
+  description: Reading timestamp (UTC)
+  source_column: timestamp
+  time_grain:
+  - minute
+  - hour
+  - day
+  - week
+  - month
+- name: quality
+  description: Data quality indicator
+  source_column: quality
+- name: unit
+  description: Unit of measure
+  source_column: uom
+functions:
+- name: FCTS
+  description: null
+  parameters: ()
+  folder: null
+- name: FCTSCURRENT
+  description: null
+  parameters: ()
+  folder: null

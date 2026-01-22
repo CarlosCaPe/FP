@@ -1,0 +1,701 @@
+{
+  "database": "Global",
+  "cluster": "https://fctsnaproddatexp02.westus2.kusto.windows.net",
+  "extracted_at": "2026-01-22T08:32:27.528931",
+  "site_code": null,
+  "description": "Global registry and metadata",
+  "tables": [
+    {
+      "name": "FaeLogsIngest",
+      "folder": null,
+      "doc_string": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "guid"
+        },
+        {
+          "name": "siteCode",
+          "type": "string"
+        },
+        {
+          "name": "jobId",
+          "type": "guid"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "scheduled",
+          "type": "datetime"
+        },
+        {
+          "name": "start",
+          "type": "datetime"
+        },
+        {
+          "name": "end",
+          "type": "datetime"
+        },
+        {
+          "name": "status",
+          "type": "string"
+        },
+        {
+          "name": "errors",
+          "type": "bool"
+        },
+        {
+          "name": "actionLogs",
+          "type": "dynamic"
+        },
+        {
+          "name": "enqueuedtime",
+          "type": "datetime"
+        }
+      ],
+      "stats": {
+        "total_extents": 5682,
+        "total_original_size": 2826115376739.0,
+        "total_row_count": 442471270
+      }
+    },
+    {
+      "name": "RegistryIngest",
+      "folder": null,
+      "doc_string": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "registryType",
+          "type": "string"
+        },
+        {
+          "name": "displayName",
+          "type": "string"
+        },
+        {
+          "name": "siteCode",
+          "type": "string"
+        },
+        {
+          "name": "process",
+          "type": "string"
+        },
+        {
+          "name": "version",
+          "type": "int"
+        },
+        {
+          "name": "status",
+          "type": "string"
+        },
+        {
+          "name": "flagged",
+          "type": "bool"
+        },
+        {
+          "name": "deviceType",
+          "type": "string"
+        },
+        {
+          "name": "dataModel",
+          "type": "string"
+        },
+        {
+          "name": "deviceId",
+          "type": "string"
+        },
+        {
+          "name": "dataSource",
+          "type": "string"
+        },
+        {
+          "name": "sensors",
+          "type": "dynamic"
+        },
+        {
+          "name": "createdBy",
+          "type": "string"
+        },
+        {
+          "name": "createdUtc",
+          "type": "string"
+        },
+        {
+          "name": "updatedBy",
+          "type": "string"
+        },
+        {
+          "name": "updatedUtc",
+          "type": "string"
+        },
+        {
+          "name": "streamName",
+          "type": "string"
+        },
+        {
+          "name": "sensorId",
+          "type": "string"
+        },
+        {
+          "name": "index",
+          "type": "int"
+        },
+        {
+          "name": "step",
+          "type": "bool"
+        },
+        {
+          "name": "uom",
+          "type": "string"
+        },
+        {
+          "name": "scaleFactor",
+          "type": "real"
+        },
+        {
+          "name": "precision",
+          "type": "real"
+        },
+        {
+          "name": "minValue",
+          "type": "real"
+        },
+        {
+          "name": "maxValue",
+          "type": "real"
+        },
+        {
+          "name": "lo",
+          "type": "real"
+        },
+        {
+          "name": "loLo",
+          "type": "real"
+        },
+        {
+          "name": "hi",
+          "type": "real"
+        },
+        {
+          "name": "hiHi",
+          "type": "real"
+        },
+        {
+          "name": "tags",
+          "type": "dynamic"
+        },
+        {
+          "name": "value",
+          "type": "string"
+        },
+        {
+          "name": "_ts",
+          "type": "datetime"
+        }
+      ],
+      "stats": {
+        "total_extents": 8,
+        "total_original_size": 5463049.0,
+        "total_row_count": 6894
+      }
+    },
+    {
+      "name": "JobsIngest",
+      "folder": null,
+      "doc_string": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "siteCode",
+          "type": "string"
+        },
+        {
+          "name": "process",
+          "type": "string"
+        },
+        {
+          "name": "status",
+          "type": "string"
+        },
+        {
+          "name": "triggerType",
+          "type": "string"
+        },
+        {
+          "name": "triggers",
+          "type": "dynamic"
+        },
+        {
+          "name": "registryTags",
+          "type": "dynamic"
+        },
+        {
+          "name": "createdBy",
+          "type": "string"
+        },
+        {
+          "name": "createdUtc",
+          "type": "datetime"
+        },
+        {
+          "name": "updatedBy",
+          "type": "string"
+        },
+        {
+          "name": "updatedUtc",
+          "type": "datetime"
+        },
+        {
+          "name": "version",
+          "type": "int"
+        },
+        {
+          "name": "enablePreLaunchValidation",
+          "type": "bool"
+        },
+        {
+          "name": "enableRegistryProcessMatching",
+          "type": "bool"
+        },
+        {
+          "name": "steps",
+          "type": "dynamic"
+        },
+        {
+          "name": "outputs",
+          "type": "dynamic"
+        },
+        {
+          "name": "_ts",
+          "type": "datetime"
+        }
+      ],
+      "stats": {
+        "total_extents": 10,
+        "total_original_size": 1638425656.0,
+        "total_row_count": 265839
+      }
+    }
+  ],
+  "functions": [
+    {
+      "name": "FCTS_CURRENT_VALUE",
+      "folder": null,
+      "doc_string": null,
+      "parameters": "()",
+      "body": "{\r\n(database('Bagdad').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('CerroVerde').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('Climax').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('ElAbra').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('ElPaso').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('FtMadison').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('Henderson').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('Huelva').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('Miami').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('Morenci').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('NewMexico').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('Rotterdam').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('Safford').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('Sierrita').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('Stowmarket').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('NAMEM').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('SAMEM').materialized_view('FCTS_CURRENT_VALUE')\r\n| union database('TechCenter').materialized_view('FCTS_CURRENT_VALUE')\r\n)\r\n| summarize arg_max(timestamp,*) by sensor_id\r\n}"
+    },
+    {
+      "name": "FCTS",
+      "folder": null,
+      "doc_string": null,
+      "parameters": "()",
+      "body": "{\r\n(\r\ndatabase('Bagdad').materialized_view('FCTS_DEDUP')\r\n| union database('CerroVerde').materialized_view('FCTS_DEDUP')\r\n| union database('Climax').materialized_view('FCTS_DEDUP')\r\n| union database('ElAbra').materialized_view('FCTS_DEDUP')\r\n| union database('ElPaso').materialized_view('FCTS_DEDUP')\r\n| union database('FtMadison').materialized_view('FCTS_DEDUP')\r\n| union database('Henderson').materialized_view('FCTS_DEDUP')\r\n| union database('Huelva').materialized_view('FCTS_DEDUP')\r\n| union database('Miami').materialized_view('FCTS_DEDUP')\r\n| union database('Morenci').materialized_view('FCTS_DEDUP')\r\n| union database('NewMexico').materialized_view('FCTS_DEDUP')\r\n| union database('Rotterdam').materialized_view('FCTS_DEDUP')\r\n| union database('Safford').materialized_view('FCTS_DEDUP')\r\n| union database('Sierrita').materialized_view('FCTS_DEDUP')\r\n| union database('Stowmarket').materialized_view('FCTS_DEDUP')\r\n| union database('TechCenter').materialized_view('FCTS_DEDUP')\r\n)\r\n}"
+    },
+    {
+      "name": "RegistryStreams",
+      "folder": "Registry",
+      "doc_string": null,
+      "parameters": "()",
+      "body": "{\n    RegistryStreamsPivot_MV\n    | where status == \"active\"\n}"
+    },
+    {
+      "name": "RegistryDevices",
+      "folder": "Registry",
+      "doc_string": null,
+      "parameters": "()",
+      "body": "{\nRegistryDevices_MV\n| where status == \"active\"\n}"
+    },
+    {
+      "name": "RegistryConstants",
+      "folder": "Registry",
+      "doc_string": null,
+      "parameters": "()",
+      "body": "{\nRegistryConstants_MV\n| where status == \"active\"\n}"
+    },
+    {
+      "name": "FaeJobLogs",
+      "folder": "Registry",
+      "doc_string": null,
+      "parameters": "()",
+      "body": "{\r\nFaeLogs_MV\r\n| project \r\n    id, \r\n    jobId, \r\n    siteCode,\r\n    job_name, \r\n    job_start, \r\n    job_end, \r\n    job_status,\r\n    job_errors,\r\n    action_name,\r\n    action_type,\r\n    action_start,\r\n    action_end,\r\n    action_status,\r\n    action_message,\r\n    parent_name,\r\n    parent_type\r\n    }"
+    },
+    {
+      "name": "ConSmelter_GetCopperAssay",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime)",
+      "body": "{\n    //Change History\n    //Date          Change by       Description\n    //2024-07-19    Samuel Xavier   Initial\n    //2024-11-05    Putu Ananda     Code review\n    //2025-06-04    Putu Ananda     Make series in one hour interval\n    //2025-07-11    Putu Ananda     Task 279597\n\n    database(site_name).FCTS_DEDUP \n    | where sensor_id == strcat(site_code, '-FFH:A_024') and timestamp between (start_date_time .. end_date_time)\n    | project value = round(todecimal(value), 2) , timestamp\n    | distinct timestamp, value\n    | sort by timestamp asc \n}"
+    },
+    {
+      "name": "ConSmelter_GetCopperAssayByTotalBatchId",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(T:(total_batch_id:int,start_date_time:datetime,end_date_time:datetime,name:string,year:int), site_name:string, site_code:string)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-07-25\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\tCode review\r\n    //2025-01-09\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let temp_table = materialize (database(site_name).FCTS_DEDUP \r\n    | where sensor_id == strcat(site_code, '-FFH:A_024') and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), name = 'Copper Assay', sensor_id, timestamp);\r\n    temp_table\r\n    | join kind=rightouter T on $left.name == $right.name\r\n    | where timestamp between (start_date_time .. end_date_time)\r\n    | summarize total_value = round(avg(value),2) by total_batch_id,year\r\n    | project total_batch_id, year, total_value\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetCopperBlowProtocolExecution",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(T:(unique_batch_id:guid,id:string,start_date_time:datetime,end_date_time:datetime), site_name:string, site_code:string)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-07-15\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\tCode review\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let c1 = strcat(site_code, '-FC1:O_010');\r\n    let c2 = strcat(site_code, '-FC2:O_010');\r\n    let c3 = strcat(site_code, '-FC3:O_010');\r\n    let c4 = strcat(site_code, '-FC4:O_010');\r\n    database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (c1, c2, c3, c4) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), sensor_name = case (\r\n    sensor_id == c1, \"C1\",\r\n    sensor_id == c2, \"C2\",\r\n    sensor_id == c3, \"C3\",\r\n    sensor_id == c4, \"C4\",\r\n    sensor_id\r\n    ), sensor_id, greater = todecimal(value) >= 22.5, timestamp\r\n    | where greater == true\r\n    | join kind=rightouter T on $left.sensor_name == $right.id \r\n    | where timestamp between (start_date_time .. end_date_time)\r\n    | project total_time = case (datetime_diff('minute',end_date_time,start_date_time) < 90, datetime_diff('minute',end_date_time,start_date_time) ,90), \r\n        timestamp, sensor_name, unique_batch_id\r\n    | summarize time_count = datetime_diff('minute',max(timestamp),min(timestamp)) by unique_batch_id, total_time\r\n    | project  unique_batch_id, O2_time = round((todecimal(time_count)/todecimal(total_time))*100,2)\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetFlashFurnaceStatus",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\t\tChange by\t\t\tDescription\r\n    //2024-07-19\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\t    Code review\r\n    //2025-06-04        Putu Ananda         Set timestamp lower bound to be (start_date_time - 3 days)\r\n\r\n    database(site_name).FCTS_DEDUP \r\n    | where sensor_id == strcat(site_code, '-FFH:B_005') and timestamp between ((start_date_time-3d) .. end_date_time)\r\n    | top 1 by timestamp desc \r\n    | project value\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetFlashFurnaceTHRate",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\t\tChange by\t\t\tDescription\r\n    //2024-07-19\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\t    Code review\r\n    //2025-06-04        Putu Ananda         Make series in one hour interval\r\n\r\n    let end_date_time2 = min_of(end_date_time, bin(now(), 15m));\r\n\r\n    let latest_value_before_start = database(site_name).FCTS_DEDUP\r\n        | where sensor_id == strcat(site_code, '-FFC:W_004') and timestamp between ((start_date_time - 30d) .. start_date_time)\r\n        | summarize arg_max(timestamp, value)\r\n        | project timestamp = start_date_time, value = round(todecimal(value), 2);\r\n\r\n    let in_range_values = database(site_name).FCTS_DEDUP \r\n        | where sensor_id == strcat(site_code, '-FFC:W_004') and timestamp between (start_date_time .. end_date_time2)\r\n        | project timestamp, value = round(todecimal(value), 2);\r\n\r\n    let combined = union latest_value_before_start, in_range_values\r\n        | distinct timestamp, value\r\n        | sort by timestamp asc;\r\n\r\n    combined\r\n        | make-series value = max(value)               \r\n                    default = real(null)             \r\n                    on timestamp                     \r\n                    from start_date_time to end_date_time2+15m\r\n                    step 15m                          \r\n        | extend value = series_fill_forward(value)    \r\n        | extend timestamp = range(start_date_time, end_date_time2, 15m)   \r\n        | mv-expand timestamp, value                   \r\n        | project timestamp, value\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetHalfTimeKpi",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(site_name:string, site_code:string, id:string, date_time:datetime)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-07-14\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\tCode review\r\n    let crushed_material_C1 = strcat(site_code, '-FC1:W_038');\r\n    let crushed_material_C2 = strcat(site_code, '-FC2:W_038');\r\n    let crushed_material_C3 = strcat(site_code, '-FC3:W_038');\r\n    let crushed_material_C4 = strcat(site_code, '-FC4:W_038');\r\n    let silica_C1 = strcat(site_code, '-FCQ:W_001');\r\n    let silica_C2 = strcat(site_code, '-FCQ:W_003');\r\n    let silica_C3 = strcat(site_code, '-FCQ:W_005');\r\n    let silica_C4 = strcat(site_code, '-FCQ:W_007');\r\n    let chip_C1 = strcat(site_code, '-FC1:W_043');\r\n    let chip_C2 = strcat(site_code, '-FC2:W_043');\r\n    let chip_C3 = strcat(site_code, '-FC3:W_043');\r\n    let chip_C4 = strcat(site_code, '-FC4:W_043');\r\n    let crushed_material = case (\r\n        id == 'C1', crushed_material_C1,\r\n        id == 'C2', crushed_material_C2,\r\n        id == 'C3', crushed_material_C3,\r\n        id == 'C4', crushed_material_C4,\r\n        ''\r\n    );\r\n    let silica = case (\r\n        id == 'C1', silica_C1,\r\n        id == 'C2', silica_C2,\r\n        id == 'C3', silica_C3,\r\n        id == 'C4', silica_C4,\r\n        ''\r\n    );\r\n    let chip = case (\r\n        id == 'C1', chip_C1,\r\n        id == 'C2', chip_C2,\r\n        id == 'C3', chip_C3,\r\n        id == 'C4', chip_C4,\r\n        ''\r\n    );\r\n    let temp_table = database(site_name).FCTS_DEDUP\r\n    | where sensor_id in (crushed_material,silica,chip) and timestamp <= (date_time-7d)\r\n    | project sensor_id, round(todecimal(value),2), timestamp;\r\n    datatable(value:decimal) [1] \r\n    | project crushed_material_hopper = toscalar (temp_table | where  sensor_id  == crushed_material  |top 1 by timestamp desc | project value)\r\n    ,silica_hopper = toscalar (temp_table | where  sensor_id  == silica |top 1 by timestamp desc | project value)\r\n    ,chip_hopper = toscalar (temp_table | where  sensor_id  == chip |top 1 by timestamp desc | project value) \r\n}"
+    },
+    {
+      "name": "ConSmelter_GetMaterialInputTons",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(site_name:string, site_code:string, id:string, material:string, date_time:datetime)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-07-19\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\tCode review\r\n    let crushed_material_C1 = strcat(site_code, '-FC1:W_007');\r\n    let crushed_material_C2 = strcat(site_code, '-FC2:W_020');\r\n    let crushed_material_C3 = strcat(site_code, '-FC3:W_003');\r\n    let crushed_material_C4 = strcat(site_code, '-FC4:W_008');\r\n    let silica_C1 = strcat(site_code, '-FC1:W_020');\r\n    let silica_C2 = strcat(site_code, '-FC2:W_026');\r\n    let silica_C3 = strcat(site_code, '-FC3:W_024');\r\n    let silica_C4 = strcat(site_code, '-FC4:W_006');\r\n    let chip_C1 = strcat(site_code, '-FC1:W_025');\r\n    let chip_C2 = strcat(site_code, '-FC2:W_013');\r\n    let chip_C3 = strcat(site_code, '-FC3:W_011');\r\n    let chip_C4 = strcat(site_code, '-FC4:W_002');\r\n    let crushed_material = case (\r\n        id == 'C1', crushed_material_C1,\r\n        id == 'C2', crushed_material_C2,\r\n        id == 'C3', crushed_material_C3,\r\n        id == 'C4', crushed_material_C4,\r\n        ''\r\n    );\r\n    let silica = case (\r\n        id == 'C1', silica_C1,\r\n        id == 'C2', silica_C2,\r\n        id == 'C3', silica_C3,\r\n        id == 'C4', silica_C4,\r\n        ''\r\n    );\r\n    let chip = case (\r\n        id == 'C1', chip_C1,\r\n        id == 'C2', chip_C2,\r\n        id == 'C3', chip_C3,\r\n        id == 'C4', chip_C4,\r\n        ''\r\n    );\r\n    let selected_material = case (\r\n        toupper(material) == 'CRUSHMAT', crushed_material,\r\n        toupper(material) == 'SILICA', silica,\r\n        toupper(material) == 'CHIP', chip,\r\n        ''\r\n    );\r\n    database(site_name).FCTS_DEDUP\r\n    | where sensor_id == selected_material and timestamp <= (date_time-7d)\r\n    | project sensor_id, round(todecimal(value),2), timestamp | top 1 by timestamp desc | project value;\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetRefiningBurnerMinMax",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(T:(total_batch_id:int,id:string,start_date_time:datetime,end_date_time:datetime,year:int), site_name:string, site_code:string)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-09-26\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\tCode review\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let h1 = strcat(site_code, '-FM3:G_008');\r\n    let h2 = strcat(site_code, '-FM4:G_008');\r\n    database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (h1, h2) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), sensor_name = case (\r\n    sensor_id == h1, \"H1\",\r\n    sensor_id == h2, \"H2\",\r\n    sensor_id\r\n    ), sensor_id, timestamp\r\n    | join kind=rightouter T on $left.sensor_name == $right.id \r\n    | where timestamp between (start_date_time .. end_date_time)\r\n    | summarize min_burner = min(value), max_burner = max(value) by total_batch_id,year\r\n    | project total_batch_id, year, min_burner, max_burner\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetRefiningNaturalGasRatio",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(T:(total_batch_id:int,id:string,start_date_time:datetime,end_date_time:datetime,tons:decimal,year:int), site_name:string, site_code:string)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-09-26\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\tCode review\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let h1 = strcat(site_code, '-FMZ:F_002');\r\n    let h2 = strcat(site_code, '-FMZ:F_007');\r\n    let h3 = strcat(site_code, '-FM2:F_002');\r\n    database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (h1, h2, h3) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), sensor_name = case (\r\n    (sensor_id == h1 or sensor_id == h2), \"H1H2\",\r\n    sensor_id == h3, \"H3\",\r\n    sensor_id\r\n    ), sensor_id, timestamp\r\n    | join kind=rightouter T on $left.sensor_name == $right.id \r\n    | where timestamp between (start_date_time .. end_date_time)\r\n    | summarize total_value = sum(value) by total_batch_id, tons, year\r\n    | project total_batch_id, year, ratio = round(total_value/tons,2);\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetRefiningTuyereAirFlow",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(T:(total_batch_id:int,refining_id:string,task_id:string,tuyere_id:string,start_date_time:datetime,end_date_time:datetime,year:int), site_name:string, site_code:string)",
+      "body": "{\n    //Change History\n    //Date\t\t\tChange by\t\tDescription\n    //2024-09-30\t\tSamuel Xavier\t\tInitial\n    //2024-11-05\t\tPutu Ananda\t\tCode review\n    let tag1 = strcat(site_code, '-FMZ:G_001');\n    let tag2 = strcat(site_code, '-FMZ:G_003');\n    let tuyere1 = strcat(site_code, '-FMZ:F_001');\n    let tuyere2 = strcat(site_code, '-FMZ:F_008');\n    let datatableValue = database(site_name).FCTS_DEDUP \n    | where sensor_id in (tuyere1, tuyere2)\n    | project value = todecimal(value), sensor_name = case (\n    sensor_id == tuyere1, \"1\",\n    sensor_id == tuyere2, \"2\",\n    sensor_id\n    ), sensor_id, timestamp, name = \"Gas Flow\"\n    | join kind=rightouter T on $left.sensor_name == $right.tuyere_id \n    | where timestamp between (start_date_time .. end_date_time) \n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, name, year;\n    let datatableTag1 = database(site_name).FCTS_DEDUP \n    | where sensor_id in (tag1)\n    | project valueTag1 = value, sensor_id, timestampTag1 = timestamp, name = \"Gas Flow\"\n    | join kind=rightouter datatableValue on $left.name == $right.name \n    | where timestampTag1 <= timestamp\n    | partition hint.strategy=native by timestamp\n    (\n        top 1 by timestampTag1 desc\n    ) \n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, valueTag1, name, year;\n    let datatableTag2 = database(site_name).FCTS_DEDUP \n    | where sensor_id in (tag2)\n    | project valueTag2 = value, sensor_id, timestampTag2 = timestamp, name = \"Gas Flow\"\n    | join kind=rightouter datatableTag1 on $left.name == $right.name \n    | where timestampTag2 <= timestamp\n    | partition hint.strategy=native by timestamp\n    (\n        top 1 by timestampTag2 desc\n    ) \n    | project total_batch_id, refining_id, task_id, tuyere_id, value, valueTag1, valueTag2, year;\n    datatableTag2\n}"
+    },
+    {
+      "name": "ConSmelter_GetRefiningTuyereGasFlow",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(T:(total_batch_id:int,refining_id:string,task_id:string,tuyere_id:string,start_date_time:datetime,end_date_time:datetime,year:int), site_name:string, site_code:string)",
+      "body": "{\n    //Change History\n    //Date\t\t\tChange by\t\tDescription\n    //2024-09-30\t\tSamuel Xavier\t\tInitial\n    //2024-11-05\t\tPutu Ananda\t\tCode review\n    let tag1 = strcat(site_code, '-FMZ:G_001');\n    let tag2 = strcat(site_code, '-FMZ:G_003');\n    let tuyere1 = strcat(site_code, '-FMZ:F_002');\n    let tuyere2 = strcat(site_code, '-FMZ:F_007');\n    let datatableValue = database(site_name).FCTS_DEDUP \n    | where sensor_id in (tuyere1, tuyere2)\n    | project value = todecimal(value), sensor_name = case (\n    sensor_id == tuyere1, \"1\",\n    sensor_id == tuyere2, \"2\",\n    sensor_id\n    ), sensor_id, timestamp, name = \"Gas Flow\"\n    | join kind=rightouter T on $left.sensor_name == $right.tuyere_id \n    | where timestamp between (start_date_time .. end_date_time) \n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, name, year;\n    let datatableTag1 = database(site_name).FCTS_DEDUP \n    | where sensor_id in (tag1)\n    | project valueTag1 = value, sensor_id, timestampTag1 = timestamp, name = \"Gas Flow\"\n    | join kind=rightouter datatableValue on $left.name == $right.name \n    | where timestampTag1 <= timestamp\n    | partition hint.strategy=native by timestamp\n    (\n        top 1 by timestampTag1 desc\n    ) \n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, valueTag1, name, year;\n    let datatableTag2 = database(site_name).FCTS_DEDUP \n    | where sensor_id in (tag2)\n    | project valueTag2 = value, sensor_id, timestampTag2 = timestamp, name = \"Gas Flow\"\n    | join kind=rightouter datatableTag1 on $left.name == $right.name \n    | where timestampTag2 <= timestamp\n    | partition hint.strategy=native by timestamp\n    (\n        top 1 by timestampTag2 desc\n    ) \n    | project total_batch_id, refining_id, task_id, tuyere_id, value, valueTag1, valueTag2, year;\n    datatableTag2\n}"
+    },
+    {
+      "name": "ConSmelter_GetSlagBlowProtocolExecutionFirstHalf",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(T:(unique_batch_id:guid,id:string,start_date_time:datetime,end_date_time:datetime), site_name:string, site_code:string)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-07-15\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\tCode review\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let c1 = strcat(site_code, '-FC1:O_010');\r\n    let c2 = strcat(site_code, '-FC2:O_010');\r\n    let c3 = strcat(site_code, '-FC3:O_010');\r\n    let c4 = strcat(site_code, '-FC4:O_010');\r\n    database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (c1, c2, c3, c4) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), sensor_name = case (\r\n    sensor_id == c1, \"C1\",\r\n    sensor_id == c2, \"C2\",\r\n    sensor_id == c3, \"C3\",\r\n    sensor_id == c4, \"C4\",\r\n    sensor_id\r\n    ), sensor_id, greater = todecimal(value) >= 25, timestamp\r\n    | where greater == true\r\n    | join kind=rightouter T on $left.sensor_name == $right.id \r\n    | where timestamp between (start_date_time .. end_date_time)\r\n    | project total_time = datetime_diff('minute',end_date_time,start_date_time), timestamp, sensor_name, unique_batch_id\r\n    | summarize time_count = datetime_diff('minute',max(timestamp),min(timestamp)) by unique_batch_id, total_time\r\n    | project  unique_batch_id, O2_time = round((todecimal(time_count)/todecimal(total_time))*100,2)\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetSlagBlowProtocolExecutionSecondHalf",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(T:(unique_batch_id:guid,id:string,start_date_time:datetime,end_date_time:datetime), site_name:string, site_code:string)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-07-15\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\tCode review\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let c1 = strcat(site_code, '-FC1:O_010');\r\n    let c2 = strcat(site_code, '-FC2:O_010');\r\n    let c3 = strcat(site_code, '-FC3:O_010');\r\n    let c4 = strcat(site_code, '-FC4:O_010');\r\n    database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (c1, c2, c3, c4) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), sensor_name = case (\r\n    sensor_id == c1, \"C1\",\r\n    sensor_id == c2, \"C2\",\r\n    sensor_id == c3, \"C3\",\r\n    sensor_id == c4, \"C4\",\r\n    sensor_id\r\n    ), sensor_id, greater = todecimal(value) >= 24, timestamp\r\n    | where greater == true\r\n    | join kind=rightouter T on $left.sensor_name == $right.id \r\n    | where timestamp between (start_date_time .. end_date_time)\r\n    | project total_time = datetime_diff('minute',end_date_time,start_date_time), timestamp, sensor_name, unique_batch_id\r\n    | summarize time_count = datetime_diff('minute',max(timestamp),min(timestamp)) by unique_batch_id, total_time\r\n    | project  unique_batch_id, O2_time = round((todecimal(time_count)/todecimal(total_time))*100,2)\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetSlagCopperBlowAvgFlowRate",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(T:(task_id:guid,start_date_time:datetime,end_date_time:datetime,name:string), site_name:string, site_code:string, id:string)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-07-16\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\tCode review\r\n    //2025-01-17\t\tSamuel Xavier\t\tFix new logic\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let converter = case (\r\n        id == \"C1\", strcat(site_code, \"-FC1:F_002\"),\r\n        id == \"C2\", strcat(site_code, \"-FC2:F_002\"),\r\n        id == \"C3\", strcat(site_code, \"-FC3:F_002\"),\r\n        id == \"C4\", strcat(site_code, \"-FC4:F_002\"),\r\n        \"\"\r\n    );\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    database(site_name).FCTS_DEDUP \r\n    | where sensor_id == converter and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), name = 'FlowRate', sensor_id, timestamp\r\n    | join kind=rightouter T on $left.name == $right.name\r\n    | where timestamp between (start_date_time .. end_date_time)\r\n    | summarize avg_value = round(avg(value),2) by task_id\r\n    | project task_id, avg_value\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetSO2Peaks",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime, is_shiftly:bool)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-07-16\t\tSamuel Xavier\t\tInitial\r\n    //2024-11-05\t\tPutu Ananda\t\tCode review\r\n    //2025-01-16\t\tSamuel Xavier\t\tUse between for where condition\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    //2025-10-30        Adhi Arivianto  Task 308126: Fix logic when the date time is +1 offset\r\n\r\n    let peaks1500 = strcat(site_code, '-FCB:B_051');\r\n    let peaks3000 = strcat(site_code, '-FCB:B_052');\r\n\r\n    let temp_table = materialize(database(site_name).FCTS_DEDUP\r\n        | where sensor_id in (peaks1500,peaks3000) and timestamp between ((start_date_time-7d) .. end_date_time)\r\n        | project sensor_id, round(todecimal(value),2), timestamp);\r\n\r\n    let peaks1500AtStartOfShift = toscalar(\r\n        temp_table\r\n            | where sensor_id == peaks1500 and timestamp between ((start_date_time-7d) .. start_date_time)\r\n            | top 1 by timestamp desc\r\n            | project value\r\n    );\r\n    let peaks1500AtEndOfShift = toscalar(\r\n        temp_table\r\n            | where sensor_id == peaks1500\r\n            | top 1 by timestamp desc\r\n            | project value\r\n    );\r\n\r\n    let peaks3000AtStartOfShift = toscalar(\r\n        temp_table\r\n            | where sensor_id == peaks3000 and timestamp between ((start_date_time-7d) .. start_date_time)\r\n            | top 1 by timestamp desc\r\n            | project value\r\n    );\r\n    let peaks3000AtEndOfShift = toscalar(\r\n        temp_table\r\n            | where sensor_id == peaks3000\r\n            | top 1 by timestamp desc\r\n            | project value\r\n    );\r\n\r\n\r\n    let peaks1500AtStartOfShift2 = case(\r\n        datetime_part('hour', start_date_time) in (4, 5), 0.0,\r\n        peaks1500AtStartOfShift    \r\n    );\r\n\r\n    let peaks3000AtStartOfShift2 = case(\r\n        datetime_part('hour', start_date_time) in (4, 5), 0.0,\r\n        peaks3000AtStartOfShift    \r\n    );\r\n\r\n    datatable(value:decimal) [1]\r\n        | project\r\n        so2peaks1500 = case(\r\n            is_shiftly == true, (peaks1500AtEndOfShift - peaks1500AtStartOfShift2),\r\n            peaks1500AtEndOfShift\r\n        ),\r\n        so2peaks3000 = case(\r\n            is_shiftly == true, (peaks3000AtEndOfShift - peaks3000AtStartOfShift2),\r\n            peaks3000AtEndOfShift\r\n        )\r\n}"
+    },
+    {
+      "name": "MillOps_GetKpisValue",
+      "folder": "ConOpsMill",
+      "doc_string": null,
+      "parameters": "(T:(sensor:string), TN:(sensor:string), site_name:string)",
+      "body": "{\n    //Change History\n    //Date\t\t\tChange by\t\tDescription\n    //2024-09-16\t\tSamuel Xavier\t\tInitial\n    //2024-11-18\t\tPutu Ananda\t\tCode review\n    let list_sensor_id = T | project sensor;\n    let list_negative_sensor =  TN | project sensor;\n    database(site_name).FCTS_DEDUP \n    | where sensor_id in~ (list_sensor_id)\n    | where timestamp >= ago(1h)\n    | project sensor_id, value_ = todecimal(value), timestamp, \n        is_valid_value = case(sensor_id in~ (list_negative_sensor), true, case(todecimal(value) >= 0, true, false))\n    | where is_valid_value == true\n    | summarize avg_val = round(avg(value_),2) by sensor_id\n    | project sensor_id, avg_val\n}"
+    },
+    {
+      "name": "MillOps_GetKpiDetailValue",
+      "folder": "ConOpsMill",
+      "doc_string": null,
+      "parameters": "(sensor:string, site_name:string, is_allow_negative:bool=false)",
+      "body": "{\n    //Change History\n    //Date\t\t\tChange by\t\tDescription\n    //2024-10-17\t\tSamuel Xavier\t\tInitial\n    //2024-11-18\t\tPutu Ananda\t\tCode review\n    //2024-11-26\t\tSamuel Xavier\t\tAdd Is Allow Negative\n    database(site_name).FCTS_DEDUP \n    | where sensor_id =~ sensor\n    | where timestamp >= ago(24h) and case(is_allow_negative, true, todecimal(value) >= 0)\n    | project sensor_id, value_ = todecimal(value), timestamp\n    | extend date_time_by_bin = bin(timestamp, 1h)\n    | summarize avg_val = round(avg(value_),2) by date_time_by_bin\n    | sort by date_time_by_bin asc\n    | project datetime_add('hour', 1, date_time_by_bin), avg_val\n}"
+    },
+    {
+      "name": "MillOps_GetKpisColumnNpsWater",
+      "folder": "ConOpsMill",
+      "doc_string": null,
+      "parameters": "(site_name:string, site_code:string)",
+      "body": "{\n    //Change History\n    //Date\t\t\tChange by\t\tDescription\n    //2024-09-16\t\tSamuel Xavier\t\tInitial\n    //2024-11-18\t\tPutu Ananda\t\tCode review\n    let tag1 = strcat(site_code, '-MM51_FI5155A_PV');\n    let tag2 = strcat(site_code, '-TD11_FI0812_PV');\n    database(site_name).FCTS_DEDUP\n    | where sensor_id in~ (tag1, tag2)\n    | where timestamp >= ago(1h) and todecimal(value) > 0\n    | project sensor_id, value_ = todecimal(value), timestamp, name = 'Kpi'\n    | extend Sensor1 = case(sensor_id =~ tag1, value_, todecimal(0)),\n    Sensor2 = case(sensor_id =~ tag2, value_, todecimal(0))\n    | summarize Sensor1 = max(Sensor1), Sensor2 = max(Sensor2) by name\n    | extend column_NPS_Water = (Sensor1 + Sensor2)\n    | project column_NPS_Water\n}"
+    },
+    {
+      "name": "MillOps_GetKpisRougherRecovery",
+      "folder": "ConOpsMill",
+      "doc_string": null,
+      "parameters": "(site_name:string, site_code:string)",
+      "body": "{\n    //Change History\n    //Date\t\t\tChange by\t\tDescription\n    //2024-09-16\t\tSamuel Xavier\t\tInitial\n    //2024-11-18\t\tPutu Ananda\t\tCode review\n    let tag1 = strcat(site_code, '-SU02_AI3330_CU');\n    let tag2 = strcat(site_code, '-SU02_AI3278_CU');\n    let tag3 = strcat(site_code, '-SU02_AI3435A_CU');\n    database(site_name).FCTS_DEDUP\n    | where sensor_id in~ (tag1,tag2,tag3)\n    | where timestamp >= ago(1h) and todecimal(value) > 0\n    | project sensor_id, value_ = todecimal(value), timestamp, name = 'Kpi'\n    | extend Sensor1 = case(sensor_id =~ tag1, value_, todecimal(0)),\n    Sensor2 = case(sensor_id =~ tag2, value_, todecimal(0)),\n    Sensor3 = case(sensor_id =~ tag3, value_, todecimal(0))\n    | summarize Sensor1 = max(Sensor1), Sensor2 = max(Sensor2), Sensor3 = max(Sensor3) by name\n    | extend rougher_recov = (Sensor1 / Sensor2) * ((Sensor2 - Sensor3) / (Sensor1 - Sensor3)) * 100\n    | project rougher_recov\n}"
+    },
+    {
+      "name": "ConSmelter_GetOperationalParametersFollowUps",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-11-28\t\tAdhi Arivianto\t\tInitial\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let wetEfAvgVoltageTag = strcat(site_code, '-FME:E_002');\r\n    let phScrubbersWaterTag = strcat(site_code, '-FML200:H_001');\r\n    let scrubWaterConductTag = strcat(site_code, '-FML:A_007');\r\n    database(site_name).FCTS_DEDUP\r\n    | where sensor_id in (wetEfAvgVoltageTag, phScrubbersWaterTag, scrubWaterConductTag) and timestamp between (start_date_time .. end_date_time)\r\n    | summarize\r\n        wetEfAvgVoltage = round(avgif(todecimal(value), sensor_id == wetEfAvgVoltageTag), 2),\r\n        phScrubbersWater = round(avgif(todecimal(value), sensor_id == phScrubbersWaterTag), 2),\r\n        scrubWaterConduct = round(avgif(todecimal(value), sensor_id == scrubWaterConductTag), 2)\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetCastingLadleHeating",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(T:(total_batch_id:int,id:string,calculated_year:int,start_date_time:datetime,end_date_time:datetime,name:string), site_name:string, site_code:string)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-11-29\t\tSamuel Xavier\t\tInitial\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let sensor = strcat(site_code, '-FMG330:F_001');\r\n    database(site_name).FCTS_DEDUP \r\n    | where sensor_id in~ (sensor) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), name = 'CLH', sensor_id, timestamp\r\n    | join kind=rightouter T on $left.name == $right.name\r\n    | where timestamp between (start_date_time .. end_date_time)\r\n    | extend duration = datetime_diff('minute', end_date_time, start_date_time)\r\n    | summarize total_value = avg(value) by total_batch_id,id,calculated_year,duration\r\n    | summarize avg_value = avg(total_value), total_duration = todouble(sum(duration))/60 by total_batch_id, id, calculated_year\r\n    | project total_batch_id, id, calculated_year, round(avg_value * total_duration,2)\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetCastingSpeed",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(T:(total_batch_id:int,id:string,calculated_year:int,start_date_time:datetime,end_date_time:datetime), site_name:string, site_code:string)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-11-29\t\tSamuel Xavier\t\tInitial\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let sensor_R1 = strcat(site_code, '-FMM200:W_001');\r\n    let sensor_R2 = strcat(site_code, '-FMM300:W_001');\r\n    database(site_name).FCTS_DEDUP \r\n    | where sensor_id in~ (sensor_R1, sensor_R2 ) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), sensor_name = case (\r\n    sensor_id == sensor_R1, \"R1\",\r\n    sensor_id == sensor_R2, \"R2\",\r\n    sensor_id\r\n    ), sensor_id, timestamp\r\n    | join kind=rightouter T on $left.sensor_name == $right.id\r\n    | where timestamp between (start_date_time .. end_date_time)\r\n    | summarize total_value = round(avg(value),2) by total_batch_id,id,calculated_year\r\n    | project total_batch_id, id, calculated_year, total_value\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetCastingTaskDefaultValueByStartEnd",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(furnaceId:string, start_or_end_time:datetime, site:string)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2025-12-18\t\tElbert      \t\tInitial\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n let sensorId =case(furnaceId==\"H1\", strcat(site, '-FM3:G_001'),  furnaceId==\"H2\" , strcat(site, '-FM4:G_001'), furnaceId==\"H3\",strcat(site, '-FM2:G_001'),\r\n    \"\");\r\ndatabase('Huelva').FCTS_DEDUP\r\n| where sensor_id in(sensorId) and bin(timestamp,1m)==start_or_end_time\r\n| project value = todecimal(value),sensor_id,timestamp\r\n| sort by timestamp desc \r\n| extend Rank=row_number(1, prev(sensor_id) != sensor_id)\r\n|where Rank==1\r\n| summarize sum(value) by sensor_id\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetHalfTimeKpi_Chip",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(site_name:string, site_code:string, id:string, start_date_time:datetime, end_date_time:datetime)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-12-24\t\tSamuel Xavier\t\tInitial\r\n    //2025-01-16\t\tSamuel Xavier\t\tUse between for where condition\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let chip_C1 = strcat(site_code, '-FC1:W_043');\r\n    let chip_C2 = strcat(site_code, '-FC2:W_043');\r\n    let chip_C3 = strcat(site_code, '-FC3:W_043');\r\n    let chip_C4 = strcat(site_code, '-FC4:W_043');\r\n    let chip = case (\r\n        id == 'C1', chip_C1,\r\n        id == 'C2', chip_C2,\r\n        id == 'C3', chip_C3,\r\n        id == 'C4', chip_C4,\r\n        ''\r\n    );\r\n    database(site_name).FCTS_DEDUP\r\n    | where sensor_id in (chip) and timestamp between ((start_date_time-7d) .. end_date_time)\r\n    | top 1 by timestamp desc\r\n    | project round(todecimal(value),2);\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetHalfTimeKpi_CrushedMaterial",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(site_name:string, site_code:string, id:string, start_date_time:datetime, end_date_time:datetime)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-12-24\t\tSamuel Xavier\t\tInitial\r\n    //2025-01-16\t\tSamuel Xavier\t\tUse between for where condition\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let crushed_material_C1 = strcat(site_code, '-FC1:W_038');\r\n    let crushed_material_C2 = strcat(site_code, '-FC2:W_038');\r\n    let crushed_material_C3 = strcat(site_code, '-FC3:W_038');\r\n    let crushed_material_C4 = strcat(site_code, '-FC4:W_038');\r\n    let crushed_material = case (\r\n        id == 'C1', crushed_material_C1,\r\n        id == 'C2', crushed_material_C2,\r\n        id == 'C3', crushed_material_C3,\r\n        id == 'C4', crushed_material_C4,\r\n        ''\r\n    );\r\n    database(site_name).FCTS_DEDUP\r\n    | where sensor_id in (crushed_material) and timestamp between ((start_date_time-7d) .. end_date_time)\r\n    | top 1 by timestamp desc\r\n    | project round(todecimal(value),2);\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetHalfTimeKpi_Silica",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(site_name:string, site_code:string, id:string, start_date_time:datetime, end_date_time:datetime)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-12-24\t\tSamuel Xavier\t\tInitial\r\n    //2025-01-16\t\tSamuel Xavier\t\tUse between for where condition\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let silica_C1 = strcat(site_code, '-FCQ:W_001');\r\n    let silica_C2 = strcat(site_code, '-FCQ:W_003');\r\n    let silica_C3 = strcat(site_code, '-FCQ:W_005');\r\n    let silica_C4 = strcat(site_code, '-FCQ:W_007');\r\n    let silica = case (\r\n        id == 'C1', silica_C1,\r\n        id == 'C2', silica_C2,\r\n        id == 'C3', silica_C3,\r\n        id == 'C4', silica_C4,\r\n        ''\r\n    );\r\n   database(site_name).FCTS_DEDUP\r\n    | where sensor_id in (silica) and timestamp between ((start_date_time-7d) .. end_date_time)\r\n    | top 1 by timestamp desc\r\n    | project round(todecimal(value),2);\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetRefiningTuyere1AirFlow",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(T:(total_batch_id:int,refining_id:string,task_id:string,tuyere_id:string,start_date_time:datetime,end_date_time:datetime,year:int), site_name:string, site_code:string)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-12-26\t\tSamuel Xavier\t\tInitial\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let tag1 = strcat(site_code, '-FMZ:G_001');\r\n    let tag2 = strcat(site_code, '-FMZ:G_003');\r\n    let tuyere1 = strcat(site_code, '-FMZ:F_001');\r\n    let datatableValue = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tuyere1) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), sensor_name = case (\r\n    sensor_id == tuyere1, \"1\",\r\n    sensor_id\r\n    ), sensor_id, timestamp, name = \"Gas Flow\"\r\n    | join kind=rightouter T on $left.sensor_name == $right.tuyere_id \r\n    | where timestamp between (start_date_time .. end_date_time) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, name, year, start_date_time, end_date_time);\r\n    let datatableTag1 = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tag1) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project valueTag1 = value, sensor_id, timestampTag1 = timestamp, name = \"Gas Flow\"\r\n    | join kind=inner datatableValue on $left.name == $right.name \r\n    | where timestampTag1 between (start_date_time .. end_date_time)\r\n    | extend partition_key = strcat(timestamp, task_id)\r\n    | partition hint.strategy=native by partition_key\r\n    (\r\n        top 1 by timestampTag1 desc\r\n    ) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, valueTag1, name, year, start_date_time, end_date_time);\r\n    let datatableTag2 = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tag2) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project valueTag2 = value, sensor_id, timestampTag2 = timestamp, name = \"Gas Flow\"\r\n    | join kind=inner datatableTag1 on $left.name == $right.name\r\n    | where timestampTag2 between (start_date_time .. end_date_time)\r\n    | extend partition_key = strcat(timestamp, task_id)\r\n    | partition hint.strategy=native by partition_key\r\n    (\r\n        top 1 by timestampTag2 desc\r\n    ) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, value, valueTag1, valueTag2, year);\r\n    datatableTag2\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetRefiningTuyere1GasFlow",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(T:(total_batch_id:int,refining_id:string,task_id:string,tuyere_id:string,start_date_time:datetime,end_date_time:datetime,year:int), site_name:string, site_code:string)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-12-26\t\tSamuel Xavier\t\tInitial\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let tag1 = strcat(site_code, '-FMZ:G_001');\r\n    let tag2 = strcat(site_code, '-FMZ:G_003');\r\n    let tuyere1 = strcat(site_code, '-FMZ:F_002');\r\n    let datatableValue = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tuyere1) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), sensor_name = case (\r\n    sensor_id == tuyere1, \"1\",\r\n    sensor_id\r\n    ), sensor_id, timestamp, name = \"Gas Flow\"\r\n    | join kind=rightouter T on $left.sensor_name == $right.tuyere_id \r\n    | where timestamp between (start_date_time .. end_date_time) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, name, year, start_date_time, end_date_time);\r\n    let datatableTag1 = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tag1) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project valueTag1 = value, sensor_id, timestampTag1 = timestamp, name = \"Gas Flow\"\r\n    | join kind=inner datatableValue on $left.name == $right.name \r\n    | where timestampTag1 between (start_date_time .. end_date_time)\r\n    | extend partition_key = strcat(timestamp, task_id)\r\n    | partition hint.strategy=native by partition_key\r\n    (\r\n        top 1 by timestampTag1 desc\r\n    ) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, valueTag1, name, year, start_date_time, end_date_time);\r\n    let datatableTag2 = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tag2) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project valueTag2 = value, sensor_id, timestampTag2 = timestamp, name = \"Gas Flow\"\r\n    | join kind=inner datatableTag1 on $left.name == $right.name\r\n    | where timestampTag2 between (start_date_time .. end_date_time)\r\n    | extend partition_key = strcat(timestamp, task_id)\r\n    | partition hint.strategy=native by partition_key\r\n    (\r\n        top 1 by timestampTag2 desc\r\n    ) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, value, valueTag1, valueTag2, year);\r\n    datatableTag2\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetRefiningTuyere2AirFlow",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(T:(total_batch_id:int,refining_id:string,task_id:string,tuyere_id:string,start_date_time:datetime,end_date_time:datetime,year:int), site_name:string, site_code:string)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-12-26\t\tSamuel Xavier\t\tInitial\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let tag1 = strcat(site_code, '-FMZ:G_001');\r\n    let tag2 = strcat(site_code, '-FMZ:G_003');\r\n    let tuyere2 = strcat(site_code, '-FMZ:F_008');\r\n    let datatableValue = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tuyere2) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), sensor_name = case (\r\n    sensor_id == tuyere2, \"2\",\r\n    sensor_id\r\n    ), sensor_id, timestamp, name = \"Gas Flow\"\r\n    | join kind=rightouter T on $left.sensor_name == $right.tuyere_id \r\n    | where timestamp between (start_date_time .. end_date_time) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, name, year, start_date_time, end_date_time);\r\n    let datatableTag1 = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tag1) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project valueTag1 = value, sensor_id, timestampTag1 = timestamp, name = \"Gas Flow\"\r\n    | join kind=inner datatableValue on $left.name == $right.name \r\n    | where timestampTag1 between (start_date_time .. end_date_time)\r\n    | extend partition_key = strcat(timestamp, task_id)\r\n    | partition hint.strategy=native by partition_key\r\n    (\r\n        top 1 by timestampTag1 desc\r\n    ) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, valueTag1, name, year, start_date_time, end_date_time);\r\n    let datatableTag2 = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tag2) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project valueTag2 = value, sensor_id, timestampTag2 = timestamp, name = \"Gas Flow\"\r\n    | join kind=inner datatableTag1 on $left.name == $right.name\r\n    | where timestampTag2 between (start_date_time .. end_date_time)\r\n    | extend partition_key = strcat(timestamp, task_id)\r\n    | partition hint.strategy=native by partition_key\r\n    (\r\n        top 1 by timestampTag2 desc\r\n    ) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, value, valueTag1, valueTag2, year);\r\n    datatableTag2\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetRefiningTuyere2GasFlow",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(T:(total_batch_id:int,refining_id:string,task_id:string,tuyere_id:string,start_date_time:datetime,end_date_time:datetime,year:int), site_name:string, site_code:string)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2024-12-26\t\tSamuel Xavier\t\tInitial\r\n    //2025-01-16\t\tSamuel Xavier\t\tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let min_start_date_time = toscalar (T | summarize min(start_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\n    let tag1 = strcat(site_code, '-FMZ:G_001');\r\n    let tag2 = strcat(site_code, '-FMZ:G_003');\r\n    let tuyere2 = strcat(site_code, '-FMZ:F_007');\r\n    let datatableValue = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tuyere2) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project value = todecimal(value), sensor_name = case (\r\n    sensor_id == tuyere2, \"2\",\r\n    sensor_id\r\n    ), sensor_id, timestamp, name = \"Gas Flow\"\r\n    | join kind=rightouter T on $left.sensor_name == $right.tuyere_id \r\n    | where timestamp between (start_date_time .. end_date_time) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, name, year, start_date_time, end_date_time);\r\n    let datatableTag1 = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tag1) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project valueTag1 = value, sensor_id, timestampTag1 = timestamp, name = \"Gas Flow\"\r\n    | join kind=inner datatableValue on $left.name == $right.name \r\n    | where timestampTag1 between (start_date_time .. end_date_time)\r\n    | extend partition_key = strcat(timestamp, task_id)\r\n    | partition hint.strategy=native by partition_key\r\n    (\r\n        top 1 by timestampTag1 desc\r\n    ) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, timestamp, value, valueTag1, name, year, start_date_time, end_date_time);\r\n    let datatableTag2 = materialize(database(site_name).FCTS_DEDUP \r\n    | where sensor_id in (tag2) and timestamp between (min_start_date_time .. max_end_date_time)\r\n    | project valueTag2 = value, sensor_id, timestampTag2 = timestamp, name = \"Gas Flow\"\r\n    | join kind=inner datatableTag1 on $left.name == $right.name\r\n    | where timestampTag2 between (start_date_time .. end_date_time)\r\n    | extend partition_key = strcat(timestamp, task_id)\r\n    | partition hint.strategy=native by partition_key\r\n    (\r\n        top 1 by timestampTag2 desc\r\n    ) \r\n    | project total_batch_id, refining_id, task_id, tuyere_id, value, valueTag1, valueTag2, year);\r\n    datatableTag2\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetUpperBottomTempPreparation",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(T:(template_preparation_id:string,end_date_time:datetime,preparation_id:string), site:string)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\tChange by\t\tDescription\r\n    //2025-12-18\t\tElbert      \t\tInitial\r\n    //2025-01-16        \tElbert              \tOptimize query\r\n    //2025-01-20\t\tPutu Ananda\t\tCode review\r\n    let upper1 = strcat(site, '-FMM:T_102');\r\n    let lower1 = strcat(site, '-FMM:T_101');\r\n    let upper2 = strcat(site, '-FMM:T_104');\r\n    let lower2 = strcat(site, '-FMM:T_103');\r\n    let upper3 = strcat(site, '-FMM:T_106');\r\n    let lower3 = strcat(site, '-FMM:T_105');\r\n    let upper4 = strcat(site, '-FMM:T_108');\r\n    let lower4 = strcat(site, '-FMM:T_107');\r\n    let min_start_date_time = toscalar (T | summarize min(end_date_time));\r\n    let max_end_date_time = toscalar (T | summarize max(end_date_time));\r\ndatabase('Huelva').FCTS_DEDUP\r\n| where sensor_id in (upper1, lower1,upper2, lower2,upper3, lower3,upper4, lower4) and bin(timestamp,1m) between (min_start_date_time .. max_end_date_time)\r\n| project value = todecimal(value),timestamp, sensor_name = case (\r\n    sensor_id == upper1, \"1\",\r\n    sensor_id == lower1, \"1\",\r\n    sensor_id == upper2, \"2\",\r\n    sensor_id == lower2, \"2\",\r\n    sensor_id == upper3, \"3\",\r\n    sensor_id == lower3, \"3\",\r\n    sensor_id == upper4, \"4\",\r\n    sensor_id == lower4, \"4\",\r\n    sensor_id\r\n    ),sensor_id\r\n| join kind=rightouter T on $left.sensor_name ==$right.template_preparation_id\r\n| where bin(timestamp,1m) ==end_date_time\r\n| project value=todecimal(value), template_preparation_id, type = case (\r\n    sensor_id == upper1, \"Upper 1\",\r\n    sensor_id == lower1, \"Bottom 1\",\r\n    sensor_id == upper2, \"Upper 2\",\r\n    sensor_id == lower2, \"Bottom 2\",\r\n    sensor_id == upper3, \"Upper 3\",\r\n    sensor_id == lower3, \"Bottom 3\",\r\n    sensor_id == upper4, \"Upper 4\",\r\n    sensor_id == lower4, \"Bottom 4\",\r\n    sensor_id\r\n    ),timestamp,preparation_id\r\n| summarize sum(value) by type,template_preparation_id,timestamp,preparation_id\r\n}"
+    },
+    {
+      "name": "FaeJobLog",
+      "folder": "Registry",
+      "doc_string": null,
+      "parameters": "(Site:string, Job:string)",
+      "body": "{\nlet site = Site;\nlet job = Job;\nlet mostRecentRun = materialize(database('Global').FaeJobLogs\n| where siteCode == site\n  and job_start > ago(8h)\n  and job_name == job\n| order by job_start desc\n| take 1\n| summarize make_list(id));\n//mostRecentRun\ndatabase('Global').FaeJobLogs\n| where id in (mostRecentRun)\n| project action_name, action_type, action_start, action_status, action_message\n| order by action_start asc\n}"
+    },
+    {
+      "name": "FaeJobsStatus",
+      "folder": "Registry",
+      "doc_string": null,
+      "parameters": "(Site:string)",
+      "body": "{\nlet starttime = ago(1h);\ndatabase('Global').FaeLogsIngest\n| where siteCode == Site\n  and start > starttime\n| extend age_seconds = round((now() - start)/1s,0)\n| summarize arg_max(start,*) by jobId\n| mv-expand actionLogs\n| extend\n    action_name = tostring(actionLogs.name),\n    action_type = tostring(actionLogs.type),\n    action_message = tostring(actionLogs.message)\n| where\n    (action_type == \"Step\" and action_name contains \"grafana\")\n    or (action_type == \"Step\" and action_name contains \"payload\")\n| extend action_name = case(action_name contains \"payload\", \"payload\", action_name contains \"grafana\", \"grafana_link\", \"\")\n| project siteCode, name, start, age_seconds, status, action_name, action_type, action_message\n| order by name asc\n| evaluate pivot(action_name, take_any(action_message))\n| project-away action_type\n}"
+    },
+    {
+      "name": "FaeUi_GetRecentJobLogs",
+      "folder": "FAEUI",
+      "doc_string": null,
+      "parameters": "(JobId:string, JobStatus:string)",
+      "body": "{\n    database('Global').FaeLogs_MV\n    | where jobId == JobId\n    and job_status == JobStatus\n    and job_start > ago(7d)\n    and action_type == \"Trigger\"\n    | order by job_start desc\n    | take 20\n    | extend trigger_sensor_id = action_name\n    | extend duration_seconds = round((job_end-job_start)/1s,3)\n    | project jobId, id, start=job_start, duration_seconds, trigger_sensor_id\n}"
+    },
+    {
+      "name": "FaeUi_GetJobInvocationLog",
+      "folder": "FAEUI",
+      "doc_string": null,
+      "parameters": "(RunId:string)",
+      "body": "{\ndatabase('Global').FaeJobLogs\n| where id == RunId\n| extend duration_seconds = round((action_end-action_start)/1s,3)\n| order by action_start asc\n| project action_name, action_type, action_start, duration_seconds, action_message, action_status, parent_name, parent_type\n}"
+    },
+    {
+      "name": "UDETripLogs",
+      "folder": "Registry",
+      "doc_string": null,
+      "parameters": "(Site:string, Job:string, SAPID:string, StartTime:datetime)",
+      "body": "{\r\n//let Site = \"SIE\";\r\n//let StartTime = ago(24h);\r\n//let Job = \"SI_NORTH_BEARING_VIB_ZAXIS_HI\";\r\ndatabase('Global').FaeJobLogs\r\n| where siteCode == Site\r\n| where job_name == Job\r\n| where job_start >= StartTime\r\n| where action_name == \"UDE_Payload\"\r\n| order by job_start asc\r\n| project id, job_name, job_start, job_end, action_message\r\n| extend \r\n    TriggeredOn = todatetime(todynamic(action_message).TriggeredOn),\r\n    UDEValue = toint(todynamic(action_message).Value),\r\n    SAPEquipmentID = tostring(todynamic(action_message).Number)\r\n| project-away action_message\r\n| order by TriggeredOn asc\r\n| where SAPEquipmentID == SAPID\r\n| where UDEValue == 1\r\n}"
+    },
+    {
+      "name": "FaeRunIDLog",
+      "folder": "Registry",
+      "doc_string": null,
+      "parameters": "(RunID:string)",
+      "body": "{\r\ndatabase('Global').FaeLogs_MV\r\n| where id == RunID\r\n| project action_name, action_type, action_start, action_status, parent_name, parent_type, action_message\r\n| order by action_start asc\r\n}"
+    },
+    {
+      "name": "AllUDETripLogs",
+      "folder": "Registry",
+      "doc_string": null,
+      "parameters": "(Site:string, StartTime:datetime)",
+      "body": "{\ndatabase('Global').FaeJobLogs\n| where siteCode == Site\n| where job_start >= StartTime\n| where action_name == \"UDE_Payload\"\n| order by job_start asc\n| project id, job_name, job_start, action_message\n| extend \n    TriggeredOn = todatetime(todynamic(action_message).TriggeredOn),\n    UDEValue = toint(todynamic(action_message).Value),\n    SAPEquipmentID = tostring(todynamic(action_message).Number)\n| project-away action_message\n| order by TriggeredOn desc\n| where UDEValue == 1\n}"
+    },
+    {
+      "name": "MillOps_GetKpisCanyonRecycle",
+      "folder": "ConOpsMill",
+      "doc_string": null,
+      "parameters": "(site_name:string, site_code:string)",
+      "body": "{\n    //Change History\n    //Date\t\t\tChange by\t\tDescription\n    //2025-03-11\t\tSamuel Xavier\t\tInitial\n    let tag1 = strcat(site_code, '-CF02_WI1201_PV');\n    let tag2 = strcat(site_code, '-MM22_WI2150_PV');\n    database(site_name).FCTS_DEDUP\n    | where sensor_id in~ (tag1, tag2)\n    | where timestamp >= ago(1h) and todecimal(value) > 0\n    | project sensor_id, value_ = todecimal(value), timestamp\n    | extend sensor_name = case(sensor_id =~ tag1, \"1\", \"2\")\n    | summarize avg_sensor = avg(value_) by sensor_name\n    | extend canyon_recycle = round(avg_sensor, 2)\n    | project canyon_recycle\n}"
+    },
+    {
+      "name": "MillOps_GetKpis5010Densinometer",
+      "folder": "ConOpsMill",
+      "doc_string": null,
+      "parameters": "(site_name:string, site_code:string)",
+      "body": "{\n    //Change History\n    //Date\t\t\t\tChange by\t\t\tDescription\n    //2025-03-20\t\tElbert\t\t        Initial\n    let tag1 = strcat(site_code, '-MD_MOR_CONMET_5010_Tail_Thickener_U');\n    let tag2 = strcat(site_code, '-F_Density');\n    database(site_name).FCTS_DEDUP\n    | where sensor_id in~ (tag1, tag2)\n    | where timestamp >= ago(1h) and todecimal(value) > 0\n    | project sensor_id, value_ = todecimal(value), timestamp\n    | extend sensor_name = case(sensor_id =~ tag1, \"1\", \"2\")\n    | summarize avg_sensor = avg(value_) by sensor_name\n    | extend densinometer = round(avg_sensor, 2)\n    | project densinometer\n}"
+    },
+    {
+      "name": "MillOps_GetKpis5011Densinometer",
+      "folder": "ConOpsMill",
+      "doc_string": null,
+      "parameters": "(site_name:string, site_code:string)",
+      "body": "{\n    //Change History\n    //Date\t\t\t\tChange by\t\t\tDescription\n    //2025-03-20\t\tElbert\t\t        Initial\n    let tag1 = strcat(site_code, '-MD_MOR_CONMET_5011_Tail_Thickener_U');\n    let tag2 = strcat(site_code, '-F_Density');\n    database(site_name).FCTS_DEDUP\n    | where sensor_id in~ (tag1, tag2)\n    | where timestamp >= ago(1h) and todecimal(value) > 0\n    | project sensor_id, value_ = todecimal(value), timestamp\n    | extend sensor_name = case(sensor_id =~ tag1, \"1\", \"2\")\n    | summarize avg_sensor = avg(value_) by sensor_name\n    | extend densinometer = round(avg_sensor, 2)\n    | project densinometer\n}"
+    },
+    {
+      "name": "ConSmelter_GetFlashFurnaceMatteAssayManualReader",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime)",
+      "body": "{\n    //Change History\n    //Date          Change by       Description\n    //2025-01-22    Samuel Xavier   Initial\n    //2025-06-04    Putu Ananda     Make series in one hour interval\n    //2025-07-11    Putu Ananda     Task 279597\n\n    database(site_name).FCTS_DEDUP \n    | where sensor_id == strcat(site_code, '-FFH:A_002') and timestamp between (start_date_time .. end_date_time)\n    | project value = round(todecimal(value), 2) , timestamp\n    | distinct timestamp, value\n    | sort by timestamp asc \n}"
+    },
+    {
+      "name": "ConSmelter_GetFlashFurnaceTargetAssay",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime)",
+      "body": "{\r\n    //Change History\r\n    //Date\t\t\t\tChange by\t\t\tDescription\r\n    //2025-01-22\t\tSamuel Xavier\t\tInitial\r\n    //2025-06-04        Putu Ananda         Make series in one hour interval\r\n\r\n    let end_date_time2 = min_of(end_date_time, bin(now(), 15m));\r\n\r\n    let latest_value_before_start = database(site_name).FCTS_DEDUP\r\n        | where sensor_id == strcat(site_code, '-FFH:A_240') and timestamp between ((start_date_time - 30d) .. start_date_time)\r\n        | summarize arg_max(timestamp, value)\r\n        | project timestamp = start_date_time, value = round(todecimal(value), 2);\r\n\r\n    let in_range_values = database(site_name).FCTS_DEDUP \r\n        | where sensor_id == strcat(site_code, '-FFH:A_240') and timestamp between (start_date_time .. end_date_time2)\r\n        | project timestamp, value = round(todecimal(value), 2);\r\n\r\n    let combined = union latest_value_before_start, in_range_values\r\n        | distinct timestamp, value\r\n        | sort by timestamp asc;\r\n\r\n    combined\r\n        | make-series value = max(value)               \r\n                    default = real(null)             \r\n                    on timestamp                     \r\n                    from start_date_time to end_date_time2+15m\r\n                    step 15m                          \r\n        | extend value = series_fill_forward(value)    \r\n        | extend timestamp = range(start_date_time, end_date_time2, 15m)   \r\n        | mv-expand timestamp, value                   \r\n        | project timestamp, value\r\n}"
+    },
+    {
+      "name": "ConSmelter_GetPisDefaultValue",
+      "folder": "ConSmelter",
+      "doc_string": null,
+      "parameters": "(equipmentId:string, site:string, taskStartDateTime:datetime)",
+      "body": "{\r\n    let sensorId = case(\r\n        equipmentId==\"C1\", strcat(site, '-FC1:G_001'),  \r\n        equipmentId==\"C2\", strcat(site, '-FC2:G_001'), \r\n        equipmentId==\"C3\", strcat(site, '-FC3:G_001'),\r\n        equipmentId==\"C4\", strcat(site, '-FC4:G_001'),\r\n    \"\");\r\n        \r\n    database('Huelva').FCTS_DEDUP\r\n    | where sensor_id in (sensorId) and timestamp between ((taskStartDateTime-30d) .. taskStartDateTime)\r\n    | top 1 by timestamp desc\r\n    | project value = todecimal(value), sensor_id, timestamp\r\n}"
+    },
+    {
+      "name": "GetDynamicHierarchy",
+      "folder": "Registry",
+      "doc_string": null,
+      "parameters": "(HierachyName:string)",
+      "body": "{\n    // example record table - replace with real table once developed\n    let DynamicHierarchies = datatable (name:string,sites:string,processes:string,tags:dynamic) [\n        \"my dynamic hierarchy view\", \n        \"SAM\",\n        \"TCLW\",\n        dynamic([\n            { \"name\":\"EquipmentMeasurement\", \"value\":\"Digits\"},\n            { \"name\":\"EquipmentComponent\", \"value\":\"Piezometer\"},\n            { \"name\":\"EquipmentType\", \"value\":\"cr1000\"}\n        ])\n    ];\n    let T = DynamicHierarchies | where name==HierachyName | mv-expand tags;\n    let sites = toscalar(DynamicHierarchies | extend sites=case(strlen(sites)>0,split(sites,\",\"),\"\") | project todynamic(sites));\n    let processes = toscalar(DynamicHierarchies | extend processes=case(strlen(processes)>0,split(processes,\",\"),\"\") | project todynamic(processes));\n    let equipment_measurement = toscalar(T | where tags.name == \"EquipmentMeasurement\" | project name=tostring(tags.value));\n    let equipment_component = toscalar(T | where tags.name == \"EquipmentComponent\" | project name=tostring(tags.value));\n    let equipment_type = toscalar(T | where tags.name == \"EquipmentType\" | project name=tostring(tags.value));\n    //\n    // print processes;\n    database('Global').RegistryStreamsPivot_MV\n    | where status == \"active\"\n    | where case(array_length(sites)>0, site_code, \"\") in (sites)\n    | where case(array_length(processes)>0, process, \"\") in (processes)\n    | where case(isnotempty(equipment_measurement), EquipmentMeasurement, \"\") contains equipment_measurement\n    | where case(isnotempty(equipment_component), EquipmentComponent, \"\") contains equipment_component\n    | where case(isnotempty(equipment_type), EquipmentType, \"\") contains equipment_type\n}"
+    },
+    {
+      "name": "PI_Integration_DataSources",
+      "folder": "PISystem",
+      "doc_string": null,
+      "parameters": "()",
+      "body": "{\r\n    let DataSources = datatable (data_source:string)\r\n    [\r\n        \"LoRaLeach\",\r\n        \"Contrail\",\r\n        \"FAE\",\r\n        \"LevelCon\",\r\n        \"LoRaVibe\",\r\n        \"LoRaColumns\"\r\n    ];\r\n    DataSources | project data_source\r\n}"
+    },
+    {
+      "name": "PISystem_MOR_Raw_Data",
+      "folder": "PISystem",
+      "doc_string": null,
+      "parameters": "()",
+      "body": "{\r\n    let start = ago(7d);\r\n    let DataSources = database('Global').PI_Integration_DataSources;\r\n    database('MOR').materialized_view('FCTS_CURRENT_VALUE')\r\n    | where timestamp > start\r\n    | where data_source in (DataSources)\r\n    | join kind=inner (\r\n        database('MOR').FCTS\r\n        | where timestamp > start\r\n    ) on sensor_id\r\n    | project sensor_id, timestamp=timestamp1, value=value1\r\n}"
+    },
+    {
+      "name": "PISystem_MOR_Daily_Averages",
+      "folder": "PISystem",
+      "doc_string": null,
+      "parameters": "()",
+      "body": "{\n    let start = ago(90d);\n    let DataSources = database('Global').PI_Integration_DataSources;\n    database('MOR').materialized_view('FCTS_CURRENT_VALUE')\n    | where timestamp > start\n    | where data_source in (DataSources)\n    | join kind=inner (\n        database('MOR').FCTS\n        | where timestamp > start\n        | extend value=toreal(value)\n        | summarize value1=avg(value) by sensor_id, bin(timestamp, 1d)\n    ) on sensor_id\n    | project sensor_id, timestamp=timestamp1, value=value1\n}"
+    },
+    {
+      "name": "time_weighted_avg_fl",
+      "folder": "Helpers",
+      "doc_string": "Time weighted average of a metric",
+      "parameters": "(tbl:(*), t_col:string, y_col:string, key_col:string, stime:datetime, etime:datetime, dt:timespan)",
+      "body": "{\r\n    let tbl_ex = tbl | extend timestamp = column_ifexists(t_col, datetime(null)), value = column_ifexists(y_col, 0.0), key = column_ifexists(key_col, '');\r\n    let gridTimes = range timestamp from stime to etime step dt | extend value=real(null), dummy=1;\r\n    let keys = materialize(tbl_ex | summarize by key | extend dummy=1);\r\n    gridTimes\r\n    | join kind=fullouter keys on dummy\r\n    | project-away dummy, dummy1\r\n    | union tbl_ex\r\n    | where timestamp between (stime..etime)\r\n    | partition hint.strategy=native by key (\r\n        order by timestamp asc, value nulls last\r\n        | scan declare(f_value:real=0.0) with (step s: true => f_value = iff(isnull(value), s.f_value, value);)    // fill forward null values\r\n        | extend diff_t=(next(timestamp)-timestamp)/1m\r\n    )\r\n    | where isnotnull(diff_t)\r\n    | summarize tw_sum=sum(f_value*diff_t), t_sum =sum(diff_t) by bin_at(timestamp, dt, stime), key\r\n    | where t_sum > 0\r\n    | extend tw_avg = tw_sum/t_sum\r\n    | project-away tw_sum, t_sum\r\n}"
+    },
+    {
+      "name": "PISystem_NMO_Raw_Data",
+      "folder": "PISystem",
+      "doc_string": null,
+      "parameters": "()",
+      "body": "{\r\n    let start = ago(7d);\r\n    let DataSources = database('Global').PI_Integration_DataSources;\r\n    database('NMO').materialized_view('FCTS_CURRENT_VALUE')\r\n    | where timestamp > start\r\n    | where data_source in (DataSources)\r\n    | join kind=inner (\r\n        database('NMO').FCTS\r\n        | where timestamp > start\r\n    ) on sensor_id\r\n    | project sensor_id, timestamp=timestamp1, value=value1\r\n}"
+    },
+    {
+      "name": "PISystem_NMO_Daily_Averages",
+      "folder": "PISystem",
+      "doc_string": null,
+      "parameters": "()",
+      "body": "{\r\n    let start = ago(90d);\r\n    let DataSources = database('Global').PI_Integration_DataSources;\r\n    database('NMO').materialized_view('FCTS_CURRENT_VALUE')\r\n    | where timestamp > start\r\n    | where data_source in (DataSources)\r\n    | join kind=inner (\r\n        database('NMO').FCTS\r\n        | where timestamp > start\r\n        | extend value=toreal(value)\r\n        | summarize value1=avg(value) by sensor_id, bin(timestamp, 1d)\r\n    ) on sensor_id\r\n    | project sensor_id, timestamp=timestamp1, value=value1\r\n}"
+    },
+    {
+      "name": "TimeEq",
+      "folder": "Helpers",
+      "doc_string": null,
+      "parameters": "(site:string, sensor:string, start:datetime, end:datetime, target_value:string)",
+      "body": "{\n    // TimeEq Function\n    // Returns the total time (in seconds) that a sensor matched the target value within\n    // the provided time window.\n    // TimeEq(site, sensor, start, end, target_value)\n    /////////////////////////////////////////////////////\n    // site = ADX Database Site Code\n    // sensor = Sensor ID of interest\n    // start = Lookup window start time\n    // end = Lookup window end time\n    // target_value = Target sensor value to filter on\n    //////////////////////////////////////////////////////\n    // Query the raw sensor data\n    database(site).FCTS\n    | where timestamp between (start .. end)\n    and sensor_id == sensor\n    // order ascending\n    | order by timestamp asc\n    // calculate the delta time between the next value and this value\n    | extend time_in_value = next(timestamp) - timestamp\n    // filter for only values that match the target\n    | where value == target_value\n    // calculate the sum of time in the target value\n    | summarize total_time_in_value = floor(sum(time_in_value),1s) by sensor_id\n    // convert the sum of time into total seconds\n    | extend seconds_in_value = round(total_time_in_value / 1s, 0)\n    | project timestamp=now(), sensor_id, total_time_in_value, seconds_in_value\n}"
+    }
+  ]
+}

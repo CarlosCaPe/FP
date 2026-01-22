@@ -1,0 +1,44 @@
+semantic_model:
+  name: ADX_AppIntegration
+  description: Application integration functions
+  cluster: https://fctsnaproddatexp02.westus2.kusto.windows.net
+  database: AppIntegration
+  site_code: null
+  updated_at: '2026-01-22T08:32:28.454942'
+entities: []
+measures: []
+dimensions: []
+functions:
+- name: AcidTankLevels
+  description: null
+  parameters: ()
+  folder: null
+- name: HaulTruck
+  description: null
+  parameters: ()
+  folder: null
+- name: HaulTruck_DEV
+  description: null
+  parameters: ()
+  folder: null
+- name: Morenci_Batman_BallMill_Aggregates
+  description: null
+  parameters: ()
+  folder: null
+- name: Morenci_Batman_Section_Aggregates
+  description: null
+  parameters: ()
+  folder: null
+- name: Morenci_Batman_Mill_Overview
+  description: null
+  parameters: ()
+  folder: null
+- name: ConSmelter_GetCastingSpeed
+  description: null
+  parameters: (T:(total_batch_id:int,id:string,calculated_year:int,start_date_time:datetime,end_date_time:datetime),
+    site_name:string, site_code:string)
+  folder: ConSmelter
+- name: AcidTankLevels_BACKUP_20251031
+  description: null
+  parameters: ()
+  folder: null

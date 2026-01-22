@@ -1,0 +1,481 @@
+semantic_model:
+  name: ADX_Global
+  description: Global registry and metadata
+  cluster: https://fctsnaproddatexp02.westus2.kusto.windows.net
+  database: Global
+  site_code: null
+  updated_at: '2026-01-22T08:32:28.429478'
+entities:
+- name: FaeLogsIngest
+  description: null
+  source:
+    type: adx_table
+    database: Global
+    table: FaeLogsIngest
+  columns:
+  - name: id
+    type: uuid
+    kusto_type: guid
+    is_key: true
+  - name: siteCode
+    type: string
+    kusto_type: string
+  - name: jobId
+    type: uuid
+    kusto_type: guid
+  - name: name
+    type: string
+    kusto_type: string
+  - name: scheduled
+    type: timestamp
+    kusto_type: datetime
+  - name: start
+    type: timestamp
+    kusto_type: datetime
+  - name: end
+    type: timestamp
+    kusto_type: datetime
+  - name: status
+    type: string
+    kusto_type: string
+  - name: errors
+    type: boolean
+    kusto_type: bool
+  - name: actionLogs
+    type: json
+    kusto_type: dynamic
+  - name: enqueuedtime
+    type: timestamp
+    kusto_type: datetime
+  primary_key: id
+  approximate_row_count: 442471270
+- name: RegistryIngest
+  description: null
+  source:
+    type: adx_table
+    database: Global
+    table: RegistryIngest
+  columns:
+  - name: id
+    type: string
+    kusto_type: string
+    is_key: true
+  - name: registryType
+    type: string
+    kusto_type: string
+  - name: displayName
+    type: string
+    kusto_type: string
+  - name: siteCode
+    type: string
+    kusto_type: string
+  - name: process
+    type: string
+    kusto_type: string
+  - name: version
+    type: integer
+    kusto_type: int
+  - name: status
+    type: string
+    kusto_type: string
+  - name: flagged
+    type: boolean
+    kusto_type: bool
+  - name: deviceType
+    type: string
+    kusto_type: string
+  - name: dataModel
+    type: string
+    kusto_type: string
+  - name: deviceId
+    type: string
+    kusto_type: string
+  - name: dataSource
+    type: string
+    kusto_type: string
+  - name: sensors
+    type: json
+    kusto_type: dynamic
+  - name: createdBy
+    type: string
+    kusto_type: string
+  - name: createdUtc
+    type: string
+    kusto_type: string
+  - name: updatedBy
+    type: string
+    kusto_type: string
+  - name: updatedUtc
+    type: string
+    kusto_type: string
+  - name: streamName
+    type: string
+    kusto_type: string
+  - name: sensorId
+    type: string
+    kusto_type: string
+  - name: index
+    type: integer
+    kusto_type: int
+  - name: step
+    type: boolean
+    kusto_type: bool
+  - name: uom
+    type: string
+    kusto_type: string
+  - name: scaleFactor
+    type: double
+    kusto_type: real
+  - name: precision
+    type: double
+    kusto_type: real
+  - name: minValue
+    type: double
+    kusto_type: real
+  - name: maxValue
+    type: double
+    kusto_type: real
+  - name: lo
+    type: double
+    kusto_type: real
+  - name: loLo
+    type: double
+    kusto_type: real
+  - name: hi
+    type: double
+    kusto_type: real
+  - name: hiHi
+    type: double
+    kusto_type: real
+  - name: tags
+    type: json
+    kusto_type: dynamic
+  - name: value
+    type: string
+    kusto_type: string
+    is_measure: true
+  - name: _ts
+    type: timestamp
+    kusto_type: datetime
+  primary_key: id
+  approximate_row_count: 6894
+- name: JobsIngest
+  description: null
+  source:
+    type: adx_table
+    database: Global
+    table: JobsIngest
+  columns:
+  - name: id
+    type: string
+    kusto_type: string
+    is_key: true
+  - name: name
+    type: string
+    kusto_type: string
+  - name: siteCode
+    type: string
+    kusto_type: string
+  - name: process
+    type: string
+    kusto_type: string
+  - name: status
+    type: string
+    kusto_type: string
+  - name: triggerType
+    type: string
+    kusto_type: string
+  - name: triggers
+    type: json
+    kusto_type: dynamic
+  - name: registryTags
+    type: json
+    kusto_type: dynamic
+  - name: createdBy
+    type: string
+    kusto_type: string
+  - name: createdUtc
+    type: timestamp
+    kusto_type: datetime
+  - name: updatedBy
+    type: string
+    kusto_type: string
+  - name: updatedUtc
+    type: timestamp
+    kusto_type: datetime
+  - name: version
+    type: integer
+    kusto_type: int
+  - name: enablePreLaunchValidation
+    type: boolean
+    kusto_type: bool
+  - name: enableRegistryProcessMatching
+    type: boolean
+    kusto_type: bool
+  - name: steps
+    type: json
+    kusto_type: dynamic
+  - name: outputs
+    type: json
+    kusto_type: dynamic
+  - name: _ts
+    type: timestamp
+    kusto_type: datetime
+  primary_key: id
+  approximate_row_count: 265839
+measures: []
+dimensions: []
+functions:
+- name: FCTS_CURRENT_VALUE
+  description: null
+  parameters: ()
+  folder: null
+- name: FCTS
+  description: null
+  parameters: ()
+  folder: null
+- name: RegistryStreams
+  description: null
+  parameters: ()
+  folder: Registry
+- name: RegistryDevices
+  description: null
+  parameters: ()
+  folder: Registry
+- name: RegistryConstants
+  description: null
+  parameters: ()
+  folder: Registry
+- name: FaeJobLogs
+  description: null
+  parameters: ()
+  folder: Registry
+- name: ConSmelter_GetCopperAssay
+  description: null
+  parameters: (site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime)
+  folder: ConSmelter
+- name: ConSmelter_GetCopperAssayByTotalBatchId
+  description: null
+  parameters: (T:(total_batch_id:int,start_date_time:datetime,end_date_time:datetime,name:string,year:int),
+    site_name:string, site_code:string)
+  folder: ConSmelter
+- name: ConSmelter_GetCopperBlowProtocolExecution
+  description: null
+  parameters: (T:(unique_batch_id:guid,id:string,start_date_time:datetime,end_date_time:datetime),
+    site_name:string, site_code:string)
+  folder: ConSmelter
+- name: ConSmelter_GetFlashFurnaceStatus
+  description: null
+  parameters: (site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime)
+  folder: ConSmelter
+- name: ConSmelter_GetFlashFurnaceTHRate
+  description: null
+  parameters: (site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime)
+  folder: ConSmelter
+- name: ConSmelter_GetHalfTimeKpi
+  description: null
+  parameters: (site_name:string, site_code:string, id:string, date_time:datetime)
+  folder: ConSmelter
+- name: ConSmelter_GetMaterialInputTons
+  description: null
+  parameters: (site_name:string, site_code:string, id:string, material:string, date_time:datetime)
+  folder: ConSmelter
+- name: ConSmelter_GetRefiningBurnerMinMax
+  description: null
+  parameters: (T:(total_batch_id:int,id:string,start_date_time:datetime,end_date_time:datetime,year:int),
+    site_name:string, site_code:string)
+  folder: ConSmelter
+- name: ConSmelter_GetRefiningNaturalGasRatio
+  description: null
+  parameters: (T:(total_batch_id:int,id:string,start_date_time:datetime,end_date_time:datetime,tons:decimal,year:int),
+    site_name:string, site_code:string)
+  folder: ConSmelter
+- name: ConSmelter_GetRefiningTuyereAirFlow
+  description: null
+  parameters: (T:(total_batch_id:int,refining_id:string,task_id:string,tuyere_id:string,start_date_time:datetime,end_date_time:datetime,year:int),
+    site_name:string, site_code:string)
+  folder: ConSmelter
+- name: ConSmelter_GetRefiningTuyereGasFlow
+  description: null
+  parameters: (T:(total_batch_id:int,refining_id:string,task_id:string,tuyere_id:string,start_date_time:datetime,end_date_time:datetime,year:int),
+    site_name:string, site_code:string)
+  folder: ConSmelter
+- name: ConSmelter_GetSlagBlowProtocolExecutionFirstHalf
+  description: null
+  parameters: (T:(unique_batch_id:guid,id:string,start_date_time:datetime,end_date_time:datetime),
+    site_name:string, site_code:string)
+  folder: ConSmelter
+- name: ConSmelter_GetSlagBlowProtocolExecutionSecondHalf
+  description: null
+  parameters: (T:(unique_batch_id:guid,id:string,start_date_time:datetime,end_date_time:datetime),
+    site_name:string, site_code:string)
+  folder: ConSmelter
+- name: ConSmelter_GetSlagCopperBlowAvgFlowRate
+  description: null
+  parameters: (T:(task_id:guid,start_date_time:datetime,end_date_time:datetime,name:string),
+    site_name:string, site_code:string, id:string)
+  folder: ConSmelter
+- name: ConSmelter_GetSO2Peaks
+  description: null
+  parameters: (site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime,
+    is_shiftly:bool)
+  folder: ConSmelter
+- name: MillOps_GetKpisValue
+  description: null
+  parameters: (T:(sensor:string), TN:(sensor:string), site_name:string)
+  folder: ConOpsMill
+- name: MillOps_GetKpiDetailValue
+  description: null
+  parameters: (sensor:string, site_name:string, is_allow_negative:bool=false)
+  folder: ConOpsMill
+- name: MillOps_GetKpisColumnNpsWater
+  description: null
+  parameters: (site_name:string, site_code:string)
+  folder: ConOpsMill
+- name: MillOps_GetKpisRougherRecovery
+  description: null
+  parameters: (site_name:string, site_code:string)
+  folder: ConOpsMill
+- name: ConSmelter_GetOperationalParametersFollowUps
+  description: null
+  parameters: (site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime)
+  folder: ConSmelter
+- name: ConSmelter_GetCastingLadleHeating
+  description: null
+  parameters: (T:(total_batch_id:int,id:string,calculated_year:int,start_date_time:datetime,end_date_time:datetime,name:string),
+    site_name:string, site_code:string)
+  folder: ConSmelter
+- name: ConSmelter_GetCastingSpeed
+  description: null
+  parameters: (T:(total_batch_id:int,id:string,calculated_year:int,start_date_time:datetime,end_date_time:datetime),
+    site_name:string, site_code:string)
+  folder: ConSmelter
+- name: ConSmelter_GetCastingTaskDefaultValueByStartEnd
+  description: null
+  parameters: (furnaceId:string, start_or_end_time:datetime, site:string)
+  folder: ConSmelter
+- name: ConSmelter_GetHalfTimeKpi_Chip
+  description: null
+  parameters: (site_name:string, site_code:string, id:string, start_date_time:datetime,
+    end_date_time:datetime)
+  folder: ConSmelter
+- name: ConSmelter_GetHalfTimeKpi_CrushedMaterial
+  description: null
+  parameters: (site_name:string, site_code:string, id:string, start_date_time:datetime,
+    end_date_time:datetime)
+  folder: ConSmelter
+- name: ConSmelter_GetHalfTimeKpi_Silica
+  description: null
+  parameters: (site_name:string, site_code:string, id:string, start_date_time:datetime,
+    end_date_time:datetime)
+  folder: ConSmelter
+- name: ConSmelter_GetRefiningTuyere1AirFlow
+  description: null
+  parameters: (T:(total_batch_id:int,refining_id:string,task_id:string,tuyere_id:string,start_date_time:datetime,end_date_time:datetime,year:int),
+    site_name:string, site_code:string)
+  folder: ConSmelter
+- name: ConSmelter_GetRefiningTuyere1GasFlow
+  description: null
+  parameters: (T:(total_batch_id:int,refining_id:string,task_id:string,tuyere_id:string,start_date_time:datetime,end_date_time:datetime,year:int),
+    site_name:string, site_code:string)
+  folder: ConSmelter
+- name: ConSmelter_GetRefiningTuyere2AirFlow
+  description: null
+  parameters: (T:(total_batch_id:int,refining_id:string,task_id:string,tuyere_id:string,start_date_time:datetime,end_date_time:datetime,year:int),
+    site_name:string, site_code:string)
+  folder: ConSmelter
+- name: ConSmelter_GetRefiningTuyere2GasFlow
+  description: null
+  parameters: (T:(total_batch_id:int,refining_id:string,task_id:string,tuyere_id:string,start_date_time:datetime,end_date_time:datetime,year:int),
+    site_name:string, site_code:string)
+  folder: ConSmelter
+- name: ConSmelter_GetUpperBottomTempPreparation
+  description: null
+  parameters: (T:(template_preparation_id:string,end_date_time:datetime,preparation_id:string),
+    site:string)
+  folder: ConSmelter
+- name: FaeJobLog
+  description: null
+  parameters: (Site:string, Job:string)
+  folder: Registry
+- name: FaeJobsStatus
+  description: null
+  parameters: (Site:string)
+  folder: Registry
+- name: FaeUi_GetRecentJobLogs
+  description: null
+  parameters: (JobId:string, JobStatus:string)
+  folder: FAEUI
+- name: FaeUi_GetJobInvocationLog
+  description: null
+  parameters: (RunId:string)
+  folder: FAEUI
+- name: UDETripLogs
+  description: null
+  parameters: (Site:string, Job:string, SAPID:string, StartTime:datetime)
+  folder: Registry
+- name: FaeRunIDLog
+  description: null
+  parameters: (RunID:string)
+  folder: Registry
+- name: AllUDETripLogs
+  description: null
+  parameters: (Site:string, StartTime:datetime)
+  folder: Registry
+- name: MillOps_GetKpisCanyonRecycle
+  description: null
+  parameters: (site_name:string, site_code:string)
+  folder: ConOpsMill
+- name: MillOps_GetKpis5010Densinometer
+  description: null
+  parameters: (site_name:string, site_code:string)
+  folder: ConOpsMill
+- name: MillOps_GetKpis5011Densinometer
+  description: null
+  parameters: (site_name:string, site_code:string)
+  folder: ConOpsMill
+- name: ConSmelter_GetFlashFurnaceMatteAssayManualReader
+  description: null
+  parameters: (site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime)
+  folder: ConSmelter
+- name: ConSmelter_GetFlashFurnaceTargetAssay
+  description: null
+  parameters: (site_name:string, site_code:string, start_date_time:datetime, end_date_time:datetime)
+  folder: ConSmelter
+- name: ConSmelter_GetPisDefaultValue
+  description: null
+  parameters: (equipmentId:string, site:string, taskStartDateTime:datetime)
+  folder: ConSmelter
+- name: GetDynamicHierarchy
+  description: null
+  parameters: (HierachyName:string)
+  folder: Registry
+- name: PI_Integration_DataSources
+  description: null
+  parameters: ()
+  folder: PISystem
+- name: PISystem_MOR_Raw_Data
+  description: null
+  parameters: ()
+  folder: PISystem
+- name: PISystem_MOR_Daily_Averages
+  description: null
+  parameters: ()
+  folder: PISystem
+- name: time_weighted_avg_fl
+  description: Time weighted average of a metric
+  parameters: (tbl:(*), t_col:string, y_col:string, key_col:string, stime:datetime,
+    etime:datetime, dt:timespan)
+  folder: Helpers
+- name: PISystem_NMO_Raw_Data
+  description: null
+  parameters: ()
+  folder: PISystem
+- name: PISystem_NMO_Daily_Averages
+  description: null
+  parameters: ()
+  folder: PISystem
+- name: TimeEq
+  description: null
+  parameters: (site:string, sensor:string, start:datetime, end:datetime, target_value:string)
+  folder: Helpers

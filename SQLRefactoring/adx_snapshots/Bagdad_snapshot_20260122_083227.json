@@ -1,0 +1,77 @@
+{
+  "database": "Bagdad",
+  "cluster": "https://fctsnaproddatexp02.westus2.kusto.windows.net",
+  "extracted_at": "2026-01-22T08:32:27.413006",
+  "site_code": "BAG",
+  "description": "Bagdad site sensor data",
+  "tables": [
+    {
+      "name": "FCTS_INGEST",
+      "folder": null,
+      "doc_string": null,
+      "columns": [
+        {
+          "name": "site_code",
+          "type": "string"
+        },
+        {
+          "name": "sensor_id",
+          "type": "string"
+        },
+        {
+          "name": "data_source",
+          "type": "string"
+        },
+        {
+          "name": "timestamp",
+          "type": "datetime"
+        },
+        {
+          "name": "value",
+          "type": "string"
+        },
+        {
+          "name": "uom",
+          "type": "string"
+        },
+        {
+          "name": "quality",
+          "type": "int"
+        },
+        {
+          "name": "annotations",
+          "type": "dynamic"
+        },
+        {
+          "name": "stream_details",
+          "type": "dynamic"
+        },
+        {
+          "name": "enqueuedtime",
+          "type": "datetime"
+        }
+      ],
+      "stats": {
+        "total_extents": 87,
+        "total_original_size": 162778181230.0,
+        "total_row_count": 754116593
+      }
+    }
+  ],
+  "functions": [
+    {
+      "name": "FCTS",
+      "folder": null,
+      "doc_string": null,
+      "parameters": "()",
+      "body": "{ \r\n    FCTS_DEDUP\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id, timestamp\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}"
+    },
+    {
+      "name": "FCTSCURRENT",
+      "folder": null,
+      "doc_string": null,
+      "parameters": "()",
+      "body": "{\r\n    FCTS_CURRENT_VALUE\r\n    | summarize arg_max(enqueuedtime, *) by sensor_id\r\n    | join kind=leftouter (database('Global').RegistryStreams) on sensor_id\r\n    | extend uom = iif(isnotempty(uom1), uom1, uom)\r\n    | project site_code, sensor_id, data_source, timestamp, timestamp_local, value, uom, quality, annotations, stream_details, enqueuedtime\r\n}"
+    }
+  ]
+}
