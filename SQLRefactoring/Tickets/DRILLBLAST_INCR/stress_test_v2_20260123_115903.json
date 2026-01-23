@@ -1,0 +1,386 @@
+{
+  "test_info": {
+    "timestamp": "2026-01-23T11:59:03.097251",
+    "total_duration_seconds": 346.89,
+    "tables_tested": 7,
+    "days_tested": [
+      1,
+      7,
+      14,
+      30
+    ]
+  },
+  "results": {
+    "DRILL_CYCLE": {
+      "source": "PROD_WG.DRILL_BLAST.DRILL_CYCLE",
+      "successful": 4,
+      "total": 4,
+      "max_rows": 45983,
+      "avg_duration": 0.72,
+      "iterations": [
+        {
+          "table": "DRILL_CYCLE",
+          "source": "PROD_WG.DRILL_BLAST.DRILL_CYCLE",
+          "days_back": 1,
+          "start_time": "2026-01-23T11:53:15.976561",
+          "status": "SUCCESS",
+          "row_count": 1177,
+          "duration_seconds": 0.81,
+          "error": null,
+          "end_time": "2026-01-23T11:53:16.782048"
+        },
+        {
+          "table": "DRILL_CYCLE",
+          "source": "PROD_WG.DRILL_BLAST.DRILL_CYCLE",
+          "days_back": 7,
+          "start_time": "2026-01-23T11:53:16.782449",
+          "status": "SUCCESS",
+          "row_count": 9747,
+          "duration_seconds": 0.64,
+          "error": null,
+          "end_time": "2026-01-23T11:53:17.419502"
+        },
+        {
+          "table": "DRILL_CYCLE",
+          "source": "PROD_WG.DRILL_BLAST.DRILL_CYCLE",
+          "days_back": 14,
+          "start_time": "2026-01-23T11:53:17.419765",
+          "status": "SUCCESS",
+          "row_count": 29433,
+          "duration_seconds": 0.8,
+          "error": null,
+          "end_time": "2026-01-23T11:53:18.216718"
+        },
+        {
+          "table": "DRILL_CYCLE",
+          "source": "PROD_WG.DRILL_BLAST.DRILL_CYCLE",
+          "days_back": 30,
+          "start_time": "2026-01-23T11:53:18.217302",
+          "status": "SUCCESS",
+          "row_count": 45983,
+          "duration_seconds": 0.62,
+          "error": null,
+          "end_time": "2026-01-23T11:53:18.837503"
+        }
+      ]
+    },
+    "DRILL_PLAN": {
+      "source": "PROD_WG.DRILL_BLAST.DRILL_PLAN",
+      "successful": 4,
+      "total": 4,
+      "max_rows": 56570,
+      "avg_duration": 21.01,
+      "iterations": [
+        {
+          "table": "DRILL_PLAN",
+          "source": "PROD_WG.DRILL_BLAST.DRILL_PLAN",
+          "days_back": 1,
+          "start_time": "2026-01-23T11:53:18.838502",
+          "status": "SUCCESS",
+          "row_count": 1218,
+          "duration_seconds": 45.63,
+          "error": null,
+          "end_time": "2026-01-23T11:54:04.466625"
+        },
+        {
+          "table": "DRILL_PLAN",
+          "source": "PROD_WG.DRILL_BLAST.DRILL_PLAN",
+          "days_back": 7,
+          "start_time": "2026-01-23T11:54:04.467209",
+          "status": "SUCCESS",
+          "row_count": 12477,
+          "duration_seconds": 20.26,
+          "error": null,
+          "end_time": "2026-01-23T11:54:24.726781"
+        },
+        {
+          "table": "DRILL_PLAN",
+          "source": "PROD_WG.DRILL_BLAST.DRILL_PLAN",
+          "days_back": 14,
+          "start_time": "2026-01-23T11:54:24.727365",
+          "status": "SUCCESS",
+          "row_count": 37713,
+          "duration_seconds": 8.46,
+          "error": null,
+          "end_time": "2026-01-23T11:54:33.186132"
+        },
+        {
+          "table": "DRILL_PLAN",
+          "source": "PROD_WG.DRILL_BLAST.DRILL_PLAN",
+          "days_back": 30,
+          "start_time": "2026-01-23T11:54:33.186377",
+          "status": "SUCCESS",
+          "row_count": 56570,
+          "duration_seconds": 9.69,
+          "error": null,
+          "end_time": "2026-01-23T11:54:42.871536"
+        }
+      ]
+    },
+    "BLAST_PLAN": {
+      "source": "PROD_WG.DRILL_BLAST.BLAST_PLAN",
+      "successful": 4,
+      "total": 4,
+      "max_rows": 39277,
+      "avg_duration": 42.02,
+      "iterations": [
+        {
+          "table": "BLAST_PLAN",
+          "source": "PROD_WG.DRILL_BLAST.BLAST_PLAN",
+          "days_back": 1,
+          "start_time": "2026-01-23T11:54:42.876477",
+          "status": "SUCCESS",
+          "row_count": 18416,
+          "duration_seconds": 28.63,
+          "error": null,
+          "end_time": "2026-01-23T11:55:11.508576"
+        },
+        {
+          "table": "BLAST_PLAN",
+          "source": "PROD_WG.DRILL_BLAST.BLAST_PLAN",
+          "days_back": 7,
+          "start_time": "2026-01-23T11:55:11.508830",
+          "status": "SUCCESS",
+          "row_count": 22880,
+          "duration_seconds": 28.2,
+          "error": null,
+          "end_time": "2026-01-23T11:55:39.705250"
+        },
+        {
+          "table": "BLAST_PLAN",
+          "source": "PROD_WG.DRILL_BLAST.BLAST_PLAN",
+          "days_back": 14,
+          "start_time": "2026-01-23T11:55:39.705859",
+          "status": "SUCCESS",
+          "row_count": 27674,
+          "duration_seconds": 32.94,
+          "error": null,
+          "end_time": "2026-01-23T11:56:12.641417"
+        },
+        {
+          "table": "BLAST_PLAN",
+          "source": "PROD_WG.DRILL_BLAST.BLAST_PLAN",
+          "days_back": 30,
+          "start_time": "2026-01-23T11:56:12.643528",
+          "status": "SUCCESS",
+          "row_count": 39277,
+          "duration_seconds": 78.3,
+          "error": null,
+          "end_time": "2026-01-23T11:57:30.940762"
+        }
+      ]
+    },
+    "BLAST_PLAN_EXECUTION": {
+      "source": "PROD_WG.DRILL_BLAST.BLAST_PLAN_EXECUTION",
+      "successful": 4,
+      "total": 4,
+      "max_rows": 149489,
+      "avg_duration": 0.9,
+      "iterations": [
+        {
+          "table": "BLAST_PLAN_EXECUTION",
+          "source": "PROD_WG.DRILL_BLAST.BLAST_PLAN_EXECUTION",
+          "days_back": 1,
+          "start_time": "2026-01-23T11:57:30.942818",
+          "status": "SUCCESS",
+          "row_count": 21107,
+          "duration_seconds": 1.24,
+          "error": null,
+          "end_time": "2026-01-23T11:57:32.187119"
+        },
+        {
+          "table": "BLAST_PLAN_EXECUTION",
+          "source": "PROD_WG.DRILL_BLAST.BLAST_PLAN_EXECUTION",
+          "days_back": 7,
+          "start_time": "2026-01-23T11:57:32.187377",
+          "status": "SUCCESS",
+          "row_count": 28038,
+          "duration_seconds": 0.65,
+          "error": null,
+          "end_time": "2026-01-23T11:57:32.842307"
+        },
+        {
+          "table": "BLAST_PLAN_EXECUTION",
+          "source": "PROD_WG.DRILL_BLAST.BLAST_PLAN_EXECUTION",
+          "days_back": 14,
+          "start_time": "2026-01-23T11:57:32.842677",
+          "status": "SUCCESS",
+          "row_count": 40568,
+          "duration_seconds": 0.68,
+          "error": null,
+          "end_time": "2026-01-23T11:57:33.519425"
+        },
+        {
+          "table": "BLAST_PLAN_EXECUTION",
+          "source": "PROD_WG.DRILL_BLAST.BLAST_PLAN_EXECUTION",
+          "days_back": 30,
+          "start_time": "2026-01-23T11:57:33.519726",
+          "status": "SUCCESS",
+          "row_count": 149489,
+          "duration_seconds": 1.03,
+          "error": null,
+          "end_time": "2026-01-23T11:57:34.545693"
+        }
+      ]
+    },
+    "DRILLBLAST_EQUIPMENT": {
+      "source": "PROD_WG.DRILL_BLAST.DRILLBLAST_EQUIPMENT",
+      "successful": 4,
+      "total": 4,
+      "max_rows": 62,
+      "avg_duration": 0.39,
+      "iterations": [
+        {
+          "table": "DRILLBLAST_EQUIPMENT",
+          "source": "PROD_WG.DRILL_BLAST.DRILLBLAST_EQUIPMENT",
+          "days_back": 1,
+          "start_time": "2026-01-23T11:57:34.547441",
+          "status": "SUCCESS",
+          "row_count": 57,
+          "duration_seconds": 0.42,
+          "error": null,
+          "end_time": "2026-01-23T11:57:34.966484"
+        },
+        {
+          "table": "DRILLBLAST_EQUIPMENT",
+          "source": "PROD_WG.DRILL_BLAST.DRILLBLAST_EQUIPMENT",
+          "days_back": 7,
+          "start_time": "2026-01-23T11:57:34.967063",
+          "status": "SUCCESS",
+          "row_count": 59,
+          "duration_seconds": 0.33,
+          "error": null,
+          "end_time": "2026-01-23T11:57:35.300392"
+        },
+        {
+          "table": "DRILLBLAST_EQUIPMENT",
+          "source": "PROD_WG.DRILL_BLAST.DRILLBLAST_EQUIPMENT",
+          "days_back": 14,
+          "start_time": "2026-01-23T11:57:35.300706",
+          "status": "SUCCESS",
+          "row_count": 60,
+          "duration_seconds": 0.38,
+          "error": null,
+          "end_time": "2026-01-23T11:57:35.680173"
+        },
+        {
+          "table": "DRILLBLAST_EQUIPMENT",
+          "source": "PROD_WG.DRILL_BLAST.DRILLBLAST_EQUIPMENT",
+          "days_back": 30,
+          "start_time": "2026-01-23T11:57:35.680464",
+          "status": "SUCCESS",
+          "row_count": 62,
+          "duration_seconds": 0.42,
+          "error": null,
+          "end_time": "2026-01-23T11:57:36.103253"
+        }
+      ]
+    },
+    "DRILLBLAST_OPERATOR": {
+      "source": "PROD_WG.DRILL_BLAST.DRILLBLAST_OPERATOR",
+      "successful": 4,
+      "total": 4,
+      "max_rows": 5263,
+      "avg_duration": 0.53,
+      "iterations": [
+        {
+          "table": "DRILLBLAST_OPERATOR",
+          "source": "PROD_WG.DRILL_BLAST.DRILLBLAST_OPERATOR",
+          "days_back": 1,
+          "start_time": "2026-01-23T11:57:36.104305",
+          "status": "SUCCESS",
+          "row_count": 2147,
+          "duration_seconds": 0.6,
+          "error": null,
+          "end_time": "2026-01-23T11:57:36.701638"
+        },
+        {
+          "table": "DRILLBLAST_OPERATOR",
+          "source": "PROD_WG.DRILL_BLAST.DRILLBLAST_OPERATOR",
+          "days_back": 7,
+          "start_time": "2026-01-23T11:57:36.701894",
+          "status": "SUCCESS",
+          "row_count": 4872,
+          "duration_seconds": 0.62,
+          "error": null,
+          "end_time": "2026-01-23T11:57:37.319661"
+        },
+        {
+          "table": "DRILLBLAST_OPERATOR",
+          "source": "PROD_WG.DRILL_BLAST.DRILLBLAST_OPERATOR",
+          "days_back": 14,
+          "start_time": "2026-01-23T11:57:37.319884",
+          "status": "SUCCESS",
+          "row_count": 5041,
+          "duration_seconds": 0.4,
+          "error": null,
+          "end_time": "2026-01-23T11:57:37.724582"
+        },
+        {
+          "table": "DRILLBLAST_OPERATOR",
+          "source": "PROD_WG.DRILL_BLAST.DRILLBLAST_OPERATOR",
+          "days_back": 30,
+          "start_time": "2026-01-23T11:57:37.724790",
+          "status": "SUCCESS",
+          "row_count": 5263,
+          "duration_seconds": 0.5,
+          "error": null,
+          "end_time": "2026-01-23T11:57:38.220341"
+        }
+      ]
+    },
+    "DRILLBLAST_SHIFT": {
+      "source": "PROD_WG.DRILL_BLAST.DRILLBLAST_SHIFT",
+      "successful": 4,
+      "total": 4,
+      "max_rows": 30390,
+      "avg_duration": 21.16,
+      "iterations": [
+        {
+          "table": "DRILLBLAST_SHIFT",
+          "source": "PROD_WG.DRILL_BLAST.DRILLBLAST_SHIFT",
+          "days_back": 1,
+          "start_time": "2026-01-23T11:57:38.222301",
+          "status": "SUCCESS",
+          "row_count": 30332,
+          "duration_seconds": 25.22,
+          "error": null,
+          "end_time": "2026-01-23T11:58:03.439538"
+        },
+        {
+          "table": "DRILLBLAST_SHIFT",
+          "source": "PROD_WG.DRILL_BLAST.DRILLBLAST_SHIFT",
+          "days_back": 7,
+          "start_time": "2026-01-23T11:58:03.440122",
+          "status": "SUCCESS",
+          "row_count": 30344,
+          "duration_seconds": 32.48,
+          "error": null,
+          "end_time": "2026-01-23T11:58:35.922814"
+        },
+        {
+          "table": "DRILLBLAST_SHIFT",
+          "source": "PROD_WG.DRILL_BLAST.DRILLBLAST_SHIFT",
+          "days_back": 14,
+          "start_time": "2026-01-23T11:58:35.923473",
+          "status": "SUCCESS",
+          "row_count": 30358,
+          "duration_seconds": 13.28,
+          "error": null,
+          "end_time": "2026-01-23T11:58:49.202080"
+        },
+        {
+          "table": "DRILLBLAST_SHIFT",
+          "source": "PROD_WG.DRILL_BLAST.DRILLBLAST_SHIFT",
+          "days_back": 30,
+          "start_time": "2026-01-23T11:58:49.203226",
+          "status": "SUCCESS",
+          "row_count": 30390,
+          "duration_seconds": 13.66,
+          "error": null,
+          "end_time": "2026-01-23T11:59:02.859048"
+        }
+      ]
+    }
+  }
+}
