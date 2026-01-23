@@ -1,3 +1,6 @@
 azure-identity
 azure-kusto-data
 pyodbc
+
+# GitHub Copilot SDK (Technical Preview) - para agentes/chatbots
+github-copilot-sdk>=0.1.16
