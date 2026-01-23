@@ -2,10 +2,30 @@
   "metadata": {
     "title": "Mining Operations Data Model - Knowledge Base",
     "description": "Comprehensive specification of mining value chain metrics, KPIs, data sources, and business definitions for the SQL refactoring project",
-    "version": "1.0.0",
+    "version": "3.0.0",
     "created_date": "2026-01-22",
     "last_updated": "2026-01-22",
-    "purpose": "Guide SQL refactoring work to align with business objectives and data architecture"
+    "purpose": "Guide SQL refactoring work to align with business objectives and data architecture",
+    "semantic_model_ref": "adx_semantic_models/MORENCI_FINAL_VALIDATED.semantic.yaml",
+    "validation_report": "reports/final_validation_20260122_145741.json",
+    "validation_summary": {
+      "adx_queries": "7/7 validated (100%)",
+      "snowflake_queries": "10/10 validated (100%)",
+      "total_kpis": 17,
+      "last_validation": "2026-01-22T14:57:41"
+    },
+    "schema_discoveries": {
+      "snowflake_columns": {
+        "site_filter": "SITE_CODE (not site_name)",
+        "equipment_id": "EXCAV_ID, TRUCK_ID (join to LH_EQUIPMENT for names)",
+        "equipment_name": "EQUIP_NAME (in LH_EQUIPMENT table)"
+      },
+      "adx_columns": {
+        "sensor_identifier": "sensor_id (not Name)",
+        "sensor_value": "value (string, use todouble())",
+        "sensor_timestamp": "timestamp (not Timestamp)"
+      }
+    }
   },
   "project_context": {
     "objective": "Build a near real-time mining operations dashboard that tracks production performance across the entire value chain",
@@ -186,20 +206,57 @@
       "primary_indicators": {
         "dig_compliance": {
           "metric": "Dig compliance (%)",
-          "description": "Spatial compliance of shovel dig events relative to dig zones defined for current shift",
-          "sensible_range": "0-100%"
+          "description": "Spatial compliance of shovel dig points (or loads) relative the dig zones defined for the entire current shift. A compliant dig point is one that occurs within any of the zones defined for the entire current shift, per the 36H plan.",
+          "sensible_range": "0-100%",
+          "actual_definition": "Percent compliance of all dig events that have occurred in the last hour (rolling 60 minutes)",
+          "target_definition": "100% compliance",
+          "projected_definition": "Percent compliance of all actual and predicted dig points for the entire shift",
+          "snowflake_tables": [
+            "prod_wg.load_haul.lh_loading_cycle",
+            "prod_wg.load_haul.lh_bucket"
+          ],
+          "key_columns": ["Dig X", "Y", "Z (in lh_bucket)"],
+          "formula": "Actual = Sum of (if dig x,y,z are in dig zone then 1 else 0) / total dig x,y,z within rolling 60 minutes",
+          "notes": [
+            "Compliance is relative to the dig zone defined for the entire shift, not just to the dig zone defined for the current hour",
+            "If a dig happens at a different time than was specified in the plan, this is still a compliant dig if it occurred within any of the zones defined for the entire shift"
+          ]
         },
         "dig_rate": {
-          "metric": "Dig rate (TPOH)",
-          "description": "Total amount of material loaded by entire shovel fleet each hour",
-          "sensible_range": "30,000-35,000",
+          "metric": "Dig rate (TPH)",
+          "description": "The total amount of material loaded by the entire shovel fleet each hour",
+          "sensible_range": "up to 99,000",
+          "actual_definition": "Total tons loaded in the last hour (rolling 60 minutes)",
+          "target_definition": "Total tons to have been loaded over the last hour (rolling 60 minutes) by all shovels (as per the 36-hour plan which defines the specific rate in each hour of the shift)",
+          "projected_definition": "Total tons predicted to be loaded by the end of the shift, divided by number of hours in a shift (12h)",
+          "snowflake_tables": [
+            "prod_wg.load_haul.lh_loading_cycle"
+          ],
+          "key_columns": ["measured_payload_metric_tons", "Truck Tons"],
+          "time_basis": "Rolling 60 minutes based on cycle_start_ts_local; 36H is based on shift_id for the last three shifts",
           "secondary_indicators": [
             "Payload"
           ]
         },
         "priority_shovels": {
-          "metric": "Top 5 Shovels",
-          "description": "Not by material type"
+          "metric": "Priority Shovels (Top 5)",
+          "description": "Drill down on dig compliance and dig rate for the top 5 priority shovels. Priority as defined in the 36-hour plan.",
+          "compliance": {
+            "metric": "Compliance (%)",
+            "sensible_range": "0-100%",
+            "definition": "Percentage of the dig points for that specific shovel that are within the defined in-shift dig zone"
+          },
+          "rate": {
+            "metric": "Rate (TPH)",
+            "sensible_range": "up to 5,000 TPH",
+            "definition": "Total tons loaded in the last hour (rolling 60 minutes) per each priority shovel",
+            "data_source": "Dispatch Tables (from Tyler / CHOQUEHUAITA MACHACA, JOSE ALONSO)"
+          },
+          "open_questions": [
+            "How can we identify the priority?",
+            "What is the trend value - Per Standard?",
+            "Do we need to calculate the metrics using the loading cycle to identify the rate (total tons loaded) / bucket to identify the dig zone?"
+          ]
         },
         "rate": {
           "metric": "Average digging rate",
@@ -271,23 +328,40 @@
       "step_type": "Process",
       "section": "Production Performance",
       "primary_indicators": {
-        "number_of_trucks": {
-          "metric": "Number of trucks (qty)",
-          "description": "Multiple calculation alternatives based on shift performance vs plan",
-          "sensible_range": "100-120 (mechanically available: higher end)",
-          "alternatives": [
-            "Performance for shift so far, relative to plan for shift so far",
-            "Performance for shift so far, relative to total shift plan average",
-            "Current performance relative to plan for this point in shift"
+        "ready_of_trucks": {
+          "metric": "Ready of trucks (qty)",
+          "description": "The number of mechanically available trucks (i.e., not in maintenance)",
+          "sensible_range": "100-130 (mechanically available: higher end)",
+          "actual_definition": "The average number of trucks that have been operating in the current hour",
+          "target_definition": "The average number of trucks to be available over the total shift",
+          "projected_definition": "The prediction of the average number of trucks will have been available for operation during the full shift",
+          "snowflake_tables": [
+            "prod_wg.load_haul.lh_equipment_status_event"
           ],
-          "clarification": "Definition of 'active operation' or 'being utilized' - Engine on?",
+          "key_columns": ["count(number of distinct trucks)"],
+          "open_questions": [
+            "How to check the equipment status? If they are mechanically available? Not in maintenance?",
+            "All the equipments in the haul cycle is considered as the mechanically available trucks."
+          ],
           "secondary_indicators": [
             "Slow trucks"
           ]
         },
         "cycle_time": {
           "metric": "Cycle Time (min)",
-          "sensible_range": "35-45 minutes",
+          "description": "The average round trip time across the entire truck fleet",
+          "sensible_range": "35-45 min",
+          "actual_definition": "The sum of the time taken for every truck cycle completed in last hour (rolling 60 minutes) divided by the total number of truck cycles completed in the last hour (rolling 60 minutes)",
+          "target_definition": "Average planned cycle time for the last hour (rolling 60 minute) across the full fleet",
+          "projected_definition": "The predicted sum of the time taken for every truck cycle that will be completed in the full shift (beginning to end), divided by the predicted number of truck cycles to be completed in the full shift",
+          "snowflake_tables": [
+            "prod_wg.load_haul.lh_haul_cycle"
+          ],
+          "key_columns": ["Avg(total_cycle_duration_calendar_mins)"],
+          "time_basis": "Rolling 60 minutes based on cycle_start_ts_local; 36H is based on shift_id for the last three shifts",
+          "open_questions": [
+            "How can we calculate the planned cycle time?"
+          ],
           "secondary_indicators": [
             "Spillage"
           ]
@@ -302,8 +376,19 @@
         },
         "dump_plan_compliance": {
           "metric": "Dump plan compliance (%)",
-          "description": "Total tons moved from correct source to correct destination, divided by total tons moved",
-          "sensible_range": "0%-100%",
+          "description": "The proportion (based on weight) of hauled material that is dumped at its designated location in compliance to the 36H plan",
+          "sensible_range": "0-100%",
+          "actual_definition": "Percentage of dumped tons so far in the current hour that occurred at the location defined for the material based on its color definition at the start of the shift",
+          "target_definition": "100% compliance",
+          "projected_definition": "Percent compliance of all actual and predicted dumped tons for the entire shift",
+          "snowflake_tables": [
+            "prod_wg.load_haul.lh_haul_cycle"
+          ],
+          "key_columns": ["sum(Report_payload_short_tons)", "dump_loc_name"],
+          "open_questions": [
+            "How can we correlate the information between the materials --> dump location using the haul cycle?",
+            "materials_id --> dump_loc_name"
+          ],
           "notes": [
             "In-shift color change results in 'non-compliant movement'",
             "Misroute results in 'non-compliant movement'",
@@ -392,33 +477,53 @@
       "subsections": {
         "mill": {
           "tons_delivered": {
-            "description": "Total lbs of copper delivered to Mill Crusher (CR2 or CR3)",
+            "metric": "Mill - tons delivered",
+            "description": "Total tons of material dumped at Mill location",
+            "sensible_range": "total per shift: ~108kt",
+            "actual_definition": "Sum of tons of material delivered to each destination so far in the current shift",
+            "target_definition": "The total tons of material to be delivered to each destination over the duration of the full shift",
+            "projected_definition": "The total tons of material predicted to have been delivered during the entire shift (beginning to end) to each destination",
+            "snowflake_tables": [
+              "prod_wg.load_haul.lh_haul_cycle"
+            ],
+            "formula": "If dump_location_name like 'Mill' then sum(Report_payload_short_tons)",
+            "open_questions": [
+              "Each additional site may have a different sensor source view - Whether we need to combine / individual pipeline to Snowflake?",
+              "How can we identify the list of PI tags?"
+            ],
             "secondary_indicators": [
               "Mill - Time building up (%)"
             ]
           },
           "crusher_rate": {
-            "metric": "Mill - Crusher Rate (TPOH)",
-            "sensible_range": "7,000-9,000",
-            "calculation_options": [
-              "Current rate vs rate planned at this point in shift",
-              "Average rate for shift so far vs average rate planned for shift so far"
-            ]
+            "metric": "Mill - Crusher Rate (TPH)",
+            "description": "The amount of material processed each hour",
+            "sensible_range": "up to 9,000",
+            "actual_definition": "Tons actually processed in the previous hour (rolling 60 minutes)",
+            "target_definition": "Tons to be processed in the previous hour (rolling 60 minutes) as per the 36H plan (Plan to define the specific rate in each hour of the shift)",
+            "projected_definition": "Total tons predicted to be processed by the end of the shift, divided by number of hours in a shift (12)",
+            "data_source": "PI Tag - Need analysis / POC"
           },
           "mill_rate": {
-            "metric": "Mill - Mill Rate (TPOH)",
+            "metric": "Mill - Mill Rate (TPH)",
+            "description": "The amount of material processed each hour",
             "sensible_range": "7,000-9,000",
+            "actual_definition": "Tons actually processed in the previous hour (rolling 60 minutes)",
+            "target_definition": "Tons to be processed in the previous hour (rolling 60 minutes) as per the 36H plan (Plan to define the specific rate in each hour of the shift)",
+            "projected_definition": "Total tons predicted to be processed by the end of the shift, divided by number of hours in a shift (12)",
+            "data_source": "PI Tag - Need analysis / POC",
             "secondary_indicators": [
               "Mill - Time drawing down (%)"
             ]
           },
           "strategy_compliance": {
             "metric": "Mill - Strategy compliance",
+            "description": "Indicators of compliance to the planned strategy for the management of IOS stockpiles for Mill",
             "sensible_range": "250,000-500,000",
-            "calculation_options": [
-              "IOS stockpile volume increase/decrease over past hour relative to plan",
-              "IOS stockpile volume increase/decrease over shift so far relative to plan"
-            ],
+            "actual_definition": "The overall direction and rate of change of the IOS stock level that occurred during the last hour (a rolling 60-minute window)",
+            "target_definition": "Direction and rate of change of the IOS stock level to be occurring for this current period of the shift",
+            "projected_definition": "The predicted level of the stockpile at the end of the shift",
+            "data_source": "PI Tag - Need analysis / POC",
             "secondary_indicators": [
               "Mill - Tons pulled"
             ]
@@ -426,31 +531,63 @@
         },
         "mfl": {
           "tons_delivered": {
-            "description": "Total lbs of copper delivered to MFL Crusher (CR2 or CR3)",
+            "metric": "MFL - tons delivered",
+            "description": "Total tons of material dumped at MFL location",
+            "sensible_range": "total per shift: ~60kt",
+            "actual_definition": "Sum of tons of material delivered to each destination so far in the current shift",
+            "target_definition": "The total tons of material to be delivered to each destination over the duration of the full shift",
+            "projected_definition": "The total tons of material predicted to have been delivered during the entire shift (beginning to end) to each destination",
+            "snowflake_tables": [
+              "prod_wg.load_haul.lh_haul_cycle"
+            ],
+            "formula": "If dump_location_name like 'MFL' then sum(Report_payload_short_tons)",
             "secondary_indicators": [
               "MFL - Time building up (%)"
             ]
           },
           "crusher_rate": {
             "metric": "MFL - Crusher Rate (TPOH)",
-            "sensible_range": "4,000-5,000",
+            "description": "Option 1: Current rate vs. rate planned at this point in the shift. Option 2: Average rate for the shift so far vs. average rate planned for the shift so far",
+            "sensible_range": "up to 5,000",
+            "actual_definition": "Tons actually processed in the previous hour (rolling 60 minutes)",
+            "target_definition": "Tons to be processed in the previous hour (rolling 60 minutes) as per the 36H plan (Plan to define the specific rate in each hour of the shift)",
+            "projected_definition": "Total tons predicted to be processed by the end of the shift, divided by number of hours in a shift (12)",
+            "data_source": "PI Tag - Need analysis / POC",
             "secondary_indicators": [
               "MFL - Time drawing down (%)"
             ]
           },
-          "fos_rate": {
-            "metric": "MFL - FOS Rate (TPOH)",
-            "sensible_range": "4,000-5,000"
+          "fcp_rate": {
+            "metric": "MFL - FCP Rate (TPOH)",
+            "description": "Option 1: Current rate vs rate planned at this point in the shift. Option 2: Average rate for the shift so far vs. average rate planned for the shift so far",
+            "sensible_range": "4,000-5,000",
+            "actual_definition": "Tons actually processed in the previous hour (rolling 60 minutes)",
+            "target_definition": "Tons to be processed in the previous hour (rolling 60 minutes) as per the 36H plan (Plan to define the specific rate in each hour of the shift)",
+            "projected_definition": "Total tons predicted to be processed by the end of the shift, divided by number of hours in a shift (12)",
+            "data_source": "PI Tag - Need analysis / POC"
           },
           "strategy_compliance": {
             "metric": "MFL - Strategy compliance",
-            "sensible_range": "50,000-180,000 (capacity ?)"
+            "description": "Indicators of compliance to the planned strategy for the management of IOS stockpiles for MFL",
+            "sensible_range": "50,000-180,000 (capacity ?)",
+            "actual_definition": "The overall direction and rate of change of the IOS stock level that occurred during the last hour (a rolling 60-minute window)",
+            "target_definition": "Direction and rate of change of the IOS stock level to be occurring for this current period of the shift",
+            "projected_definition": "The predicted level of the stockpile at the end of the shift",
+            "data_source": "PI Tag - Need analysis / POC"
           }
         },
         "rom": {
           "tons_delivered": {
             "metric": "ROM - tons delivered",
-            "sensible_range": "Total ~500ktpd, ~21ktph"
+            "description": "Total tons of material dumped at ROM location",
+            "sensible_range": "total per shift: ~250kt",
+            "actual_definition": "Sum of tons of material delivered to each destination so far in the current shift",
+            "target_definition": "The total tons of material to be delivered to each destination over the duration of the full shift",
+            "projected_definition": "The total tons of material predicted to have been delivered during the entire shift (beginning to end) to each destination",
+            "snowflake_tables": [
+              "prod_wg.load_haul.lh_haul_cycle"
+            ],
+            "formula": "If dump_location_name like 'ROM' then sum(Report_payload_short_tons)"
           }
         }
       }
