@@ -128,7 +128,7 @@ CREATE OR REPLACE TABLE DEV_API_REF.FUSE.BLAST_PLAN_INCR (
 -- =============================================================================
 -- STORED PROCEDURE
 -- =============================================================================
-CREATE OR REPLACE PROCEDURE DEV_API_REF.FUSE.SP_BLAST_PLAN_INCR(
+CREATE OR REPLACE PROCEDURE DEV_API_REF.FUSE.BLAST_PLAN_INCR_P(
     P_DAYS_BACK FLOAT DEFAULT 3,
     P_MAX_DAYS FLOAT DEFAULT 30
 )
@@ -138,7 +138,7 @@ EXECUTE AS CALLER
 AS
 $$
     var result = {
-        procedure: 'SP_BLAST_PLAN_INCR',
+        procedure: 'BLAST_PLAN_INCR_P',
         start_time: new Date().toISOString(),
         rows_merged: 0,
         rows_inserted: 0,
@@ -403,10 +403,10 @@ $$;
 -- USAGE EXAMPLES
 -- =============================================================================
 -- Default execution (3 days lookback)
--- CALL DEV_API_REF.FUSE.SP_BLAST_PLAN_INCR();
+-- CALL DEV_API_REF.FUSE.BLAST_PLAN_INCR_P();
 
 -- Custom lookback period
--- CALL DEV_API_REF.FUSE.SP_BLAST_PLAN_INCR(7, 30);
+-- CALL DEV_API_REF.FUSE.BLAST_PLAN_INCR_P(7, 30);
 
 -- Full reload (30 days max)
--- CALL DEV_API_REF.FUSE.SP_BLAST_PLAN_INCR(30, 30);
+-- CALL DEV_API_REF.FUSE.BLAST_PLAN_INCR_P(30, 30);

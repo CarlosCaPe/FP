@@ -16,7 +16,7 @@ CREATE OR REPLACE TABLE DEV_API_REF.FUSE.BL_DW_HOLE_INCR (
     BLASTNAME                           VARCHAR(500) COLLATE 'en-ci',
     MODIFIED_BLASTNAME                  VARCHAR(500) COLLATE 'en-ci',
     BLASTID                             NUMBER(10,0),
-    ROW                                 VARCHAR(500) COLLATE 'en-ci',
+    "ROW"                               VARCHAR(500) COLLATE 'en-ci',
     ECHELON                             NUMBER(10,0),
     STATUS                              VARCHAR(500) COLLATE 'en-ci',
     LASTKNOWNDEPTH                      FLOAT,
@@ -113,7 +113,7 @@ WHEN MATCHED AND HASH(src.name, src.status, src.blastid, src.lastknowndepth, src
 THEN UPDATE SET
     tgt.name = src.name, tgt.modified_name = src.modified_name,
     tgt.blastname = src.blastname, tgt.modified_blastname = src.modified_blastname,
-    tgt.blastid = src.blastid, tgt.row = src.row, tgt.echelon = src.echelon, tgt.status = src.status,
+    tgt.blastid = src.blastid, tgt."ROW" = src."ROW", tgt.echelon = src.echelon, tgt.status = src.status,
     tgt.lastknowndepth = src.lastknowndepth, tgt.lastknownwater = src.lastknownwater,
     tgt.lastknownwetsides = src.lastknownwetsides, tgt.lastknowntemperature = src.lastknowntemperature,
     tgt.lastknowntemperaturetime = src.lastknowntemperaturetime,
@@ -150,7 +150,7 @@ THEN UPDATE SET
     tgt.refreshedtime = src.refreshedtime, tgt.deleted = src.deleted,
     tgt.dw_file_ts_utc = src.dw_file_ts_utc, tgt.dw_modify_ts = CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ
 WHEN NOT MATCHED THEN INSERT (
-    orig_src_id, site_code, id, name, modified_name, blastname, modified_blastname, blastid, row, echelon, status,
+    orig_src_id, site_code, id, name, modified_name, blastname, modified_blastname, blastid, "ROW", echelon, status,
     lastknowndepth, lastknownwater, lastknownwetsides, lastknowntemperature, lastknowntemperaturetime,
     previoustemperature, previoustemperaturetime, temperaturerateofchange, designtime, drilledtime,
     lastdipdepth, lastdippedtime, lastbackfillingdipdepth, lastbackfillingdiptime,
@@ -167,7 +167,7 @@ WHEN NOT MATCHED THEN INSERT (
     refreshedtime, deleted, dw_file_ts_utc, dw_logical_delete_flag, dw_load_ts, dw_modify_ts
 ) VALUES (
     src.orig_src_id, src.site_code, src.id, src.name, src.modified_name, src.blastname, src.modified_blastname,
-    src.blastid, src.row, src.echelon, src.status,
+    src.blastid, src."ROW", src.echelon, src.status,
     src.lastknowndepth, src.lastknownwater, src.lastknownwetsides, src.lastknowntemperature, src.lastknowntemperaturetime,
     src.previoustemperature, src.previoustemperaturetime, src.temperaturerateofchange, src.designtime, src.drilledtime,
     src.lastdipdepth, src.lastdippedtime, src.lastbackfillingdipdepth, src.lastbackfillingdiptime,

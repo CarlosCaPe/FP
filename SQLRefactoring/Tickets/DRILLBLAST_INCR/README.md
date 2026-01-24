@@ -52,6 +52,16 @@ Following the pattern established by Hidayath for `DRILLBLAST_DRILL_CYCLE_CT_P`:
 
 ## Usage
 
+### Pre-Deployment Validation (REQUIRED)
+
+```powershell
+# Run naming convention validator BEFORE deploying
+cd C:\Users\ccarrill2\Documents\repos\FP\SQLRefactoring\Tickets\DRILLBLAST_INCR
+py -3.12 validate_naming.py
+```
+
+This will catch any naming convention issues (like SP_ prefix instead of _P suffix) BEFORE deployment.
+
 ### Deploy to Snowflake
 
 ```sql
@@ -63,6 +73,14 @@ CALL DEV_API_REF.FUSE.LH_HAUL_CYCLE_INCR_P('30');
 
 -- Step 4: Verify data
 SELECT COUNT(*) FROM DEV_API_REF.FUSE.LH_HAUL_CYCLE_INCR;
+```
+
+### Post-Deployment Verification (REQUIRED)
+
+```powershell
+# Run this to verify all 22 objects exist with correct names
+cd C:\Users\ccarrill2\Documents\repos\FP\SQLRefactoring\Tickets\DRILLBLAST_INCR
+py -3.12 verify_all_objects.py
 ```
 
 ### Regular Refresh
@@ -109,4 +127,66 @@ All INCR tables include:
 - Original pattern: Hidayath's `DRILLBLAST_DRILL_CYCLE_CT_P`
 
 ---
-*Created: 2026-01-23 | Author: Carlos Carrillo*
+
+## ⚠️ NAMING CONVENTIONS (CRITICAL)
+
+> **Lesson Learned (2026-01-23):** Deployment failed because 4 SQL files had incorrect procedure names with `SP_` prefix instead of `_P` suffix. This caused Vikas's Function Apps to fail finding the expected procedures.
+
+### Required Naming Pattern
+
+| Object Type | Pattern | Example |
+|-------------|---------|---------|
+| Tables | `{NAME}_INCR` | `BLAST_PLAN_INCR` |
+| Procedures | `{NAME}_INCR_P` | `BLAST_PLAN_INCR_P(VARCHAR DEFAULT '3')` |
+
+### ❌ INCORRECT (Do NOT use)
+```sql
+CREATE OR REPLACE PROCEDURE DEV_API_REF.FUSE.SP_BLAST_PLAN_INCR(...)  -- WRONG: SP_ prefix
+```
+
+### ✅ CORRECT (Always use this)
+```sql
+CREATE OR REPLACE PROCEDURE DEV_API_REF.FUSE.BLAST_PLAN_INCR_P(...)  -- CORRECT: _P suffix
+```
+
+### Deployment Checklist
+
+Before deploying to Snowflake, verify:
+
+- [ ] **All procedures end with `_P` suffix** (not `SP_` prefix)
+- [ ] **Parameter signature matches**: `(VARCHAR DEFAULT '3')`
+- [ ] **Run `verify_all_objects.py`** to confirm all 22 objects exist with correct names
+- [ ] **Test each procedure** with: `CALL DEV_API_REF.FUSE.{NAME}_INCR_P('3');`
+
+### Expected Objects (Reference for Vikas's Function Apps)
+
+```
+Tables (11):
+  DEV_API_REF.FUSE.BL_DW_BLAST_INCR
+  DEV_API_REF.FUSE.BL_DW_BLASTPROPERTYVALUE_INCR
+  DEV_API_REF.FUSE.BL_DW_HOLE_INCR
+  DEV_API_REF.FUSE.BLAST_PLAN_INCR
+  DEV_API_REF.FUSE.BLAST_PLAN_EXECUTION_INCR
+  DEV_API_REF.FUSE.DRILL_CYCLE_INCR
+  DEV_API_REF.FUSE.DRILL_PLAN_INCR
+  DEV_API_REF.FUSE.DRILLBLAST_EQUIPMENT_INCR
+  DEV_API_REF.FUSE.DRILLBLAST_OPERATOR_INCR
+  DEV_API_REF.FUSE.DRILLBLAST_SHIFT_INCR
+  DEV_API_REF.FUSE.LH_HAUL_CYCLE_INCR
+
+Procedures (11):
+  DEV_API_REF.FUSE.BL_DW_BLAST_INCR_P(VARCHAR DEFAULT '3')
+  DEV_API_REF.FUSE.BL_DW_BLASTPROPERTYVALUE_INCR_P(VARCHAR DEFAULT '3')
+  DEV_API_REF.FUSE.BL_DW_HOLE_INCR_P(VARCHAR DEFAULT '3')
+  DEV_API_REF.FUSE.BLAST_PLAN_INCR_P(VARCHAR DEFAULT '3')
+  DEV_API_REF.FUSE.BLAST_PLAN_EXECUTION_INCR_P(VARCHAR DEFAULT '3')
+  DEV_API_REF.FUSE.DRILL_CYCLE_INCR_P(VARCHAR DEFAULT '3')
+  DEV_API_REF.FUSE.DRILL_PLAN_INCR_P(VARCHAR DEFAULT '3')
+  DEV_API_REF.FUSE.DRILLBLAST_EQUIPMENT_INCR_P(VARCHAR DEFAULT '3')
+  DEV_API_REF.FUSE.DRILLBLAST_OPERATOR_INCR_P(VARCHAR DEFAULT '3')
+  DEV_API_REF.FUSE.DRILLBLAST_SHIFT_INCR_P(VARCHAR DEFAULT '3')
+  DEV_API_REF.FUSE.LH_HAUL_CYCLE_INCR_P(VARCHAR DEFAULT '3')
+```
+
+---
+*Created: 2026-01-23 | Updated: 2026-01-23 | Author: Carlos Carrillo*

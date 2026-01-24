@@ -177,7 +177,7 @@ CREATE OR REPLACE TABLE DEV_API_REF.FUSE.DRILL_CYCLE_INCR (
 -- =============================================================================
 -- STORED PROCEDURE
 -- =============================================================================
-CREATE OR REPLACE PROCEDURE DEV_API_REF.FUSE.SP_DRILL_CYCLE_INCR(
+CREATE OR REPLACE PROCEDURE DEV_API_REF.FUSE.DRILL_CYCLE_INCR_P(
     P_DAYS_BACK FLOAT DEFAULT 3,
     P_MAX_DAYS FLOAT DEFAULT 30
 )
@@ -187,7 +187,7 @@ EXECUTE AS CALLER
 AS
 $$
     var result = {
-        procedure: 'SP_DRILL_CYCLE_INCR',
+        procedure: 'DRILL_CYCLE_INCR_P',
         start_time: new Date().toISOString(),
         rows_merged: 0,
         rows_inserted: 0,
@@ -561,10 +561,10 @@ $$;
 -- USAGE EXAMPLES
 -- =============================================================================
 -- Default execution (3 days lookback)
--- CALL DEV_API_REF.FUSE.SP_DRILL_CYCLE_INCR();
+-- CALL DEV_API_REF.FUSE.DRILL_CYCLE_INCR_P();
 
 -- Custom lookback period
--- CALL DEV_API_REF.FUSE.SP_DRILL_CYCLE_INCR(7, 30);
+-- CALL DEV_API_REF.FUSE.DRILL_CYCLE_INCR_P(7, 30);
 
 -- Full reload (30 days max)
--- CALL DEV_API_REF.FUSE.SP_DRILL_CYCLE_INCR(30, 30);
+-- CALL DEV_API_REF.FUSE.DRILL_CYCLE_INCR_P(30, 30);
