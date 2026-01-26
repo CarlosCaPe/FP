@@ -68,9 +68,10 @@ OUTPUT_BASE = os.path.join(os.path.dirname(__file__), "DDL-Scripts")
 # =============================================================================
 # Template replacement - convert hardcoded env to Jinja2 templates
 # =============================================================================
-def templatize_ddl(ddl: str) -> str:
+def templatize_ddl(ddl: str, object_type: str, object_name: str) -> str:
     """
     Replace hardcoded database references with Jinja2 template variables.
+    Also add full qualified name to CREATE statements.
     
     Target database (DEV/TEST/PROD_API_REF) -> {{ envi }}_API_REF
     Source database (PROD_WG) -> {{ RO_PROD }}_WG (always PROD for source)
@@ -80,6 +81,36 @@ def templatize_ddl(ddl: str) -> str:
     
     # Source: PROD_WG (read from production) -> {{ RO_PROD }}_WG
     ddl = re.sub(r'PROD_WG', r'{{ RO_PROD }}_WG', ddl, flags=re.IGNORECASE)
+    
+    # Add full qualified name to CREATE TABLE statements
+    # Pattern: create or replace TABLE TABLE_NAME (
+    # Replace with: create or replace TABLE {{ envi }}_API_REF.FUSE.TABLE_NAME (
+    if object_type == 'TABLE':
+        ddl = re.sub(
+            rf'(create\s+or\s+replace\s+TABLE\s+){re.escape(object_name)}(\s*\()',
+            rf'\g<1>{{{{ envi }}}}_API_REF.FUSE.{object_name}\2',
+            ddl,
+            flags=re.IGNORECASE
+        )
+    
+    # Add full qualified name to CREATE PROCEDURE statements
+    # Pattern: CREATE OR REPLACE PROCEDURE "PROC_NAME"(
+    # Replace with: CREATE OR REPLACE PROCEDURE {{ envi }}_API_REF.FUSE.PROC_NAME(
+    if object_type == 'PROCEDURE':
+        # Handle quoted procedure names
+        ddl = re.sub(
+            rf'(CREATE\s+OR\s+REPLACE\s+PROCEDURE\s+)"{re.escape(object_name)}"(\s*\()',
+            rf'\g<1>{{{{ envi }}}}_API_REF.FUSE.{object_name}\2',
+            ddl,
+            flags=re.IGNORECASE
+        )
+        # Handle unquoted procedure names
+        ddl = re.sub(
+            rf'(CREATE\s+OR\s+REPLACE\s+PROCEDURE\s+){re.escape(object_name)}(\s*\()',
+            rf'\g<1>{{{{ envi }}}}_API_REF.FUSE.{object_name}\2',
+            ddl,
+            flags=re.IGNORECASE
+        )
     
     return ddl
 
@@ -126,8 +157,8 @@ def main():
             cursor.execute(f"SELECT GET_DDL('TABLE', '{SOURCE_DATABASE}.{SCHEMA}.{table_name}')")
             ddl = cursor.fetchone()[0]
             
-            # Apply template variable
-            ddl = templatize_ddl(ddl)
+            # Apply template variable and add full qualified name
+            ddl = templatize_ddl(ddl, 'TABLE', table_name)
             
             # Write file (no header, just clean DDL like in the repo)
             file_path = os.path.join(tables_dir, f"R__{table_name}.sql")
@@ -156,8 +187,8 @@ def main():
             cursor.execute(f"SELECT GET_DDL('PROCEDURE', '{SOURCE_DATABASE}.{SCHEMA}.{proc_name}(VARCHAR)')")
             ddl = cursor.fetchone()[0]
             
-            # Apply template variable
-            ddl = templatize_ddl(ddl)
+            # Apply template variable and add full qualified name
+            ddl = templatize_ddl(ddl, 'PROCEDURE', proc_name)
             
             # Write file
             file_path = os.path.join(procs_dir, f"R__{proc_name}.sql")
