@@ -1,0 +1,391 @@
+{
+  "metadata": {
+    "title": "IROC Video Wall - Production Performance Knowledge Base",
+    "version": "5.0.0",
+    "generated_at": "2026-01-23",
+    "purpose": "LH&IOS Production Performance Section for CC6 IROC Video Wall",
+    "source_document": "IROC Video Wall Production Performance Section Requirements Definition",
+    "sites": ["Morenci", "Bagdad", "Miami", "Climax", "Sierrita", "NewMexico", "CerroVerde"]
+  },
+  
+  "connections": {
+    "snowflake": {
+      "account": "FCX-NA",
+      "warehouse": "WH_BATCH_DE_NONPROD",
+      "database": "PROD_WG",
+      "schema": "LOAD_HAUL",
+      "authentication": "externalbrowser",
+      "tables": {
+        "LH_LOADING_CYCLE": "Shovel loading events and dig compliance",
+        "LH_HAUL_CYCLE": "Truck haul cycles and dump compliance",
+        "LH_EQUIPMENT": "Equipment master data",
+        "LH_BUCKET": "Dig point coordinates for spatial compliance",
+        "LH_EQUIPMENT_STATUS_EVENT": "Equipment availability tracking"
+      }
+    },
+    "adx": {
+      "cluster": "https://fctsnaproddatexp02.westus2.kusto.windows.net",
+      "authentication": "InteractiveBrowserCredential",
+      "functions": ["FCTSCURRENT()", "FCTS()"],
+      "databases": {
+        "Morenci": {
+          "pi_tags": {
+            "mill_crusher": "MOR-CR03_WI00317_PV",
+            "mfl_crusher": "MOR-CR02_WI01203_PV",
+            "ios_main": "MOR-CC06_LI00601_PV",
+            "ios_small": "MOR-CC10_LI0102_PV"
+          }
+        },
+        "Bagdad": {
+          "pi_tags": {
+            "crusher": "BAG-GL4CrusherMotorMotorLoad"
+          }
+        }
+      }
+    }
+  },
+  
+  "global_standards": {
+    "actual": {
+      "definition": "Performance during rolling 60 minutes up until current moment",
+      "reset": "At start of shift (first hour may have spurious results)"
+    },
+    "actual_color_code": {
+      "basis": "Ratio of Actual to Target",
+      "green": ">= 90%",
+      "orange": "80% to 90%",
+      "red": "< 80%"
+    },
+    "target": {
+      "definition": "Rolling weighted average for last 60 minutes from 36H plan",
+      "note": "36H plan defines targets for each hour of shift"
+    },
+    "shift_target": {
+      "definition": "Average of hourly targets from 36H plan",
+      "note": "May not be displayed, used for Projected color coding"
+    },
+    "projected": {
+      "definition": "Predicted average hourly performance for entire shift",
+      "includes": "Actual portion completed + predicted portion remaining"
+    },
+    "projected_color_code": {
+      "basis": "Ratio of Projected to Shift Target",
+      "green": ">= 90%",
+      "orange": "80% to 90%",
+      "red": "< 80%"
+    },
+    "trend": {
+      "definition": "Ratio of current Actual to Actual from 1 hour ago",
+      "format": "Always include sign (+ or -)",
+      "up_arrow": "Current > Previous (1 hour ago)",
+      "down_arrow": "Current < Previous (1 hour ago)"
+    },
+    "trend_color_code": {
+      "green": "Increase (any positive change)",
+      "orange": "Decrease less than 10%",
+      "red": "Decrease greater than 10%"
+    }
+  },
+  
+  "sections": {
+    "loading": {
+      "name": "Loading",
+      "icon": "⚙️",
+      "metrics": {
+        "dig_compliance": {
+          "id": "01",
+          "label": "Dig Compliance (%)",
+          "time_window": "Rolling 60 min",
+          "description": "Spatial compliance of shovel dig points relative to defined dig zones",
+          "formula": "(Count of Compliant Events / Count of Total Events) * 100",
+          "actual": "Percent compliance of all dig events in past hour",
+          "target": "100%",
+          "projected": "Percent compliance of all actual and predicted dig points for entire shift",
+          "range": {"min": 0, "max": 100, "unit": "%"},
+          "source": "SNOWFLAKE",
+          "exceptions": [
+            "Compliance is relative to dig zones defined for ENTIRE SHIFT",
+            "A dig at different time than planned is still compliant if within any shift-defined zone"
+          ],
+          "display_elements": [
+            {"id": 1, "type": "label", "value": "Dig Compliance (%)"},
+            {"id": 2, "type": "actual"},
+            {"id": 3, "type": "projected"},
+            {"id": 4, "type": "trend_indicator"},
+            {"id": 5, "type": "trend_value"},
+            {"id": 6, "type": "progress_bar"},
+            {"id": 7, "type": "target"}
+          ]
+        },
+        "dig_rate": {
+          "id": "02",
+          "label": "Dig Rate (TPRH)",
+          "alternate_label": "Total Fleet Dig Rate (TPH)",
+          "time_window": "Rolling 60 min",
+          "description": "Total amount of material loaded by entire shovel fleet each hour",
+          "actual": "Total tons loaded in past hour (rolling 60 min)",
+          "target": "Total tons per 36H plan for past hour",
+          "projected": "Total tons predicted by end of shift / 12 hours",
+          "range": {"min": 0, "max": 99000, "unit": "TPH"},
+          "source": "SNOWFLAKE",
+          "column": "MEASURED_PAYLOAD_METRIC_TONS"
+        },
+        "priority_shovels": {
+          "id": "03",
+          "label": "Priority Shovels",
+          "time_window": "Rolling 60 min",
+          "description": "Top 5 priority shovels with dig compliance and dig rate",
+          "columns": [
+            {"name": "Shovel ID", "type": "string"},
+            {"name": "Material Type", "type": "enum", "values": ["Mill", "MFL", "ROM"]},
+            {"name": "Compliance", "type": "percentage", "range": "0-100%"},
+            {"name": "Rate", "type": "number", "range": "0-6500 TPH"},
+            {"name": "Trend", "type": "indicator"}
+          ],
+          "source": "SNOWFLAKE"
+        }
+      }
+    },
+    
+    "haulage": {
+      "name": "Haulage",
+      "icon": "🚛",
+      "metrics": {
+        "cycle_time": {
+          "id": "05",
+          "label": "Cycle Time (min)",
+          "time_window": "Rolling 60 min",
+          "description": "Average round trip time across entire truck fleet",
+          "actual": "Sum of time for all truck cycles in past hour / total cycles",
+          "target": "Average planned cycle time for past hour across full fleet",
+          "projected": "Predicted sum of time for all shift cycles / predicted cycles",
+          "range": {"min": 35, "max": 45, "unit": "min"},
+          "source": "SNOWFLAKE",
+          "column": "TOTAL_CYCLE_DURATION_CALENDAR_MINS",
+          "visualization_exception": {
+            "type": "centered_target",
+            "target_position": "center",
+            "bar_range": "target ± 25%",
+            "color_thresholds": {
+              "green": "within 5% of target",
+              "orange": "within 15% of target",
+              "red": "deviation > 15%"
+            }
+          }
+        },
+        "truck_count": {
+          "id": "04",
+          "label": "# of Trucks (Qty)",
+          "alternate_label": "Ready Trucks (Qty)",
+          "time_window": "Rolling 60 min",
+          "status": "WIP",
+          "description": "Number of mechanically available trucks (not in maintenance)",
+          "actual": "Average number of trucks actively hauling during past hour",
+          "target_a": "Average trucks planned to be available during past hour",
+          "target_b": "Average trucks required to haul planned material",
+          "projected": "Prediction of average trucks available for entire shift",
+          "source": "SNOWFLAKE",
+          "tables": ["LH_HAUL_CYCLE", "LH_EQUIPMENT_STATUS_EVENT"]
+        },
+        "asset_efficiency": {
+          "id": "06",
+          "label": "Asset Efficiency (%)",
+          "time_window": "Rolling 60 min",
+          "description": "Truck utilization measured by cycles per truck",
+          "formula": "cycles_per_truck / expected_cycles * 100",
+          "range": {"min": 0, "max": 100, "unit": "%"},
+          "source": "SNOWFLAKE"
+        },
+        "dump_compliance": {
+          "id": "07",
+          "label": "Dump Plan Compliance (%)",
+          "time_window": "Rolling 60 min",
+          "description": "Proportion of material dumped at designated location per 36H plan",
+          "actual": "Percentage of dumped tons at correct location per color definition at shift start",
+          "target": "100%",
+          "projected": "Percent compliance of all actual and predicted dumped tons",
+          "range": {"min": 0, "max": 100, "unit": "%"},
+          "source": "SNOWFLAKE",
+          "columns": ["DUMP_LOC_NAME", "REPORT_PAYLOAD_SHORT_TONS"],
+          "non_compliant_types": [
+            "Misroutes",
+            "In-shift color changes",
+            "Unplanned dumps at rehandle",
+            "Incorrect zones within ROM"
+          ]
+        }
+      }
+    },
+    
+    "lbs_on_ground": {
+      "name": "Lbs on Ground",
+      "icon": "△",
+      "metrics": {
+        "mill_tons": {
+          "id": "08",
+          "label": "Mill Material Delivered (tons)",
+          "time_window": "12 Hours (Full Shift)",
+          "description": "Total tons dumped at Mill location",
+          "typical_range": "~108kt per shift",
+          "actual": "Sum of tons delivered so far in current shift",
+          "target": "Total tons to be delivered over full shift",
+          "projected": "Total tons predicted for entire shift",
+          "source": "SNOWFLAKE",
+          "filter": "DUMP_LOC_NAME ILIKE '%mill%' OR '%crusher%'"
+        },
+        "mill_crusher": {
+          "id": "09",
+          "label": "Mill Crusher (TPOH)",
+          "time_window": "Rolling 60 min",
+          "description": "Mill crusher throughput rate",
+          "range": {"min": 0, "max": 9000, "unit": "TPH"},
+          "source": "ADX",
+          "pi_tag": "MOR-CR03_WI00317_PV"
+        },
+        "mill_rate": {
+          "id": "10",
+          "label": "Mill Feed (TPOH)",
+          "time_window": "Rolling 60 min",
+          "description": "Mill feed throughput rate",
+          "range": {"min": 7000, "max": 9000, "unit": "TPH"},
+          "source": "ADX",
+          "pi_tag": "MOR-CR03_WI00317_PV"
+        },
+        "mill_ios": {
+          "id": "11",
+          "label": "Mill IOS Level",
+          "priority": "HIGHEST",
+          "time_window": "Rolling 60 min",
+          "description": "In-Ore Stockpile level and direction - MOST IMPORTANT METRIC",
+          "range": {"min": 250000, "max": 500000, "unit": "tons"},
+          "actual": "Overall direction and rate of change of IOS level in past hour",
+          "target": "Direction and rate of change per shift plan",
+          "projected": "Predicted stockpile level at end of shift",
+          "source": "ADX",
+          "pi_tags": {
+            "main": "MOR-CC06_LI00601_PV",
+            "small": "MOR-CC10_LI0102_PV"
+          },
+          "level_indicator_colors": {
+            "red": "Within 10% of limit",
+            "orange": "Within 20% of limit",
+            "green": "Otherwise"
+          }
+        },
+        "mfl_tons": {
+          "id": "12",
+          "label": "MFL Material Delivered (tons)",
+          "time_window": "12 Hours (Full Shift)",
+          "description": "Total tons dumped at MFL location",
+          "typical_range": "~60kt per shift",
+          "source": "SNOWFLAKE",
+          "filter": "DUMP_LOC_NAME ILIKE '%mfl%' OR '%leach%'"
+        },
+        "mfl_crusher": {
+          "id": "13",
+          "label": "MFL Crusher (TPOH)",
+          "time_window": "Rolling 60 min",
+          "description": "MFL crusher throughput rate",
+          "range": {"min": 0, "max": 5000, "unit": "TPH"},
+          "source": "ADX",
+          "pi_tag": "MOR-CR02_WI01203_PV"
+        },
+        "mfl_fos": {
+          "id": "14",
+          "label": "FCP (TPOH)",
+          "time_window": "Rolling 60 min",
+          "description": "FCP/FOS rate at MFL operations",
+          "range": {"min": 4000, "max": 5000, "unit": "TPH"},
+          "source": "ADX"
+        },
+        "mfl_ios": {
+          "id": "15",
+          "label": "MFL IOS Level",
+          "time_window": "Rolling 60 min",
+          "description": "MFL stockpile level and operational compliance",
+          "range": {"min": 50000, "max": 180000, "unit": "tons"},
+          "source": "ADX"
+        },
+        "rom_tons": {
+          "id": "16",
+          "label": "ROM Material Delivered (tons)",
+          "time_window": "12 Hours (Full Shift)",
+          "description": "Total tons dumped at ROM location",
+          "typical_range": "~250kt per shift",
+          "source": "SNOWFLAKE",
+          "filter": "DUMP_LOC_NAME ILIKE '%rom%' OR '%stockpile%'"
+        }
+      }
+    }
+  },
+  
+  "section_heading_rules": {
+    "elements": [
+      {"id": 1, "description": "Centered Label (Loading, Haulage, Lbs on Ground)"},
+      {"id": 2, "description": "Color Coded Bar per standard thresholds"},
+      {"id": 3, "description": "Unplanned Constraint Indicator"}
+    ],
+    "constraint_indicators": {
+      "upstream": "Red arrow on LEFT if section is RED and causing upstream constraint",
+      "downstream": "Red arrow on RIGHT if section is RED and causing downstream constraint"
+    }
+  },
+  
+  "design_principles": [
+    "Focus on driving compliance to plan – current and for entire shift",
+    "Actionable information",
+    "Consistency across all metrics – in terms of time scales, calculations",
+    "Viewers don't have to 'do math' in their head to understand the display"
+  ],
+  
+  "sites": {
+    "MOR": {
+      "name": "Morenci",
+      "location": "Arizona, USA",
+      "type": "Open Pit Copper",
+      "adx_database": "Morenci",
+      "pi_tags": {
+        "mill_crusher": "MOR-CR03_WI00317_PV",
+        "mfl_crusher": "MOR-CR02_WI01203_PV",
+        "ios_main": "MOR-CC06_LI00601_PV",
+        "ios_small": "MOR-CC10_LI0102_PV"
+      }
+    },
+    "BAG": {
+      "name": "Bagdad",
+      "location": "Arizona, USA",
+      "type": "Open Pit Copper",
+      "adx_database": "Bagdad"
+    },
+    "SAM": {
+      "name": "Miami",
+      "location": "Arizona, USA",
+      "type": "Underground/Processing",
+      "adx_database": "Miami"
+    },
+    "CMX": {
+      "name": "Climax",
+      "location": "Colorado, USA",
+      "type": "Molybdenum Mine",
+      "adx_database": "Climax"
+    },
+    "SIE": {
+      "name": "Sierrita",
+      "location": "Arizona, USA",
+      "type": "Open Pit Copper",
+      "adx_database": "Sierrita"
+    },
+    "NMO": {
+      "name": "NewMexico",
+      "location": "New Mexico, USA",
+      "type": "Open Pit Copper",
+      "adx_database": "NewMexico"
+    },
+    "CVE": {
+      "name": "CerroVerde",
+      "location": "Arequipa, Peru",
+      "type": "Open Pit Copper",
+      "adx_database": "CerroVerde"
+    }
+  }
+}

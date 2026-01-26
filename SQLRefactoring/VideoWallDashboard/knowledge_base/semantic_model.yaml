@@ -1,0 +1,526 @@
+# =============================================================================
+# IROC VIDEO WALL - PRODUCTION PERFORMANCE SEMANTIC MODEL
+# =============================================================================
+# Complete semantic model derived from requirements document
+# 
+# Structure:
+#   - 4 Sections: Loading, Haulage, Lbs on Ground, Processing
+#   - 16 Business Outcomes with strict formatting requirements
+#   - Business rules for Actual, Target, Projected, Trend calculations
+#
+# Source: IROC Video Wall Production Performance Requirements Definition
+# Generated: 2026-01-23
+# =============================================================================
+
+version: "5.0"
+name: IROC_VideoWall_ProductionPerformance
+generated_at: "2026-01-23"
+purpose: "LH&IOS Production Performance Section of the Morenci video wall dashboard for CC6 IROC"
+
+# =============================================================================
+# GLOBAL STANDARDS - Applied to ALL Metrics
+# =============================================================================
+standards:
+  actual:
+    displayed_value: "Rolling 60 minutes performance up until current moment"
+    color_code:
+      description: "Ratio of Actual to Target"
+      green: ">= 90%"
+      orange: "80% to 90%"
+      red: "< 80%"
+    note: "Reset at start of shift - first hour may have spurious results"
+  
+  target:
+    displayed_value: "Rolling weighted average for last 60 minutes from 36H plan"
+    note: "36H plan defines targets for each hour of shift"
+  
+  shift_target:
+    value: "Average of hourly targets from 36H plan"
+    note: "May not be displayed - used for Projected color coding"
+  
+  projected:
+    displayed_value: "Predicted average hourly performance for entire shift"
+    color_code:
+      description: "Ratio of Projected to Shift Target"
+      green: ">= 90%"
+      orange: "80% to 90%"
+      red: "< 80%"
+  
+  trend:
+    displayed_value: "Ratio of current Actual to Actual from 1 hour ago"
+    format: "Always include sign (+ or -)"
+    indicator:
+      up_arrow: "Current > Previous (1 hour ago)"
+      down_arrow: "Current < Previous (1 hour ago)"
+    color_code:
+      green: "Increase"
+      orange: "Decrease < 10%"
+      red: "Decrease > 10%"
+
+# =============================================================================
+# SECTION: LOADING
+# =============================================================================
+sections:
+  loading:
+    name: "Loading"
+    icon: "⚙️"
+    color_bar: "green"
+    
+    metrics:
+      dig_compliance:
+        id: "01"
+        label: "Dig Compliance (%)"
+        time_window: "Rolling 60 min"
+        description: "Spatial compliance of shovel dig points relative to defined dig zones"
+        formula: "(Count of Compliant Events / Count of Total Events) * 100"
+        
+        definitions:
+          actual: "Percent compliance of all dig events in past hour (rolling 60 min)"
+          target: "100%"
+          projected: "Percent compliance of all actual and predicted dig points for entire shift"
+        
+        range:
+          min: 0
+          max: 100
+          unit: "%"
+        
+        source: SNOWFLAKE
+        tables:
+          - "PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE"
+          - "PROD_WG.LOAD_HAUL.LH_BUCKET"
+        
+        display:
+          elements:
+            - id: 1
+              description: "Label: 'Dig Compliance (%)'"
+            - id: 2
+              description: "Actual – Displayed Value"
+            - id: 3
+              description: "Projected Value"
+            - id: 4
+              description: "Trend Indicator – Per Standard"
+            - id: 5
+              description: "Trend Value – Per Standard"
+            - id: 6
+              description: "Visual representation - bar width = Actual/Target ratio"
+            - id: 7
+              description: "Target Displayed Value"
+        
+        exceptions:
+          - "Compliance is relative to dig zones defined for ENTIRE SHIFT, not just current hour"
+          - "A dig at different time than planned is still compliant if within any shift-defined zone"
+
+      dig_rate:
+        id: "02"
+        label: "Dig Rate (TPRH)"
+        alternative_label: "Total Fleet Dig Rate (TPH)"
+        time_window: "Rolling 60 min"
+        description: "Total amount of material loaded by entire shovel fleet each hour"
+        
+        definitions:
+          actual: "Total tons loaded in past hour (rolling 60 min)"
+          target: "Total tons to have been loaded per 36H plan for past hour"
+          projected: "Total tons predicted to be loaded by end of shift / 12 hours"
+        
+        range:
+          min: 0
+          max: 99000
+          unit: "TPH"
+        
+        source: SNOWFLAKE
+        tables:
+          - "PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE"
+        columns:
+          - "MEASURED_PAYLOAD_METRIC_TONS"
+        
+        display:
+          elements:
+            - id: 1
+              description: "Label: 'Total Fleet Dig Rate (TPH)'"
+            - id: 2
+              description: "Actual – Displayed Value"
+            - id: 3
+              description: "Projected Value"
+            - id: 4
+              description: "Trend Indicator – Per Standard"
+            - id: 5
+              description: "Trend Value – Per Standard"
+            - id: 6
+              description: "Visual representation - bar width = Actual/Target ratio"
+            - id: 7
+              description: "Target Displayed Value"
+        
+        exceptions: "None"
+
+      priority_shovels:
+        id: "03"
+        label: "Priority Shovels"
+        time_window: "Rolling 60 min"
+        description: "Top 5 priority shovels with dig compliance and dig rate breakdown"
+        
+        definitions:
+          compliance:
+            description: "Percentage of dig points for specific shovel within defined dig zone"
+            range: "0-100%"
+          rate:
+            description: "Total tons loaded by each priority shovel"
+            range: "Up to 6500 TPH"
+        
+        source: SNOWFLAKE
+        tables:
+          - "PROD_WG.LOAD_HAUL.LH_LOADING_CYCLE"
+          - "PROD_WG.LOAD_HAUL.LH_EQUIPMENT"
+        
+        display:
+          columns:
+            - id: 1
+              description: "Shovel ID"
+            - id: 2
+              description: "Material Type (MFL, Mill, ROM)"
+            - id: 3
+              description: "Shift-to-date compliance per shovel"
+            - id: 4
+              description: "Shift-to-date dig rate (TPH) per shovel"
+            - id: 5
+              description: "Trend Value – Per Standard"
+        
+        exceptions: "None"
+
+  # =============================================================================
+  # SECTION: HAULAGE
+  # =============================================================================
+  haulage:
+    name: "Haulage"
+    icon: "🚛"
+    color_bar: "dynamic"
+    
+    metrics:
+      cycle_time:
+        id: "05"
+        label: "Cycle Time (min)"
+        time_window: "Rolling 60 min"
+        description: "Average round trip time across entire truck fleet"
+        
+        definitions:
+          actual: "Sum of time for all truck cycles in past hour / total cycles in past hour"
+          target: "Average planned cycle time for past hour across full fleet"
+          projected: "Predicted sum of time for all shift cycles / predicted number of cycles"
+        
+        range:
+          min: 35
+          max: 45
+          unit: "min"
+        
+        source: SNOWFLAKE
+        tables:
+          - "PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE"
+        columns:
+          - "TOTAL_CYCLE_DURATION_CALENDAR_MINS"
+        
+        display:
+          elements:
+            - id: 1
+              description: "Label: 'Cycle Time (min)'"
+            - id: 2
+              description: "Actual – Displayed Value"
+            - id: 3
+              description: "Projected Value"
+            - id: 4
+              description: "Trend Indicator – Per Standard"
+            - id: 5
+              description: "Trend Value – Per Standard"
+            - id: 6
+              description: "Visual representation (special: target at center)"
+            - id: 7
+              description: "Target Value (center of bar)"
+            - id: 8
+              description: "Plus/minus 25% of target endpoints"
+        
+        exceptions:
+          visual_representation:
+            - "Target is at CENTER of bar"
+            - "Bar width = target ± 25%"
+            - "Colored bar extends left/right of target based on deviation"
+            - "Green: within 5% of target"
+            - "Orange: within 15% of target"
+            - "Red: deviation > 15%"
+
+      dump_plan_compliance:
+        id: "07"
+        label: "Dump Plan Compliance (%)"
+        time_window: "Rolling 60 min"
+        description: "Proportion of hauled material dumped at designated location per 36H plan"
+        
+        definitions:
+          actual: "Percentage of dumped tons in current hour at correct location per color definition at shift start"
+          target: "100%"
+          projected: "Percent compliance of all actual and predicted dumped tons for entire shift"
+        
+        range:
+          min: 0
+          max: 100
+          unit: "%"
+        
+        source: SNOWFLAKE
+        tables:
+          - "PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE"
+        columns:
+          - "DUMP_LOC_NAME"
+          - "REPORT_PAYLOAD_SHORT_TONS"
+        
+        non_compliant_dumps:
+          - "Misroutes"
+          - "In-shift color changes"
+          - "Unplanned dumps at rehandle"
+          - "At incorrect zones within ROM"
+        
+        exceptions:
+          - "Material not scheduled for movement during shift is still compliant if dump location aligns with color specification"
+
+      trucking_numbers:
+        id: "04"
+        label: "# of Trucks (Qty)"
+        alternative_label: "Ready Trucks (Qty)"
+        time_window: "Rolling 60 min"
+        status: "WIP"
+        description: "Number of mechanically available trucks (not in maintenance)"
+        
+        definitions:
+          actual: "Average number of trucks actively hauling during past hour"
+          target_a: "Average trucks planned to be available (not in maintenance) during past hour"
+          target_b: "Average trucks required to haul planned material"
+          projected: "Prediction of average trucks available for entire shift"
+        
+        source: SNOWFLAKE
+        tables:
+          - "PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE"
+          - "PROD_WG.LOAD_HAUL.LH_EQUIPMENT_STATUS_EVENT"
+        
+        exceptions:
+          - "Target = planned value for current shift"
+          - "Total number of available trucks also displayed"
+
+      asset_efficiency:
+        id: "06"
+        label: "Asset Efficiency (%)"
+        time_window: "Rolling 60 min"
+        description: "Truck utilization measured by cycles per truck and payload efficiency"
+        
+        range:
+          min: 0
+          max: 100
+          unit: "%"
+        
+        source: SNOWFLAKE
+
+  # =============================================================================
+  # SECTION: LBS ON GROUND
+  # =============================================================================
+  lbs_on_ground:
+    name: "Lbs on Ground"
+    icon: "△"
+    color_bar: "dynamic"
+    
+    metrics:
+      throughput_tph:
+        id: "09-10"
+        label: "Throughput (TPH)"
+        time_window: "Rolling 60 min"
+        status: "WIP"
+        description: "Amount of material processed each hour"
+        
+        variants:
+          - label: "Mill Crusher (TPOH)"
+            range_max: 9000
+          - label: "Mill Feed (TPOH)"
+            range: "7000-9000"
+          - label: "MFL Crusher (TPOH)"
+            range_max: 5000
+          - label: "FCP (TPOH)"
+            range: "4000-5000"
+        
+        definitions:
+          actual: "Tons processed in past hour (rolling 60 min)"
+          target: "Tons to be processed per 36H plan"
+          projected: "Total tons predicted to be processed by shift end / 12"
+        
+        source: ADX
+        pi_tags:
+          mill_crusher: "MOR-CR03_WI00317_PV"
+          mfl_crusher: "MOR-CR02_WI01203_PV"
+        
+        display:
+          elements:
+            - id: 1
+              description: "Labels for each crusher/feed"
+            - id: 2
+              description: "Actual – Displayed Value"
+            - id: 3
+              description: "Target Value (As defined)"
+            - id: 4
+              description: "Trend Indicator – Per standard"
+            - id: 5
+              description: "Trend Value – Per standard"
+
+      material_delivered:
+        id: "08,12,16"
+        label: "Material Delivered (Tons)"
+        time_window: "12 Hours (Full Shift)"
+        description: "Total tons dumped at each destination location"
+        
+        variants:
+          mill:
+            label: "Mill Material Delivered (tons)"
+            range: "~108kt per shift"
+            source: SNOWFLAKE
+          mfl:
+            label: "MFL Material Delivered (tons)"
+            range: "~60kt per shift"
+            source: SNOWFLAKE
+          rom:
+            label: "ROM Material Delivered (tons)"
+            range: "~250kt per shift"
+            source: SNOWFLAKE
+        
+        definitions:
+          actual: "Sum of tons delivered to destination so far in current shift"
+          target: "Total tons to be delivered over full shift duration"
+          projected: "Total tons predicted to be delivered during entire shift"
+        
+        display:
+          elements:
+            - id: 1
+              description: "Label: '<Material Type> Material Delivered (Tons)'"
+            - id: 2
+              description: "Actual – Displayed Value"
+            - id: 3
+              description: "Projected Value"
+            - id: 4
+              description: "Trend Indicator – Per standard"
+            - id: 5
+              description: "Trend Value – Per standard"
+            - id: 6
+              description: "Visual representation - bar width = Actual/Target ratio"
+            - id: 7
+              description: "Target Displayed Value"
+
+      ios_level_strategy:
+        id: "11,15"
+        label: "IOS Level Strategy (TPH)"
+        time_window: "Rolling 60 min"
+        status: "HIGHEST PRIORITY"
+        description: "Compliance to planned strategy for IOS stockpile management"
+        
+        variants:
+          mill:
+            label: "Mill IOS"
+            range: "250,000 - 500,000"
+          mfl:
+            label: "MFL IOS"
+            range: "50,000 - 180,000"
+        
+        definitions:
+          actual: "Overall direction and rate of change of IOS level in past hour"
+          target: "Direction and rate of change for current period per shift plan"
+          projected: "Predicted stockpile level at end of shift"
+        
+        source: ADX
+        pi_tags:
+          mill_main: "MOR-CC06_LI00601_PV"
+          mill_small: "MOR-CC10_LI0102_PV"
+        
+        display:
+          elements:
+            - id: 1
+              description: "Actual – Displayed Value (TPH rate)"
+            - id: 2
+              description: "Arrow: building up or drawing down relative to 1 hour ago"
+            - id: 3
+              description: "Planned increase or decrease for shift"
+            - id: 4
+              description: "Current level"
+            - id: 5
+              description: "Level indicator (length proportionate to max)"
+            - id: 6
+              description: "Projected value"
+            - id: 7
+              description: "Maximum level of stockpile"
+          
+          level_indicator_colors:
+            orange: "Within 20% of up or low limit"
+            red: "Within 10% of limit"
+            green: "Otherwise"
+        
+        visualization:
+          - "Triangular stockpile icons arranged in grid"
+          - "Each icon shows: TPH rate, Capacity in hours"
+          - "Arrow indicates direction (up = building, down = drawing)"
+
+# =============================================================================
+# SECTION HEADING DISPLAY RULES
+# =============================================================================
+section_headings:
+  elements:
+    - id: 1
+      description: "Centered Label (Loading, Haulage, Lbs on Ground)"
+    - id: 2
+      description: "Color Coded Bar – Per standard thresholds"
+    - id: 3
+      description: "Unplanned Constraint Indicator"
+      rules:
+        - "If section is RED and causing upstream constraint: Red arrow on LEFT"
+        - "If section is RED and causing downstream constraint: Red arrow on RIGHT"
+
+# =============================================================================
+# DATA SOURCE CONNECTIONS
+# =============================================================================
+connections:
+  snowflake:
+    account: "FCX-NA"
+    warehouse: "WH_BATCH_DE_NONPROD"
+    database: "PROD_WG"
+    schema: "LOAD_HAUL"
+    authentication: "externalbrowser"
+    tables:
+      primary:
+        - name: "LH_LOADING_CYCLE"
+          purpose: "Shovel loading events, dig compliance"
+        - name: "LH_HAUL_CYCLE"
+          purpose: "Truck haul cycles, dump compliance"
+        - name: "LH_EQUIPMENT"
+          purpose: "Equipment master data"
+        - name: "LH_BUCKET"
+          purpose: "Dig point coordinates"
+      secondary:
+        - name: "LH_EQUIPMENT_STATUS_EVENT"
+          purpose: "Equipment availability tracking"
+  
+  adx:
+    cluster: "https://fctsnaproddatexp02.westus2.kusto.windows.net"
+    authentication: "InteractiveBrowserCredential"
+    functions:
+      - name: "FCTSCURRENT()"
+        purpose: "Latest value per sensor"
+      - name: "FCTS()"
+        purpose: "Historical time series"
+    databases:
+      - "Morenci"
+      - "Bagdad"
+      - "Miami"
+      - "Climax"
+      - "Sierrita"
+      - "NewMexico"
+      - "CerroVerde"
+
+# =============================================================================
+# DESIGN CONSIDERATIONS
+# =============================================================================
+design_principles:
+  - "Focus on driving compliance to plan – current and for entire shift"
+  - "Actionable information"
+  - "Consistency across all metrics in terms of time scales, calculations"
+  - "Viewers don't have to 'do math' in their head to understand the display"
+
+color_palette:
+  note: "Specific palette to be defined by UI/UX team"
+  alternatives: "Green might not be used - blue or grey may be selected instead"

@@ -210,18 +210,24 @@ nRow Values: [443, "MOR", 4700, "SHA", ...]
 1. **Added `QUALIFY ROW_NUMBER()` clause** to the source query in the MERGE statement to deduplicate rows, keeping only the latest record per business key based on `DW_MODIFY_TS`.
 2. **Changed procedure signature** from `(P_DAYS_BACK FLOAT, P_MAX_DAYS FLOAT)` to `("NUMBER_OF_DAYS" VARCHAR)` for API compatibility with Vikas's Function Apps.
 3. **Simplified JavaScript** to match the pattern used in other INCR procedures.
+4. **Added COALESCE for NULL-safe joins** on PUSHBACK and PATTERN_NAME columns to prevent duplicate inserts when these fields are NULL.
 
 ```sql
--- Fix applied in MERGE source query:
+-- Fix 1: Deduplicate source
 QUALIFY ROW_NUMBER() OVER (
     PARTITION BY ORIG_SRC_ID, SITE_CODE, BENCH, PUSHBACK, PATTERN_NAME, BLAST_NAME, DRILLED_HOLE_ID
     ORDER BY DW_MODIFY_TS DESC NULLS LAST
 ) = 1
+
+-- Fix 4: NULL-safe joins
+AND COALESCE(tgt.PUSHBACK, '') = COALESCE(src.PUSHBACK, '')
+AND COALESCE(tgt.PATTERN_NAME, '') = COALESCE(src.PATTERN_NAME, '')
 ```
 
 **Test Result (2026-01-26):**
 ```
-SUCCESS: Deleted 0 old records, Merged 150751 records, Soft deleted 179981 records
+SUCCESS: Merged 150,751 records, Soft deleted 230 records
+No duplicates found on business key ✅
 ```
 
 **Important:** When creating new INCR procedures, always consider adding `QUALIFY` deduplication if the source table may have duplicate business keys.

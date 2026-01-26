@@ -1,0 +1,20 @@
+# IROC Video Wall Dashboard Requirements
+# Production Performance Section
+
+# Core framework
+streamlit>=1.31.0
+
+# Data connectors
+snowflake-connector-python>=3.6.0
+azure-kusto-data>=4.3.0
+azure-identity>=1.15.0
+
+# Data processing
+pandas>=2.1.0
+numpy>=1.26.0
+
+# YAML parsing for semantic model
+pyyaml>=6.0.1
+
+# Utilities
+python-dotenv>=1.0.0
