@@ -231,3 +231,89 @@ No duplicates found on business key ✅
 ```
 
 **Important:** When creating new INCR procedures, always consider adding `QUALIFY` deduplication if the source table may have duplicate business keys.
+---
+
+## ADO Deployment Standards (MANDATORY)
+
+### Folder Structure for Snowflake_NA Repository
+
+All DDL scripts for ADO deployment **MUST** follow this structure:
+
+```
+DDL-Scripts/
+  API_REF/
+    FUSE/
+      TABLES/
+        R__<TABLE_NAME>.sql
+      PROCEDURES/
+        R__<PROCEDURE_NAME>.sql
+```
+
+### File Naming Convention
+
+- Prefix: `R__` (double underscore)
+- Name: Exact object name in uppercase
+- Extension: `.sql`
+- Example: `R__BLAST_PLAN_EXECUTION_INCR.sql`, `R__BLAST_PLAN_EXECUTION_INCR_P.sql`
+
+### CREATE Statement Format (CRITICAL)
+
+**ALL CREATE statements MUST include full qualified name with Jinja2 template:**
+
+```sql
+-- Tables
+create or replace TABLE {{ envi }}_API_REF.FUSE.<TABLE_NAME> (
+    ...
+);
+
+-- Procedures
+CREATE OR REPLACE PROCEDURE {{ envi }}_API_REF.FUSE.<PROCEDURE_NAME>(...)
+RETURNS VARCHAR(16777216)
+LANGUAGE JAVASCRIPT
+...
+```
+
+### Template Variables (Jinja2)
+
+| Variable | Purpose | Replaced by ADO Pipeline |
+|----------|---------|--------------------------|
+| `{{ envi }}` | Target environment | DEV, TEST, PROD |
+| `{{ RO_PROD }}` | Read-only PROD source | Always PROD |
+| `{{ RO_DEV }}` | Read-only DEV source | Always DEV |
+| `{{ RO_TEST }}` | Read-only TEST source | Always TEST |
+
+### Example Usage
+
+```sql
+-- Target table (environment-dependent)
+SELECT * FROM {{ envi }}_API_REF.FUSE.BLAST_PLAN_EXECUTION_INCR;
+
+-- Source table (always read from PROD)
+SELECT * FROM {{ RO_PROD }}_WG.DRILL_BLAST.BLAST_PLAN_EXECUTION;
+```
+
+### Generation Script
+
+Use `split_ddl_for_ado.py` to generate ADO-compatible DDL files:
+
+```powershell
+cd C:\Users\ccarrill2\Documents\repos\FP\SQLRefactoring\Tickets\DRILLBLAST_INCR
+py -3.12 split_ddl_for_ado.py
+```
+
+This script:
+1. Extracts DDL from Snowflake using `GET_DDL()`
+2. Replaces hardcoded database names with `{{ envi }}` template
+3. Replaces `PROD_WG` with `{{ RO_PROD }}_WG`
+4. Adds full qualified name to CREATE statements
+5. Splits into individual files per object
+
+### Validation Checklist Before Sending to ADO
+
+- [ ] File names start with `R__`
+- [ ] CREATE statements include `{{ envi }}_API_REF.FUSE.<NAME>`
+- [ ] Source references use `{{ RO_PROD }}_WG` (not hardcoded PROD_WG)
+- [ ] No hardcoded DEV_API_REF, TEST_API_REF, or PROD_API_REF
+- [ ] Files are in correct folder: TABLES/ or PROCEDURES/
+
+---
