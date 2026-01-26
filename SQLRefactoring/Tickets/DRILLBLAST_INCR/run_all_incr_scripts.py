@@ -103,9 +103,9 @@ print("\n" + "=" * 60)
 print("📋 PASO 2: CREANDO 11 STORED PROCEDURES")
 print("=" * 60)
 
-# Los 5 procedures arreglados con Vikas fix tienen nuevo parámetro,
-# hay que DROP primero para evitar conflicto de overload
-PROCEDURES_WITH_NEW_PARAM = [
+# Los 5 procedures fueron creados antes con 2 parámetros,
+# hay que DROP la versión antigua para reemplazarla
+PROCEDURES_TO_CLEAN = [
     "BLAST_PLAN_INCR_P",
     "DRILL_CYCLE_INCR_P",
     "DRILL_PLAN_INCR_P",
@@ -113,12 +113,11 @@ PROCEDURES_WITH_NEW_PARAM = [
     "LH_HAUL_CYCLE_INCR_P",
 ]
 
-print("  🗑️ Eliminando procedures con nuevo parámetro MAX_DAYS_TO_KEEP...")
-for proc in PROCEDURES_WITH_NEW_PARAM:
+print("  🗑️ Eliminando procedures con firma antigua...")
+for proc in PROCEDURES_TO_CLEAN:
     try:
-        cursor.execute(f"DROP PROCEDURE IF EXISTS DEV_API_REF.FUSE.{proc}(VARCHAR)")
         cursor.execute(f"DROP PROCEDURE IF EXISTS DEV_API_REF.FUSE.{proc}(VARCHAR, VARCHAR)")
-        print(f"    ✓ Dropped {proc}")
+        print(f"    ✓ Dropped {proc}(VARCHAR, VARCHAR)")
     except Exception as e:
         print(f"    ⚠️ {proc}: {str(e)[:50]}")
 

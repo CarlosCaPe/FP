@@ -1,28 +1,17 @@
--- =============================================
--- Procedure: DRILL_CYCLE_INCR_P
--- Purpose: Incremental load with purging logic (Vikas fix - 2026-01-26)
--- Pattern: COUNT old → DELETE old (purge) → MERGE new
--- =============================================
-CREATE OR REPLACE PROCEDURE {{ envi }}_API_REF.FUSE.DRILL_CYCLE_INCR_P("NUMBER_OF_DAYS" VARCHAR(16777216) DEFAULT '3', "MAX_DAYS_TO_KEEP" VARCHAR(16777216) DEFAULT '90')
+CREATE OR REPLACE PROCEDURE {{ envi }}_API_REF.FUSE.DRILL_CYCLE_INCR_P("NUMBER_OF_DAYS" VARCHAR(16777216) DEFAULT '3')
 RETURNS VARCHAR(16777216)
 LANGUAGE JAVASCRIPT
 EXECUTE AS OWNER
 AS '
-var sp_result = "";
-var daysBack = NUMBER_OF_DAYS || 3;
-var maxDays = MAX_DAYS_TO_KEEP || 90;
-var rows_purged = 0;
-var rows_merged = 0;
+var sp_result="";
 
-// STEP 1: COUNT old records to purge (older than MAX_DAYS_TO_KEEP)
-var sql_count_incr = `SELECT COUNT(*) AS cnt FROM {{ envi }}_API_REF.fuse.drill_cycle_incr 
-                      WHERE DW_MODIFY_TS < DATEADD(day, -` + maxDays + `, CURRENT_TIMESTAMP())`;
+var sql_count_incr = `SELECT COUNT(*) AS count_check_1 
+                      FROM {{ envi }}_API_REF.fuse.drill_cycle_incr 
+                      WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
-// STEP 2: DELETE old records (purge) - prevents unbounded table growth
 var sql_delete_incr = `DELETE FROM {{ envi }}_API_REF.fuse.drill_cycle_incr 
-                       WHERE DW_MODIFY_TS < DATEADD(day, -` + maxDays + `, CURRENT_TIMESTAMP())`;
+                       WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
-// STEP 3: MERGE new/updated records from source
 var sql_merge = `MERGE INTO {{ envi }}_API_REF.fuse.drill_cycle_incr tgt
 USING (
     SELECT DRILL_CYCLE_SK, ORIG_SRC_ID, SITE_CODE, BENCH, PUSHBACK, PATTERN_NAME,
@@ -31,7 +20,7 @@ USING (
            ''N'' AS dw_logical_delete_flag,
            HASH(DRILL_CYCLE_SK, ORIG_SRC_ID, SITE_CODE) AS dw_row_hash
     FROM {{ RO_PROD }}_WG.DRILL_BLAST.DRILL_CYCLE
-    WHERE DW_MODIFY_TS >= DATEADD(day, -` + daysBack + `, CURRENT_TIMESTAMP())
+    WHERE DW_MODIFY_TS >= DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_TIMESTAMP())
 ) AS src
 ON tgt.DRILL_CYCLE_SK = src.DRILL_CYCLE_SK
 WHEN MATCHED THEN UPDATE SET
@@ -43,16 +32,24 @@ WHEN NOT MATCHED THEN INSERT (DRILL_CYCLE_SK, ORIG_SRC_ID, SITE_CODE, BENCH, PUS
 VALUES (src.DRILL_CYCLE_SK, src.ORIG_SRC_ID, src.SITE_CODE, src.BENCH, src.PUSHBACK, src.PATTERN_NAME,
     src.dw_load_ts, CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ, src.dw_logical_delete_flag, src.dw_row_hash);`;
 
+var sql_delete = `UPDATE {{ envi }}_API_REF.fuse.drill_cycle_incr tgt
+                  SET dw_logical_delete_flag = ''Y'', dw_modify_ts = CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ
+                  WHERE tgt.dw_logical_delete_flag = ''N''
+                  AND NOT EXISTS (SELECT 1 FROM {{ RO_PROD }}_WG.DRILL_BLAST.DRILL_CYCLE src
+                      WHERE src.DRILL_CYCLE_SK = tgt.DRILL_CYCLE_SK);`;
+
 try {
-    // Execute purge (DELETE old records)
-    var rs_delete_incr = snowflake.execute({sqlText: sql_delete_incr});
-    rows_purged = rs_delete_incr.getNumRowsAffected();
-    
-    // Execute merge
+    snowflake.execute({sqlText: "BEGIN WORK;"});
+    var rs_count_incr = snowflake.execute({sqlText: sql_count_incr});
+    rs_count_incr.next();
+    var rs_records_incr = rs_count_incr.getColumnValue(''COUNT_CHECK_1'');
+    var rs_deleted_records_incr = rs_records_incr > 0 ? snowflake.execute({sqlText: sql_delete_incr}).getNumRowsAffected() : 0;
     var rs_merge = snowflake.execute({sqlText: sql_merge});
-    rows_merged = rs_merge.getNumRowsAffected();
-    
-    sp_result = "Purged: " + rows_purged + ", Merged: " + rows_merged + ", Archived: 0";
+    var rs_merged_records = rs_merge.getNumRowsAffected();
+    var rs_delete = snowflake.execute({sqlText: sql_delete});
+    var rs_delete_records = rs_delete.getNumRowsAffected();
+    sp_result = "Deleted: " + rs_deleted_records_incr + ", Merged: " + rs_merged_records + ", Archived: " + rs_delete_records;
+    snowflake.execute({sqlText: "COMMIT WORK;"});
     return sp_result;
-} catch (err) { throw err; }
+} catch (err) { snowflake.execute({sqlText: "ROLLBACK WORK;"}); throw err; }
 ';
