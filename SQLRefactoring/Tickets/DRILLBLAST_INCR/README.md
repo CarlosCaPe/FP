@@ -206,14 +206,22 @@ nRow Values: [443, "MOR", 4700, "SHA", ...]
 
 **Root Cause:** The source table `PROD_WG.DRILL_BLAST.BLAST_PLAN_EXECUTION` contains duplicate rows for the same composite business key (`ORIG_SRC_ID, SITE_CODE, BENCH, PUSHBACK, PATTERN_NAME, BLAST_NAME, DRILLED_HOLE_ID`). Snowflake MERGE statements fail when the source contains multiple rows that match the same target key.
 
-**Fix Applied:** Added `QUALIFY ROW_NUMBER()` clause to the source query in the MERGE statement to deduplicate rows, keeping only the latest record per business key based on `DW_MODIFY_TS`.
+**Fixes Applied:**
+1. **Added `QUALIFY ROW_NUMBER()` clause** to the source query in the MERGE statement to deduplicate rows, keeping only the latest record per business key based on `DW_MODIFY_TS`.
+2. **Changed procedure signature** from `(P_DAYS_BACK FLOAT, P_MAX_DAYS FLOAT)` to `("NUMBER_OF_DAYS" VARCHAR)` for API compatibility with Vikas's Function Apps.
+3. **Simplified JavaScript** to match the pattern used in other INCR procedures.
 
 ```sql
--- Added after WHERE clause in MERGE source query:
+-- Fix applied in MERGE source query:
 QUALIFY ROW_NUMBER() OVER (
     PARTITION BY ORIG_SRC_ID, SITE_CODE, BENCH, PUSHBACK, PATTERN_NAME, BLAST_NAME, DRILLED_HOLE_ID
-    ORDER BY TRY_TO_TIMESTAMP(DW_MODIFY_TS) DESC NULLS LAST
+    ORDER BY DW_MODIFY_TS DESC NULLS LAST
 ) = 1
+```
+
+**Test Result (2026-01-26):**
+```
+SUCCESS: Deleted 0 old records, Merged 150751 records, Soft deleted 179981 records
 ```
 
 **Important:** When creating new INCR procedures, always consider adding `QUALIFY` deduplication if the source table may have duplicate business keys.

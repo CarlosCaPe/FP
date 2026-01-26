@@ -1,123 +1,12 @@
-/*******************************************************************************
- * BLAST_PLAN_EXECUTION_INCR - Incremental Table and Stored Procedure
- * 
- * Source: PROD_WG.DRILL_BLAST.BLAST_PLAN_EXECUTION
- * Target: DEV_API_REF.FUSE.BLAST_PLAN_EXECUTION_INCR
- * Business Key: ORIG_SRC_ID, SITE_CODE, BENCH, PUSHBACK, PATTERN_NAME, BLAST_NAME, DRILLED_HOLE_ID (composite)
- * Timestamp Column: DW_MODIFY_TS
- * 
- * Pattern: MERGE-driven upserts with hash-based conditional updates
- * Incremental Window: 3 days default, max 30 days
- * Soft Deletes: DW_LOGICAL_DELETE_FLAG = 'Y'
- ******************************************************************************/
+-- =============================================================================
+-- BLAST_PLAN_EXECUTION_INCR_P - Fixed version for Vikas API compatibility
+-- =============================================================================
+-- Fix 1: Changed signature from (P_DAYS_BACK FLOAT, P_MAX_DAYS FLOAT) to 
+--        ("NUMBER_OF_DAYS" VARCHAR) for API compatibility
+-- Fix 2: Added QUALIFY ROW_NUMBER() to deduplicate source data (duplicate row fix)
+-- Fix 3: Simplified JavaScript to match other INCR procedures
+-- =============================================================================
 
--- =============================================================================
--- TABLE DDL
--- =============================================================================
-CREATE OR REPLACE TABLE DEV_API_REF.FUSE.BLAST_PLAN_EXECUTION_INCR (
-    -- Business Keys (Composite Primary Key)
-    ORIG_SRC_ID                 BIGINT          NOT NULL,
-    SITE_CODE                   VARCHAR(50)     NOT NULL,
-    BENCH                       FLOAT           NOT NULL,
-    PUSHBACK                    VARCHAR(50)     NOT NULL,
-    PATTERN_NAME                VARCHAR(400)    NOT NULL,
-    BLAST_NAME                  VARCHAR(5000)   NOT NULL,
-    DRILLED_HOLE_ID             INT             NOT NULL,
-    
-    -- Hole Identification
-    DRILLED_HOLE_NAME           VARCHAR(500),
-    
-    -- Related Keys
-    DRILL_CYCLE_SK              BIGINT,
-    BLAST_PLAN_SK               BIGINT,
-    SHIFT_ID                    VARCHAR(500),
-    BLAST_ID                    INT,
-    
-    -- Shot Details
-    SHOT_DATE_UTC               VARCHAR(50),
-    SHOT_DATE_LOCAL             VARCHAR(50),
-    BLAST_TYPE                  VARCHAR(400),
-    BLAST_ENGINEER_NAME         VARCHAR(500),
-    LOADING_TRUCK_OPERATOR_NAME VARCHAR(200),
-    
-    -- Hole Loading
-    HOLE_LOADED_TS_UTC          VARCHAR(50),
-    HOLE_LOADED_TS_LOCAL        VARCHAR(50),
-    HOLE_LAST_KNOWN_DEPTH_METERS    DECIMAL(38,5),
-    HOLE_LAST_KNOWN_DEPTH_FEET      DECIMAL(38,5),
-    HOLE_TAPED_DEPTH_METERS         DECIMAL(38,5),
-    HOLE_TAPED_DEPTH_FEET           DECIMAL(38,5),
-    HOLE_PLUGGED_FLAG               BOOLEAN,
-    
-    -- Explosive Products
-    EXPLOSIVE_PRODUCT_BOTTOM    BIGINT,
-    EXPLOSIVE_PRODUCT_TOP       BIGINT,
-    EXPLOSIVE_PRODUCT_USED_BOTTOM_KILOGRAMS  DECIMAL(38,5),
-    EXPLOSIVE_PRODUCT_USED_BOTTOM_POUNDS     DECIMAL(38,5),
-    EXPLOSIVE_PRODUCT_USED_TOP_KILOGRAMS     DECIMAL(38,5),
-    EXPLOSIVE_PRODUCT_USED_TOP_POUNDS        DECIMAL(38,5),
-    EXPLOSIVE_PRODUCT_LENGTH_BOTTOM_METERS   DECIMAL(38,5),
-    EXPLOSIVE_PRODUCT_LENGTH_BOTTOM_FEET     DECIMAL(38,5),
-    EXPLOSIVE_PRODUCT_LENGTH_TOP_METERS      DECIMAL(38,5),
-    EXPLOSIVE_PRODUCT_LENGTH_TOP_FEET        DECIMAL(38,5),
-    
-    -- Stemming
-    STEMMING_LENGTH_TOTAL_METERS    DECIMAL(38,5),
-    STEMMING_LENGTH_TOTAL_FEET      DECIMAL(38,5),
-    STEMMING_LENGTH_BOTTOM_METERS   DECIMAL(38,5),
-    STEMMING_LENGTH_BOTTOM_FEET     DECIMAL(38,5),
-    STEMMING_LENGTH_TOP_METERS      DECIMAL(38,5),
-    STEMMING_LENGTH_TOP_FEET        DECIMAL(38,5),
-    
-    -- Spacing and Burden
-    BURDEN_METERS               DECIMAL(38,5),
-    BURDEN_FEET                 DECIMAL(38,5),
-    SPACING_METERS              DECIMAL(38,5),
-    SPACING_FEET                DECIMAL(38,5),
-    
-    -- Calculated Metrics
-    TONS_PER_HOLE               DECIMAL(38,5),
-    KCALS_PER_TON               DECIMAL(38,5),
-    POWDER_FACTOR               DECIMAL(38,5),
-    MEGAJOULES_PER_TON          DECIMAL(38,5),
-    CONFINEMENT_FACTOR          DECIMAL(38,5),
-    PRIMER_COUNT                INT,
-    
-    -- Temperature
-    HOLE_TEMPERATURE_CELSIUS    DECIMAL(38,5),
-    HOLE_TEMPERATURE_FAHRENHEIT DECIMAL(38,5),
-    
-    -- Comments
-    PRODUCT_BOTTOM_COMMENTS     VARCHAR(5000),
-    PRODUCT_TOP_COMMENTS        VARCHAR(5000),
-    STEMMING_BOTTOM_COMMENT     VARCHAR(5000),
-    STEMMING_TOP_COMMENT        VARCHAR(5000),
-    
-    -- Water and Misfire
-    WATER_DEPTH_METERS          DECIMAL(38,5),
-    WATER_DEPTH_FEET            DECIMAL(38,5),
-    MISFIRE_FLAG                BOOLEAN,
-    
-    -- Data Warehouse Audit Columns
-    DW_LOAD_TS                  TIMESTAMP_NTZ,
-    DW_MODIFY_TS                TIMESTAMP_NTZ,
-    DW_LOGICAL_DELETE_FLAG      VARCHAR(1)      DEFAULT 'N',
-    DW_ROW_HASH                 VARCHAR(64),
-    
-    -- Primary Key (Composite)
-    CONSTRAINT PK_BLAST_PLAN_EXECUTION_INCR PRIMARY KEY (
-        ORIG_SRC_ID, SITE_CODE, BENCH, PUSHBACK, PATTERN_NAME, BLAST_NAME, DRILLED_HOLE_ID
-    )
-);
-
--- =============================================================================
--- STORED PROCEDURE
--- =============================================================================
--- Fix History:
--- 2026-01-26: Fixed duplicate row error by adding QUALIFY ROW_NUMBER()
---             Changed signature to VARCHAR for API compatibility
---             Simplified JavaScript to match other INCR procedures
--- =============================================================================
 CREATE OR REPLACE PROCEDURE DEV_API_REF.FUSE.BLAST_PLAN_EXECUTION_INCR_P("NUMBER_OF_DAYS" VARCHAR(16777216) DEFAULT '3')
 RETURNS VARCHAR(16777216)
 LANGUAGE JAVASCRIPT
@@ -157,7 +46,7 @@ USING (
         WATER_DEPTH_METERS, WATER_DEPTH_FEET, MISFIRE_FLAG,
         DW_LOAD_TS,
         DW_MODIFY_TS,
-        ''''N'''' AS DW_LOGICAL_DELETE_FLAG,
+        ''N'' AS DW_LOGICAL_DELETE_FLAG,
         CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ AS dw_load_ts_new
     FROM prod_wg.drill_blast.blast_plan_execution
     WHERE DW_MODIFY_TS >= DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_TIMESTAMP())
@@ -278,7 +167,7 @@ WHEN NOT MATCHED THEN INSERT (
 )`;
 
 sql_delete = `UPDATE dev_api_ref.fuse.blast_plan_execution_incr tgt
-SET DW_LOGICAL_DELETE_FLAG = ''''Y'''', DW_MODIFY_TS = CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ
+SET DW_LOGICAL_DELETE_FLAG = ''Y'', DW_MODIFY_TS = CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ
 WHERE NOT EXISTS (
     SELECT 1 FROM prod_wg.drill_blast.blast_plan_execution src
     WHERE tgt.ORIG_SRC_ID = src.ORIG_SRC_ID 
@@ -289,7 +178,7 @@ WHERE NOT EXISTS (
       AND tgt.BLAST_NAME = src.BLAST_NAME 
       AND tgt.DRILLED_HOLE_ID = src.DRILLED_HOLE_ID
 )
-AND tgt.DW_LOGICAL_DELETE_FLAG = ''''N''''`;
+AND tgt.DW_LOGICAL_DELETE_FLAG = ''N''`;
 
 try {
     // Count old records
@@ -320,15 +209,3 @@ try {
 
 return sp_result;
 ';
-
--- =============================================================================
--- USAGE EXAMPLES
--- =============================================================================
--- Default execution (3 days lookback)
--- CALL DEV_API_REF.FUSE.BLAST_PLAN_EXECUTION_INCR_P();
-
--- Custom lookback period (7 days)
--- CALL DEV_API_REF.FUSE.BLAST_PLAN_EXECUTION_INCR_P('7');
-
--- Full reload (30 days)
--- CALL DEV_API_REF.FUSE.BLAST_PLAN_EXECUTION_INCR_P('30');
