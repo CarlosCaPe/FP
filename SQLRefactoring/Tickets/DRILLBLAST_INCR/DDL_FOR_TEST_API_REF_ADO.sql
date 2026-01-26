@@ -2,7 +2,7 @@
 ================================================================================
 DRILLBLAST_INCR Objects - DDL for TEST_API_REF.FUSE
 ================================================================================
-Generated: 2026-01-26T15:03:26.729570
+Generated: 2026-01-26T15:21:31.685737
 Purpose: Complete DDL scripts for Azure DevOps deployment to TEST environment
 
 Objects:
@@ -247,10 +247,10 @@ DROP TABLE IF EXISTS TEST_API_REF.FUSE.BLAST_PLAN_EXECUTION_INCR;
 create or replace TABLE BLAST_PLAN_EXECUTION_INCR (
 	ORIG_SRC_ID NUMBER(38,0) NOT NULL,
 	SITE_CODE VARCHAR(50) NOT NULL,
-	BENCH FLOAT,
-	PUSHBACK VARCHAR(50),
-	PATTERN_NAME VARCHAR(400),
-	BLAST_NAME VARCHAR(5000),
+	BENCH FLOAT NOT NULL,
+	PUSHBACK VARCHAR(50) NOT NULL,
+	PATTERN_NAME VARCHAR(400) NOT NULL,
+	BLAST_NAME VARCHAR(5000) NOT NULL,
 	DRILLED_HOLE_ID NUMBER(38,0) NOT NULL,
 	DRILLED_HOLE_NAME VARCHAR(500),
 	DRILL_CYCLE_SK NUMBER(38,0),
@@ -655,7 +655,7 @@ AS '
 /*****************************************************************************************
 * PURPOSE   : Merge data from BL_DW_BLAST into BL_DW_BLAST_INCR
 * SOURCE    : PROD_WG.DRILL_BLAST.BL_DW_BLAST
-* TARGET    : TEST_API_REF.FUSE.BL_DW_BLAST_INCR
+* TARGET    : SANDBOX_DATA_ENGINEER.CCARRILL2.BL_DW_BLAST_INCR
 * BUSINESS KEY: ORIG_SRC_ID, SITE_CODE, ID
 * INCREMENTAL COLUMN: DW_MODIFY_TS
 * DATE: 2026-01-23 | AUTHOR: CARLOS CARRILLO
@@ -667,13 +667,13 @@ var rs_count_incr, rs_delete_incr, rs_merge, rs_delete;
 var rs_records_incr, rs_deleted_records_incr, rs_merged_records, rs_delete_records;
 
 sql_count_incr = `SELECT COUNT(*) AS count_check_1 
-                  FROM dev_api_ref.fuse.bl_dw_blast_incr 
+                  FROM TEST_API_REF.FUSE.bl_dw_blast_incr 
                   WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
-sql_delete_incr = `DELETE FROM dev_api_ref.fuse.bl_dw_blast_incr 
+sql_delete_incr = `DELETE FROM TEST_API_REF.FUSE.bl_dw_blast_incr 
                    WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
-sql_merge = `MERGE INTO dev_api_ref.fuse.bl_dw_blast_incr tgt
+sql_merge = `MERGE INTO TEST_API_REF.FUSE.bl_dw_blast_incr tgt
 USING (
     SELECT
         orig_src_id, site_code, id, name, status,
@@ -715,7 +715,7 @@ WHEN NOT MATCHED THEN INSERT (
     src.dw_file_ts_utc, src.dw_logical_delete_flag, src.dw_load_ts, src.dw_modify_ts
 );`;
 
-sql_delete = `UPDATE dev_api_ref.fuse.bl_dw_blast_incr tgt
+sql_delete = `UPDATE TEST_API_REF.FUSE.bl_dw_blast_incr tgt
               SET dw_logical_delete_flag = ''Y'', dw_modify_ts = CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ
               WHERE tgt.dw_logical_delete_flag = ''N''
               AND NOT EXISTS (
@@ -771,13 +771,13 @@ var rs_count_incr, rs_delete_incr, rs_merge, rs_delete;
 var rs_records_incr, rs_deleted_records_incr, rs_merged_records, rs_delete_records;
 
 sql_count_incr = `SELECT COUNT(*) AS count_check_1 
-                  FROM dev_api_ref.fuse.bl_dw_blastpropertyvalue_incr 
+                  FROM TEST_API_REF.FUSE.bl_dw_blastpropertyvalue_incr 
                   WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
-sql_delete_incr = `DELETE FROM dev_api_ref.fuse.bl_dw_blastpropertyvalue_incr 
+sql_delete_incr = `DELETE FROM TEST_API_REF.FUSE.bl_dw_blastpropertyvalue_incr 
                    WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
-sql_merge = `MERGE INTO dev_api_ref.fuse.bl_dw_blastpropertyvalue_incr tgt
+sql_merge = `MERGE INTO TEST_API_REF.FUSE.bl_dw_blastpropertyvalue_incr tgt
 USING (
     SELECT orig_src_id, site_code, blastid, refreshedtime, deleted,
            parameter, planneddate, shottype, shotgoal, dw_file_ts_utc,
@@ -802,7 +802,7 @@ WHEN NOT MATCHED THEN INSERT (
     src.planneddate, src.shottype, src.shotgoal, src.dw_file_ts_utc, src.dw_logical_delete_flag, src.dw_load_ts, src.dw_modify_ts
 );`;
 
-sql_delete = `UPDATE dev_api_ref.fuse.bl_dw_blastpropertyvalue_incr tgt
+sql_delete = `UPDATE TEST_API_REF.FUSE.bl_dw_blastpropertyvalue_incr tgt
               SET dw_logical_delete_flag = ''Y'', dw_modify_ts = CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ
               WHERE tgt.dw_logical_delete_flag = ''N''
               AND NOT EXISTS (SELECT 1 FROM prod_wg.drill_blast.bl_dw_blastpropertyvalue src
@@ -839,13 +839,13 @@ var sp_result="";
 var sql_count_incr, sql_delete_incr, sql_merge, sql_delete;
 
 sql_count_incr = `SELECT COUNT(*) AS count_check_1 
-                  FROM dev_api_ref.fuse.bl_dw_hole_incr 
+                  FROM TEST_API_REF.FUSE.bl_dw_hole_incr 
                   WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
-sql_delete_incr = `DELETE FROM dev_api_ref.fuse.bl_dw_hole_incr 
+sql_delete_incr = `DELETE FROM TEST_API_REF.FUSE.bl_dw_hole_incr 
                    WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
-sql_merge = `MERGE INTO dev_api_ref.fuse.bl_dw_hole_incr tgt
+sql_merge = `MERGE INTO TEST_API_REF.FUSE.bl_dw_hole_incr tgt
 USING (
     SELECT orig_src_id, site_code, id, name, modified_name, blastname, modified_blastname, 
            blastid, "ROW" AS hole_row, echelon, status, lastknowndepth, lastknownwater, 
@@ -888,7 +888,7 @@ WHEN NOT MATCHED THEN INSERT (
     src.dw_logical_delete_flag, src.dw_load_ts_new, src.dw_modify_ts
 );`;
 
-sql_delete = `UPDATE dev_api_ref.fuse.bl_dw_hole_incr tgt
+sql_delete = `UPDATE TEST_API_REF.FUSE.bl_dw_hole_incr tgt
               SET dw_logical_delete_flag = ''Y'', dw_modify_ts = CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ
               WHERE tgt.dw_logical_delete_flag = ''N''
               AND NOT EXISTS (SELECT 1 FROM prod_wg.drill_blast.bl_dw_hole src
@@ -924,7 +924,7 @@ AS '
 var sp_result="";
 var daysBack = NUMBER_OF_DAYS || 3;
 
-var sql_merge = `MERGE INTO dev_api_ref.fuse.blast_plan_incr tgt
+var sql_merge = `MERGE INTO TEST_API_REF.FUSE.blast_plan_incr tgt
 USING (
     SELECT BLAST_PLAN_SK, ORIG_SRC_ID, SITE_CODE, BENCH, PUSHBACK, PATTERN_NAME, BLAST_NAME,
            CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ AS dw_load_ts,
@@ -967,13 +967,13 @@ var sp_result="";
 var sql_count_incr, sql_delete_incr, sql_merge, sql_delete;
 
 sql_count_incr = `SELECT COUNT(*) AS count_check_1 
-                  FROM dev_api_ref.fuse.blast_plan_execution_incr 
+                  FROM TEST_API_REF.FUSE.blast_plan_execution_incr 
                   WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
-sql_delete_incr = `DELETE FROM dev_api_ref.fuse.blast_plan_execution_incr 
+sql_delete_incr = `DELETE FROM TEST_API_REF.FUSE.blast_plan_execution_incr 
                    WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
-sql_merge = `MERGE INTO dev_api_ref.fuse.blast_plan_execution_incr tgt
+sql_merge = `MERGE INTO TEST_API_REF.FUSE.blast_plan_execution_incr tgt
 USING (
     SELECT 
         ORIG_SRC_ID, SITE_CODE, BENCH, PUSHBACK, PATTERN_NAME, BLAST_NAME, DRILLED_HOLE_ID,
@@ -1117,7 +1117,7 @@ WHEN NOT MATCHED THEN INSERT (
     src.dw_load_ts_new, src.dw_load_ts_new, src.DW_LOGICAL_DELETE_FLAG
 )`;
 
-sql_delete = `UPDATE dev_api_ref.fuse.blast_plan_execution_incr tgt
+sql_delete = `UPDATE TEST_API_REF.FUSE.blast_plan_execution_incr tgt
 SET DW_LOGICAL_DELETE_FLAG = ''Y'', DW_MODIFY_TS = CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ
 WHERE NOT EXISTS (
     SELECT 1 FROM prod_wg.drill_blast.blast_plan_execution src
@@ -1175,7 +1175,7 @@ AS '
 var sp_result="";
 var daysBack = NUMBER_OF_DAYS || 3;
 
-var sql_merge = `MERGE INTO dev_api_ref.fuse.drill_cycle_incr tgt
+var sql_merge = `MERGE INTO TEST_API_REF.FUSE.drill_cycle_incr tgt
 USING (
     SELECT DRILL_CYCLE_SK, ORIG_SRC_ID, SITE_CODE, BENCH, PUSHBACK, PATTERN_NAME,
            CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ AS dw_load_ts,
@@ -1217,7 +1217,7 @@ AS '
 var sp_result="";
 var daysBack = NUMBER_OF_DAYS || 3;
 
-var sql_merge = `MERGE INTO dev_api_ref.fuse.drill_plan_incr tgt
+var sql_merge = `MERGE INTO TEST_API_REF.FUSE.drill_plan_incr tgt
 USING (
     SELECT DRILL_PLAN_SK, ORIG_SRC_ID, SITE_CODE, BENCH, PUSHBACK, PATTERN_NAME,
            CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ AS dw_load_ts,
@@ -1259,13 +1259,13 @@ AS '
 var sp_result="";
 
 var sql_count_incr = `SELECT COUNT(*) AS count_check_1 
-                      FROM dev_api_ref.fuse.drillblast_equipment_incr 
+                      FROM TEST_API_REF.FUSE.drillblast_equipment_incr 
                       WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
-var sql_delete_incr = `DELETE FROM dev_api_ref.fuse.drillblast_equipment_incr 
+var sql_delete_incr = `DELETE FROM TEST_API_REF.FUSE.drillblast_equipment_incr 
                        WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
-var sql_merge = `MERGE INTO dev_api_ref.fuse.drillblast_equipment_incr tgt
+var sql_merge = `MERGE INTO TEST_API_REF.FUSE.drillblast_equipment_incr tgt
 USING (
     SELECT orig_src_id, site_code, drill_id, equip_name, equip_model,
            serial_number, equip_category, mem_equip_id, equip_unit_code,
@@ -1295,7 +1295,7 @@ WHEN NOT MATCHED THEN INSERT (
     src.sap_equip_no, src.system_version, src.dw_logical_delete_flag, src.dw_load_ts, src.dw_modify_ts
 );`;
 
-var sql_delete = `UPDATE dev_api_ref.fuse.drillblast_equipment_incr tgt
+var sql_delete = `UPDATE TEST_API_REF.FUSE.drillblast_equipment_incr tgt
                   SET dw_logical_delete_flag = ''Y'', dw_modify_ts = CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ
                   WHERE tgt.dw_logical_delete_flag = ''N''
                   AND NOT EXISTS (SELECT 1 FROM prod_wg.drill_blast.drillblast_equipment src
@@ -1331,13 +1331,13 @@ AS '
 var sp_result="";
 
 var sql_count_incr = `SELECT COUNT(*) AS count_check_1 
-                      FROM dev_api_ref.fuse.drillblast_operator_incr 
+                      FROM TEST_API_REF.FUSE.drillblast_operator_incr 
                       WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
-var sql_delete_incr = `DELETE FROM dev_api_ref.fuse.drillblast_operator_incr 
+var sql_delete_incr = `DELETE FROM TEST_API_REF.FUSE.drillblast_operator_incr 
                        WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
-var sql_merge = `MERGE INTO dev_api_ref.fuse.drillblast_operator_incr tgt
+var sql_merge = `MERGE INTO TEST_API_REF.FUSE.drillblast_operator_incr tgt
 USING (
     SELECT system_operator_id, site_code, orig_src_id, application_operator_id,
            operator_name, crew_id, crew_name, sap_operator_id,
@@ -1368,7 +1368,7 @@ WHEN NOT MATCHED THEN INSERT (
     src.dw_logical_delete_flag, src.dw_load_ts, src.dw_modify_ts
 );`;
 
-var sql_delete = `UPDATE dev_api_ref.fuse.drillblast_operator_incr tgt
+var sql_delete = `UPDATE TEST_API_REF.FUSE.drillblast_operator_incr tgt
                   SET dw_logical_delete_flag = ''Y'', dw_modify_ts = CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ
                   WHERE tgt.dw_logical_delete_flag = ''N''
                   AND NOT EXISTS (SELECT 1 FROM prod_wg.drill_blast.drillblast_operator src
@@ -1403,7 +1403,7 @@ EXECUTE AS OWNER
 AS '
 var sp_result="";
 
-var sql_merge = `MERGE INTO dev_api_ref.fuse.drillblast_shift_incr tgt
+var sql_merge = `MERGE INTO TEST_API_REF.FUSE.drillblast_shift_incr tgt
 USING (
     SELECT orig_src_id, site_code, shift_id, shift_date, shift_name,
            shift_date_name, attributed_crew_id, crew_name, shift_no,
@@ -1460,7 +1460,7 @@ EXECUTE AS OWNER
 AS '
 var sp_result="";
 
-var sql_merge = `MERGE INTO dev_api_ref.fuse.lh_haul_cycle_incr tgt
+var sql_merge = `MERGE INTO TEST_API_REF.FUSE.lh_haul_cycle_incr tgt
 USING (
     SELECT haul_cycle_id, site_code, orig_src_id, 
            shift_id_at_loading_end, shift_id_at_dump_end,

@@ -79,9 +79,10 @@ USE WAREHOUSE WH_BATCH_DE_NONPROD;
             cursor.execute(f"SELECT GET_DDL('TABLE', 'DEV_API_REF.FUSE.{table_name}')")
             ddl = cursor.fetchone()[0]
             
-            # Replace database reference
-            ddl = ddl.replace("DEV_API_REF.FUSE", "TEST_API_REF.FUSE")
-            ddl = ddl.replace("DEV_API_REF", "TEST_API_REF")
+            # Replace database reference (case-insensitive)
+            import re
+            ddl = re.sub(r'DEV_API_REF\.FUSE', 'TEST_API_REF.FUSE', ddl, flags=re.IGNORECASE)
+            ddl = re.sub(r'DEV_API_REF', 'TEST_API_REF', ddl, flags=re.IGNORECASE)
             
             f.write(f"-- ----------------------------------------------------------------------------\n")
             f.write(f"-- TABLE: {table_name}\n")
@@ -113,9 +114,10 @@ USE WAREHOUSE WH_BATCH_DE_NONPROD;
             cursor.execute(f"SELECT GET_DDL('PROCEDURE', 'DEV_API_REF.FUSE.{proc_name}(VARCHAR)')")
             ddl = cursor.fetchone()[0]
             
-            # Replace database reference
-            ddl = ddl.replace("DEV_API_REF.FUSE", "TEST_API_REF.FUSE")
-            ddl = ddl.replace("DEV_API_REF", "TEST_API_REF")
+            # Replace database reference (case-insensitive)
+            import re
+            ddl = re.sub(r'DEV_API_REF\.FUSE', 'TEST_API_REF.FUSE', ddl, flags=re.IGNORECASE)
+            ddl = re.sub(r'DEV_API_REF', 'TEST_API_REF', ddl, flags=re.IGNORECASE)
             
             f.write(f"-- ----------------------------------------------------------------------------\n")
             f.write(f"-- PROCEDURE: {proc_name}\n")
