@@ -3,6 +3,29 @@
 
 ---
 
+## ⚠️ CRITICAL KNOWLEDGE - READ FIRST ⚠️
+
+### Python 3.14 Compatibility Issues
+
+**PROBLEM:** Python 3.14 is NOT compatible with:
+- `snowflake-connector-python` - Requires C++ compilation, no wheels available
+- Some Azure SDK packages may also have issues
+
+**SOLUTIONS:**
+
+| Tool | Alternative |
+|------|-------------|
+| Snowflake | Use SnowSQL CLI, Snowflake Worksheet, or VS Code Snowflake Extension |
+| ADX/Kusto | Works fine with Python 3.14 (azure-kusto-data has wheels) |
+| SQL Azure | Use MSSQL extension in VS Code |
+
+**If you need Python for Snowflake:**
+```powershell
+py -3.12 your_script.py  # Use Python 3.12 specifically
+```
+
+---
+
 ## 📋 COPILOT PROMPT TO GET STARTED
 
 **Copy and paste this entire prompt into Copilot chat to set up your project:**

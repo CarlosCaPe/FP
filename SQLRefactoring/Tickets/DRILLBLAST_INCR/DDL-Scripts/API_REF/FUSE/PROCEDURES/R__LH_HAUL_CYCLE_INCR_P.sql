@@ -1,10 +1,28 @@
-CREATE OR REPLACE PROCEDURE {{ envi }}_API_REF.FUSE.LH_HAUL_CYCLE_INCR_P("NUMBER_OF_DAYS" VARCHAR(16777216) DEFAULT '3')
+-- =============================================
+-- Procedure: LH_HAUL_CYCLE_INCR_P
+-- Purpose: Incremental load with purging logic (Vikas fix - 2026-01-26)
+-- Pattern: COUNT old → DELETE old (purge) → MERGE new
+-- =============================================
+CREATE OR REPLACE PROCEDURE {{ envi }}_API_REF.FUSE.LH_HAUL_CYCLE_INCR_P("NUMBER_OF_DAYS" VARCHAR(16777216) DEFAULT '3', "MAX_DAYS_TO_KEEP" VARCHAR(16777216) DEFAULT '90')
 RETURNS VARCHAR(16777216)
 LANGUAGE JAVASCRIPT
 EXECUTE AS OWNER
 AS '
-var sp_result="";
+var sp_result = "";
+var daysBack = NUMBER_OF_DAYS || 3;
+var maxDays = MAX_DAYS_TO_KEEP || 90;
+var rows_purged = 0;
+var rows_merged = 0;
 
+// STEP 1: COUNT old records to purge (older than MAX_DAYS_TO_KEEP)
+var sql_count_incr = `SELECT COUNT(*) AS cnt FROM {{ envi }}_API_REF.fuse.lh_haul_cycle_incr 
+                      WHERE dw_modify_ts < DATEADD(day, -` + maxDays + `, CURRENT_TIMESTAMP())`;
+
+// STEP 2: DELETE old records (purge) - prevents unbounded table growth
+var sql_delete_incr = `DELETE FROM {{ envi }}_API_REF.fuse.lh_haul_cycle_incr 
+                       WHERE dw_modify_ts < DATEADD(day, -` + maxDays + `, CURRENT_TIMESTAMP())`;
+
+// STEP 3: MERGE new/updated records from source
 var sql_merge = `MERGE INTO {{ envi }}_API_REF.fuse.lh_haul_cycle_incr tgt
 USING (
     SELECT haul_cycle_id, site_code, orig_src_id, 
@@ -53,7 +71,7 @@ USING (
            CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ AS dw_load_ts,
            dw_modify_ts::TIMESTAMP_NTZ AS dw_modify_ts
     FROM {{ RO_PROD }}_WG.load_haul.lh_haul_cycle
-    WHERE dw_modify_ts >= DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_TIMESTAMP())
+    WHERE dw_modify_ts >= DATEADD(day, -` + daysBack + `, CURRENT_TIMESTAMP())
 ) AS src
 ON tgt.haul_cycle_id = src.haul_cycle_id
 WHEN MATCHED THEN UPDATE SET
@@ -94,9 +112,15 @@ WHEN NOT MATCHED THEN INSERT (
 );`;
 
 try {
+    // Execute purge (DELETE old records)
+    var rs_delete_incr = snowflake.execute({sqlText: sql_delete_incr});
+    rows_purged = rs_delete_incr.getNumRowsAffected();
+    
+    // Execute merge
     var rs_merge = snowflake.execute({sqlText: sql_merge});
-    var rs_merged_records = rs_merge.getNumRowsAffected();
-    sp_result = "Deleted: 0, Merged: " + rs_merged_records + ", Archived: 0";
+    rows_merged = rs_merge.getNumRowsAffected();
+    
+    sp_result = "Purged: " + rows_purged + ", Merged: " + rows_merged + ", Archived: 0";
     return sp_result;
 } catch (err) { throw err; }
 ';

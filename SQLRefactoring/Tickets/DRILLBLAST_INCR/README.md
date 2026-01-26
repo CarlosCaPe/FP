@@ -1,5 +1,39 @@
 # DRILLBLAST_INCR - Incremental Tables for IROC Project
 
+---
+
+## ⚠️ CONOCIMIENTO CRÍTICO - LEER PRIMERO ⚠️
+
+### Python 3.14 NO es compatible con snowflake-connector-python
+
+**PROBLEMA RECURRENTE:** El conector de Snowflake para Python requiere compilar extensiones C++ y Python 3.14 no tiene wheels precompilados ni soporte de compilación.
+
+**SOLUCIONES (en orden de preferencia):**
+
+1. **Ejecutar en Snowflake Worksheet** - Copiar/pegar `TEST_DEPLOYMENT_DEV.sql`
+2. **Usar SnowSQL CLI** - `snowsql -f TEST_DEPLOYMENT_DEV.sql`
+3. **VS Code Snowflake Extension** - Instalar y ejecutar directamente
+4. **Python 3.12** - Si necesitas Python: `py -3.12 script.py`
+
+**NO INTENTAR:**
+- `pip install snowflake-connector-python` con Python 3.14
+- Scripts Python que requieran el conector sin especificar versión
+
+---
+
+### Vikas Fix (2026-01-26) - Purging Logic
+
+**Problema:** 5 procedures NO tenían lógica de purging (crecimiento infinito de tablas)
+- BLAST_PLAN_INCR_P, DRILL_CYCLE_INCR_P, DRILL_PLAN_INCR_P, DRILLBLAST_SHIFT_INCR_P, LH_HAUL_CYCLE_INCR_P
+
+**Solución:** Se agregó DELETE antes del MERGE para purgar registros > 90 días
+
+**Output esperado:** `Purged: X, Merged: Y, Archived: 0` (no `Deleted: 0`)
+
+**Nuevo parámetro:** `MAX_DAYS_TO_KEEP` (default: 90 días)
+
+---
+
 ## Overview
 
 This folder contains DDL scripts to create incremental (_INCR) tables and stored procedures for the IROC project. These tables sync data from Snowflake to SQL Azure using a high watermark strategy.
