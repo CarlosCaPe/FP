@@ -189,4 +189,31 @@ Procedures (11):
 ```
 
 ---
-*Created: 2026-01-23 | Updated: 2026-01-23 | Author: Carlos Carrillo*
+*Created: 2026-01-23 | Updated: 2026-01-26 | Author: Carlos Carrillo*
+
+---
+
+## 🐛 Known Issues & Fixes
+
+### Issue: BLAST_PLAN_EXECUTION_INCR_P - Duplicate Row Error (2026-01-26)
+
+**Symptom:** Procedure fails with error:
+```
+Execution error in store procedure BLAST_PLAN_EXECUTION_INCR_P
+Duplicate row detected during DML action
+nRow Values: [443, "MOR", 4700, "SHA", ...]
+```
+
+**Root Cause:** The source table `PROD_WG.DRILL_BLAST.BLAST_PLAN_EXECUTION` contains duplicate rows for the same composite business key (`ORIG_SRC_ID, SITE_CODE, BENCH, PUSHBACK, PATTERN_NAME, BLAST_NAME, DRILLED_HOLE_ID`). Snowflake MERGE statements fail when the source contains multiple rows that match the same target key.
+
+**Fix Applied:** Added `QUALIFY ROW_NUMBER()` clause to the source query in the MERGE statement to deduplicate rows, keeping only the latest record per business key based on `DW_MODIFY_TS`.
+
+```sql
+-- Added after WHERE clause in MERGE source query:
+QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY ORIG_SRC_ID, SITE_CODE, BENCH, PUSHBACK, PATTERN_NAME, BLAST_NAME, DRILLED_HOLE_ID
+    ORDER BY TRY_TO_TIMESTAMP(DW_MODIFY_TS) DESC NULLS LAST
+) = 1
+```
+
+**Important:** When creating new INCR procedures, always consider adding `QUALIFY` deduplication if the source table may have duplicate business keys.

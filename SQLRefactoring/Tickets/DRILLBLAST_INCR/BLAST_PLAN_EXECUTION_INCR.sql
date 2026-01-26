@@ -234,6 +234,11 @@ $$
                     ), 256) AS DW_ROW_HASH
                 FROM PROD_WG.DRILL_BLAST.BLAST_PLAN_EXECUTION
                 WHERE TRY_TO_TIMESTAMP(DW_MODIFY_TS) >= '${cutoffTs}'
+                -- Deduplicate: keep only the latest row per business key to prevent MERGE duplicate errors
+                QUALIFY ROW_NUMBER() OVER (
+                    PARTITION BY ORIG_SRC_ID, SITE_CODE, BENCH, PUSHBACK, PATTERN_NAME, BLAST_NAME, DRILLED_HOLE_ID
+                    ORDER BY TRY_TO_TIMESTAMP(DW_MODIFY_TS) DESC NULLS LAST
+                ) = 1
             ) AS SRC
             ON TGT.ORIG_SRC_ID = SRC.ORIG_SRC_ID
                AND TGT.SITE_CODE = SRC.SITE_CODE
