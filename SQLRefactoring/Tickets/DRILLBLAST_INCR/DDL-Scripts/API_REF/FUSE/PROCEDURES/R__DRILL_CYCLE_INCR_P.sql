@@ -3,16 +3,28 @@ RETURNS VARCHAR(16777216)
 LANGUAGE JAVASCRIPT
 EXECUTE AS OWNER
 AS '
+/*****************************************************************************************
+* PURPOSE   : Merge data from DRILL_CYCLE into DRILL_CYCLE_INCR
+* SOURCE    : {{ RO_PROD }}_WG.DRILL_BLAST.DRILL_CYCLE
+* TARGET    : {{ envi }}_API_REF.FUSE.DRILL_CYCLE_INCR
+* BUSINESS KEY: DRILL_CYCLE_SK
+* INCREMENTAL COLUMN: DW_MODIFY_TS
+* DATE: 2026-01-23 | AUTHOR: CARLOS CARRILLO
+******************************************************************************************/
+
 var sp_result="";
+var sql_count_incr, sql_delete_incr, sql_merge, sql_delete;
+var rs_count_incr, rs_delete_incr, rs_merge, rs_delete;
+var rs_records_incr, rs_deleted_records_incr, rs_merged_records, rs_delete_records;
 
-var sql_count_incr = `SELECT COUNT(*) AS count_check_1 
-                      FROM {{ envi }}_API_REF.fuse.drill_cycle_incr 
-                      WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
+sql_count_incr = `SELECT COUNT(*) AS count_check_1 
+                  FROM {{ envi }}_API_REF.fuse.drill_cycle_incr 
+                  WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
-var sql_delete_incr = `DELETE FROM {{ envi }}_API_REF.fuse.drill_cycle_incr 
-                       WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
+sql_delete_incr = `DELETE FROM {{ envi }}_API_REF.fuse.drill_cycle_incr 
+                   WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
-var sql_merge = `MERGE INTO {{ envi }}_API_REF.fuse.drill_cycle_incr tgt
+sql_merge = `MERGE INTO {{ envi }}_API_REF.fuse.drill_cycle_incr tgt
 USING (
     SELECT DRILL_CYCLE_SK, ORIG_SRC_ID, SITE_CODE, BENCH, PUSHBACK, PATTERN_NAME,
            CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ AS dw_load_ts,
@@ -32,22 +44,22 @@ WHEN NOT MATCHED THEN INSERT (DRILL_CYCLE_SK, ORIG_SRC_ID, SITE_CODE, BENCH, PUS
 VALUES (src.DRILL_CYCLE_SK, src.ORIG_SRC_ID, src.SITE_CODE, src.BENCH, src.PUSHBACK, src.PATTERN_NAME,
     src.dw_load_ts, CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ, src.dw_logical_delete_flag, src.dw_row_hash);`;
 
-var sql_delete = `UPDATE {{ envi }}_API_REF.fuse.drill_cycle_incr tgt
-                  SET dw_logical_delete_flag = ''Y'', dw_modify_ts = CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ
-                  WHERE tgt.dw_logical_delete_flag = ''N''
-                  AND NOT EXISTS (SELECT 1 FROM {{ RO_PROD }}_WG.DRILL_BLAST.DRILL_CYCLE src
-                      WHERE src.DRILL_CYCLE_SK = tgt.DRILL_CYCLE_SK);`;
+sql_delete = `UPDATE {{ envi }}_API_REF.fuse.drill_cycle_incr tgt
+              SET dw_logical_delete_flag = ''Y'', dw_modify_ts = CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ
+              WHERE tgt.dw_logical_delete_flag = ''N''
+              AND NOT EXISTS (SELECT 1 FROM {{ RO_PROD }}_WG.DRILL_BLAST.DRILL_CYCLE src
+                  WHERE src.DRILL_CYCLE_SK = tgt.DRILL_CYCLE_SK);`;
 
 try {
     snowflake.execute({sqlText: "BEGIN WORK;"});
-    var rs_count_incr = snowflake.execute({sqlText: sql_count_incr});
+    rs_count_incr = snowflake.execute({sqlText: sql_count_incr});
     rs_count_incr.next();
-    var rs_records_incr = rs_count_incr.getColumnValue(''COUNT_CHECK_1'');
-    var rs_deleted_records_incr = rs_records_incr > 0 ? snowflake.execute({sqlText: sql_delete_incr}).getNumRowsAffected() : 0;
-    var rs_merge = snowflake.execute({sqlText: sql_merge});
-    var rs_merged_records = rs_merge.getNumRowsAffected();
-    var rs_delete = snowflake.execute({sqlText: sql_delete});
-    var rs_delete_records = rs_delete.getNumRowsAffected();
+    rs_records_incr = rs_count_incr.getColumnValue(''COUNT_CHECK_1'');
+    rs_deleted_records_incr = rs_records_incr > 0 ? snowflake.execute({sqlText: sql_delete_incr}).getNumRowsAffected() : 0;
+    rs_merge = snowflake.execute({sqlText: sql_merge});
+    rs_merged_records = rs_merge.getNumRowsAffected();
+    rs_delete = snowflake.execute({sqlText: sql_delete});
+    rs_delete_records = rs_delete.getNumRowsAffected();
     sp_result = "Deleted: " + rs_deleted_records_incr + ", Merged: " + rs_merged_records + ", Archived: " + rs_delete_records;
     snowflake.execute({sqlText: "COMMIT WORK;"});
     return sp_result;

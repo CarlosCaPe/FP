@@ -3,16 +3,28 @@ RETURNS VARCHAR(16777216)
 LANGUAGE JAVASCRIPT
 EXECUTE AS OWNER
 AS '
+/*****************************************************************************************
+* PURPOSE   : Merge data from BLAST_PLAN into BLAST_PLAN_INCR
+* SOURCE    : {{ RO_PROD }}_WG.DRILL_BLAST.BLAST_PLAN
+* TARGET    : {{ envi }}_API_REF.FUSE.BLAST_PLAN_INCR
+* BUSINESS KEY: BLAST_PLAN_SK
+* INCREMENTAL COLUMN: DW_MODIFY_TS
+* DATE: 2026-01-23 | AUTHOR: CARLOS CARRILLO
+******************************************************************************************/
+
 var sp_result="";
+var sql_count_incr, sql_delete_incr, sql_merge, sql_delete;
+var rs_count_incr, rs_delete_incr, rs_merge, rs_delete;
+var rs_records_incr, rs_deleted_records_incr, rs_merged_records, rs_delete_records;
 
-var sql_count_incr = `SELECT COUNT(*) AS count_check_1 
-                      FROM {{ envi }}_API_REF.fuse.blast_plan_incr 
-                      WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
+sql_count_incr = `SELECT COUNT(*) AS count_check_1 
+                  FROM {{ envi }}_API_REF.fuse.blast_plan_incr 
+                  WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
-var sql_delete_incr = `DELETE FROM {{ envi }}_API_REF.fuse.blast_plan_incr 
-                       WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
+sql_delete_incr = `DELETE FROM {{ envi }}_API_REF.fuse.blast_plan_incr 
+                   WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
-var sql_merge = `MERGE INTO {{ envi }}_API_REF.fuse.blast_plan_incr tgt
+sql_merge = `MERGE INTO {{ envi }}_API_REF.fuse.blast_plan_incr tgt
 USING (
     SELECT BLAST_PLAN_SK, ORIG_SRC_ID, SITE_CODE, BENCH, PUSHBACK, PATTERN_NAME, BLAST_NAME,
            CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ AS dw_load_ts,
@@ -32,22 +44,22 @@ WHEN NOT MATCHED THEN INSERT (BLAST_PLAN_SK, ORIG_SRC_ID, SITE_CODE, BENCH, PUSH
 VALUES (src.BLAST_PLAN_SK, src.ORIG_SRC_ID, src.SITE_CODE, src.BENCH, src.PUSHBACK, src.PATTERN_NAME, src.BLAST_NAME,
     src.dw_load_ts, CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ, src.dw_logical_delete_flag, src.dw_row_hash);`;
 
-var sql_delete = `UPDATE {{ envi }}_API_REF.fuse.blast_plan_incr tgt
-                  SET dw_logical_delete_flag = ''Y'', dw_modify_ts = CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ
-                  WHERE tgt.dw_logical_delete_flag = ''N''
-                  AND NOT EXISTS (SELECT 1 FROM {{ RO_PROD }}_WG.DRILL_BLAST.BLAST_PLAN src
-                      WHERE src.BLAST_PLAN_SK = tgt.BLAST_PLAN_SK);`;
+sql_delete = `UPDATE {{ envi }}_API_REF.fuse.blast_plan_incr tgt
+              SET dw_logical_delete_flag = ''Y'', dw_modify_ts = CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ
+              WHERE tgt.dw_logical_delete_flag = ''N''
+              AND NOT EXISTS (SELECT 1 FROM {{ RO_PROD }}_WG.DRILL_BLAST.BLAST_PLAN src
+                  WHERE src.BLAST_PLAN_SK = tgt.BLAST_PLAN_SK);`;
 
 try {
     snowflake.execute({sqlText: "BEGIN WORK;"});
-    var rs_count_incr = snowflake.execute({sqlText: sql_count_incr});
+    rs_count_incr = snowflake.execute({sqlText: sql_count_incr});
     rs_count_incr.next();
-    var rs_records_incr = rs_count_incr.getColumnValue(''COUNT_CHECK_1'');
-    var rs_deleted_records_incr = rs_records_incr > 0 ? snowflake.execute({sqlText: sql_delete_incr}).getNumRowsAffected() : 0;
-    var rs_merge = snowflake.execute({sqlText: sql_merge});
-    var rs_merged_records = rs_merge.getNumRowsAffected();
-    var rs_delete = snowflake.execute({sqlText: sql_delete});
-    var rs_delete_records = rs_delete.getNumRowsAffected();
+    rs_records_incr = rs_count_incr.getColumnValue(''COUNT_CHECK_1'');
+    rs_deleted_records_incr = rs_records_incr > 0 ? snowflake.execute({sqlText: sql_delete_incr}).getNumRowsAffected() : 0;
+    rs_merge = snowflake.execute({sqlText: sql_merge});
+    rs_merged_records = rs_merge.getNumRowsAffected();
+    rs_delete = snowflake.execute({sqlText: sql_delete});
+    rs_delete_records = rs_delete.getNumRowsAffected();
     sp_result = "Deleted: " + rs_deleted_records_incr + ", Merged: " + rs_merged_records + ", Archived: " + rs_delete_records;
     snowflake.execute({sqlText: "COMMIT WORK;"});
     return sp_result;

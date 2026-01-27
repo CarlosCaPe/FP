@@ -3,16 +3,28 @@ RETURNS VARCHAR(16777216)
 LANGUAGE JAVASCRIPT
 EXECUTE AS OWNER
 AS '
+/*****************************************************************************************
+* PURPOSE   : Merge data from LH_HAUL_CYCLE into LH_HAUL_CYCLE_INCR
+* SOURCE    : {{ RO_PROD }}_WG.LOAD_HAUL.LH_HAUL_CYCLE
+* TARGET    : {{ envi }}_API_REF.FUSE.LH_HAUL_CYCLE_INCR
+* BUSINESS KEY: HAUL_CYCLE_ID
+* INCREMENTAL COLUMN: DW_MODIFY_TS
+* DATE: 2026-01-23 | AUTHOR: CARLOS CARRILLO
+******************************************************************************************/
+
 var sp_result="";
+var sql_count_incr, sql_delete_incr, sql_merge, sql_delete;
+var rs_count_incr, rs_delete_incr, rs_merge, rs_delete;
+var rs_records_incr, rs_deleted_records_incr, rs_merged_records, rs_delete_records;
 
-var sql_count_incr = `SELECT COUNT(*) AS count_check_1 
-                      FROM {{ envi }}_API_REF.fuse.lh_haul_cycle_incr 
-                      WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
+sql_count_incr = `SELECT COUNT(*) AS count_check_1 
+                  FROM {{ envi }}_API_REF.fuse.lh_haul_cycle_incr 
+                  WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
-var sql_delete_incr = `DELETE FROM {{ envi }}_API_REF.fuse.lh_haul_cycle_incr 
-                       WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
+sql_delete_incr = `DELETE FROM {{ envi }}_API_REF.fuse.lh_haul_cycle_incr 
+                   WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
-var sql_merge = `MERGE INTO {{ envi }}_API_REF.fuse.lh_haul_cycle_incr tgt
+sql_merge = `MERGE INTO {{ envi }}_API_REF.fuse.lh_haul_cycle_incr tgt
 USING (
     SELECT haul_cycle_id, site_code, orig_src_id, 
            shift_id_at_loading_end, shift_id_at_dump_end,
@@ -100,22 +112,22 @@ WHEN NOT MATCHED THEN INSERT (
     src.dw_logical_delete_flag, src.dw_load_ts, src.dw_modify_ts
 );`;
 
-var sql_delete = `UPDATE {{ envi }}_API_REF.fuse.lh_haul_cycle_incr tgt
-                  SET dw_logical_delete_flag = ''Y'', dw_modify_ts = CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ
-                  WHERE tgt.dw_logical_delete_flag = ''N''
-                  AND NOT EXISTS (SELECT 1 FROM {{ RO_PROD }}_WG.load_haul.lh_haul_cycle src
-                      WHERE src.haul_cycle_id = tgt.haul_cycle_id);`;
+sql_delete = `UPDATE {{ envi }}_API_REF.fuse.lh_haul_cycle_incr tgt
+              SET dw_logical_delete_flag = ''Y'', dw_modify_ts = CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ
+              WHERE tgt.dw_logical_delete_flag = ''N''
+              AND NOT EXISTS (SELECT 1 FROM {{ RO_PROD }}_WG.load_haul.lh_haul_cycle src
+                  WHERE src.haul_cycle_id = tgt.haul_cycle_id);`;
 
 try {
     snowflake.execute({sqlText: "BEGIN WORK;"});
-    var rs_count_incr = snowflake.execute({sqlText: sql_count_incr});
+    rs_count_incr = snowflake.execute({sqlText: sql_count_incr});
     rs_count_incr.next();
-    var rs_records_incr = rs_count_incr.getColumnValue(''COUNT_CHECK_1'');
-    var rs_deleted_records_incr = rs_records_incr > 0 ? snowflake.execute({sqlText: sql_delete_incr}).getNumRowsAffected() : 0;
-    var rs_merge = snowflake.execute({sqlText: sql_merge});
-    var rs_merged_records = rs_merge.getNumRowsAffected();
-    var rs_delete = snowflake.execute({sqlText: sql_delete});
-    var rs_delete_records = rs_delete.getNumRowsAffected();
+    rs_records_incr = rs_count_incr.getColumnValue(''COUNT_CHECK_1'');
+    rs_deleted_records_incr = rs_records_incr > 0 ? snowflake.execute({sqlText: sql_delete_incr}).getNumRowsAffected() : 0;
+    rs_merge = snowflake.execute({sqlText: sql_merge});
+    rs_merged_records = rs_merge.getNumRowsAffected();
+    rs_delete = snowflake.execute({sqlText: sql_delete});
+    rs_delete_records = rs_delete.getNumRowsAffected();
     sp_result = "Deleted: " + rs_deleted_records_incr + ", Merged: " + rs_merged_records + ", Archived: " + rs_delete_records;
     snowflake.execute({sqlText: "COMMIT WORK;"});
     return sp_result;
