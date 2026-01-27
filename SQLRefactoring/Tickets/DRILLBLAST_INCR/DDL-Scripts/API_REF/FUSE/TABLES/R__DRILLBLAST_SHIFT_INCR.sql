@@ -1,3 +1,9 @@
+/*****************************************************************************************
+* TABLE     : DRILLBLAST_SHIFT_INCR
+* SCHEMA    : {{ envi }}_API_REF.FUSE
+* SOURCE    : {{ RO_PROD }}_WG.DRILL_BLAST.DRILLBLAST_SHIFT
+* DATE: 2026-01-23 | AUTHOR: CARLOS CARRILLO
+******************************************************************************************/
 create or replace TABLE {{ envi }}_API_REF.FUSE.DRILLBLAST_SHIFT_INCR (
 	ORIG_SRC_ID NUMBER(10,0),
 	SITE_CODE VARCHAR(5) NOT NULL COLLATE 'en-ci',

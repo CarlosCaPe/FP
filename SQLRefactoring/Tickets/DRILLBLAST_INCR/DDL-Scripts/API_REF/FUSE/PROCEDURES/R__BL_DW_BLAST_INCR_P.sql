@@ -6,7 +6,7 @@ AS '
 /*****************************************************************************************
 * PURPOSE   : Merge data from BL_DW_BLAST into BL_DW_BLAST_INCR
 * SOURCE    : {{ RO_PROD }}_WG.DRILL_BLAST.BL_DW_BLAST
-* TARGET    : SANDBOX_DATA_ENGINEER.CCARRILL2.BL_DW_BLAST_INCR
+* TARGET    : {{ envi }}_API_REF.FUSE.BL_DW_BLAST_INCR
 * BUSINESS KEY: ORIG_SRC_ID, SITE_CODE, ID
 * INCREMENTAL COLUMN: DW_MODIFY_TS
 * DATE: 2026-01-23 | AUTHOR: CARLOS CARRILLO

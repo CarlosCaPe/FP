@@ -1,3 +1,9 @@
+/*****************************************************************************************
+* TABLE     : BL_DW_BLAST_INCR
+* SCHEMA    : {{ envi }}_API_REF.FUSE
+* SOURCE    : {{ RO_PROD }}_WG.DRILL_BLAST.BL_DW_BLAST
+* DATE: 2026-01-23 | AUTHOR: CARLOS CARRILLO
+******************************************************************************************/
 create or replace TABLE {{ envi }}_API_REF.FUSE.BL_DW_BLAST_INCR (
 	ORIG_SRC_ID NUMBER(19,0) NOT NULL,
 	SITE_CODE VARCHAR(50) NOT NULL COLLATE 'en-ci',

@@ -1,3 +1,9 @@
+/*****************************************************************************************
+* TABLE     : LH_HAUL_CYCLE_INCR
+* SCHEMA    : {{ envi }}_API_REF.FUSE
+* SOURCE    : {{ RO_PROD }}_WG.LOAD_HAUL.LH_HAUL_CYCLE
+* DATE: 2026-01-23 | AUTHOR: CARLOS CARRILLO
+******************************************************************************************/
 create or replace TABLE {{ envi }}_API_REF.FUSE.LH_HAUL_CYCLE_INCR (
 	HAUL_CYCLE_ID NUMBER(19,0) NOT NULL,
 	SITE_CODE VARCHAR(4) COLLATE 'en-ci',

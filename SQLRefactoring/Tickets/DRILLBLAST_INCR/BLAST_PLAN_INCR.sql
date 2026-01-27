@@ -140,6 +140,7 @@ $$
     var result = {
         procedure: 'BLAST_PLAN_INCR_P',
         start_time: new Date().toISOString(),
+        rows_purged: 0,
         rows_merged: 0,
         rows_inserted: 0,
         rows_updated: 0,
@@ -165,6 +166,21 @@ $$
         var cutoffTs = cutoffResult.getColumnValue(1);
         result.cutoff_timestamp = cutoffTs;
         
+        // =====================================================================
+        // STEP 1: PURGE - Delete old records beyond retention window
+        // This prevents unbounded table growth (Vikas fix - 2026-01-26)
+        // =====================================================================
+        var purgeSQL = `
+            DELETE FROM DEV_API_REF.FUSE.BLAST_PLAN_INCR
+            WHERE DW_MODIFY_TS < DATEADD(day, -${maxDays}, CURRENT_TIMESTAMP())
+        `;
+        var purgeStmt = snowflake.createStatement({sqlText: purgeSQL});
+        purgeStmt.execute();
+        result.rows_purged = purgeStmt.getNumRowsAffected();
+        
+        // =====================================================================
+        // STEP 2: MERGE - Upsert new/updated records
+        // =====================================================================
         // MERGE statement with hash-based conditional updates
         var mergeSQL = `
             MERGE INTO DEV_API_REF.FUSE.BLAST_PLAN_INCR AS TGT

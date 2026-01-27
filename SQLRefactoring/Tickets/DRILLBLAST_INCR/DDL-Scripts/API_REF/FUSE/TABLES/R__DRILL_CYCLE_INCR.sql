@@ -1,3 +1,9 @@
+/*****************************************************************************************
+* TABLE     : DRILL_CYCLE_INCR
+* SCHEMA    : {{ envi }}_API_REF.FUSE
+* SOURCE    : {{ RO_PROD }}_WG.DRILL_BLAST.DRILL_CYCLE
+* DATE: 2026-01-23 | AUTHOR: CARLOS CARRILLO
+******************************************************************************************/
 create or replace TABLE {{ envi }}_API_REF.FUSE.DRILL_CYCLE_INCR (
 	DRILL_CYCLE_SK NUMBER(38,0) NOT NULL,
 	ORIG_SRC_ID NUMBER(38,0),

@@ -1,3 +1,9 @@
+/*****************************************************************************************
+* TABLE     : BLAST_PLAN_EXECUTION_INCR
+* SCHEMA    : {{ envi }}_API_REF.FUSE
+* SOURCE    : {{ RO_PROD }}_WG.DRILL_BLAST.BLAST_PLAN_EXECUTION
+* DATE: 2026-01-23 | AUTHOR: CARLOS CARRILLO
+******************************************************************************************/
 create or replace TABLE {{ envi }}_API_REF.FUSE.BLAST_PLAN_EXECUTION_INCR (
 	ORIG_SRC_ID NUMBER(38,0) NOT NULL,
 	SITE_CODE VARCHAR(50) NOT NULL,

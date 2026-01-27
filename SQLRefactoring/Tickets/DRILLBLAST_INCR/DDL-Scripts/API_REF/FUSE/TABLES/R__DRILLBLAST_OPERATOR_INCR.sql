@@ -1,3 +1,9 @@
+/*****************************************************************************************
+* TABLE     : DRILLBLAST_OPERATOR_INCR
+* SCHEMA    : {{ envi }}_API_REF.FUSE
+* SOURCE    : {{ RO_PROD }}_WG.DRILL_BLAST.DRILLBLAST_OPERATOR
+* DATE: 2026-01-23 | AUTHOR: CARLOS CARRILLO
+******************************************************************************************/
 create or replace TABLE {{ envi }}_API_REF.FUSE.DRILLBLAST_OPERATOR_INCR (
 	SYSTEM_OPERATOR_ID NUMBER(19,0) NOT NULL,
 	SITE_CODE VARCHAR(5) NOT NULL COLLATE 'en-ci',

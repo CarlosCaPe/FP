@@ -3,6 +3,15 @@ RETURNS VARCHAR(16777216)
 LANGUAGE JAVASCRIPT
 EXECUTE AS OWNER
 AS '
+/*****************************************************************************************
+* PURPOSE   : Merge data from BLAST_PLAN_EXECUTION into BLAST_PLAN_EXECUTION_INCR
+* SOURCE    : {{ RO_PROD }}_WG.DRILL_BLAST.BLAST_PLAN_EXECUTION
+* TARGET    : {{ envi }}_API_REF.FUSE.BLAST_PLAN_EXECUTION_INCR
+* BUSINESS KEY: ORIG_SRC_ID, SITE_CODE, BENCH, PUSHBACK, PATTERN_NAME, BLAST_NAME, DRILLED_HOLE_ID
+* INCREMENTAL COLUMN: DW_MODIFY_TS
+* DATE: 2026-01-23 | AUTHOR: CARLOS CARRILLO
+******************************************************************************************/
+
 var sp_result="";
 var sql_count_incr, sql_delete_incr, sql_merge, sql_delete;
 

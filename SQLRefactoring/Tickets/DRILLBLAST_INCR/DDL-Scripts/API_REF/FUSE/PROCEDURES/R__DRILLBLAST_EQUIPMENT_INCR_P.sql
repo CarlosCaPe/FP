@@ -3,6 +3,15 @@ RETURNS VARCHAR(16777216)
 LANGUAGE JAVASCRIPT
 EXECUTE AS OWNER
 AS '
+/*****************************************************************************************
+* PURPOSE   : Merge data from DRILLBLAST_EQUIPMENT into DRILLBLAST_EQUIPMENT_INCR
+* SOURCE    : {{ RO_PROD }}_WG.DRILL_BLAST.DRILLBLAST_EQUIPMENT
+* TARGET    : {{ envi }}_API_REF.FUSE.DRILLBLAST_EQUIPMENT_INCR
+* BUSINESS KEY: ORIG_SRC_ID, SITE_CODE, DRILL_ID
+* INCREMENTAL COLUMN: DW_MODIFY_TS
+* DATE: 2026-01-23 | AUTHOR: CARLOS CARRILLO
+******************************************************************************************/
+
 var sp_result="";
 
 var sql_count_incr = `SELECT COUNT(*) AS count_check_1 

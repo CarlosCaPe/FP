@@ -1,5 +1,34 @@
 # IROC Video Wall - Production Performance Dashboard
 
+## 🚀 NEW: Intelligent Dashboard with Integrated Chat
+
+The **Intelligent Dashboard** combines the video wall with a natural language chat interface:
+
+```bash
+# Run the intelligent dashboard
+streamlit run intelligent_dashboard.py
+# Or use the batch script:
+run_intelligent.bat
+```
+
+### ✨ Features:
+- 🌍 **Multi-site switching** - Change between MOR, BAG, SIE, SAM, CMX, NMO, CVE instantly
+- 💬 **Natural Language Chat** - Ask questions in English or Spanish
+- 📊 **Live Query Execution** - See KQL/SQL queries and results in real-time
+- 🔄 **Real-time Metrics** - Auto-refreshing dashboard metrics
+
+### 💬 Chat Examples:
+| Query | Description |
+|-------|-------------|
+| `ios level morenci` | Shows IOS stockpile levels |
+| `crusher rate bagdad` | Shows crusher throughput |
+| `truck count` | Shows active truck fleet |
+| `cycle time` | Shows average cycle time |
+| `top shovels` | Shows priority shovels by production |
+| `tons delivered` | Shows tons by destination |
+
+---
+
 ## Overview
 
 Real-time production performance dashboard for the CC6 IROC Video Wall at Morenci mining operations. This dashboard displays LH&IOS (Load-Haul & In-Ore Stockpile) metrics following strict requirements for display format, calculations, and color coding.
