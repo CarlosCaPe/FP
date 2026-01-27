@@ -26,11 +26,116 @@
 **Problema:** 5 procedures NO tenían lógica de purging (crecimiento infinito de tablas)
 - BLAST_PLAN_INCR_P, DRILL_CYCLE_INCR_P, DRILL_PLAN_INCR_P, DRILLBLAST_SHIFT_INCR_P, LH_HAUL_CYCLE_INCR_P
 
-**Solución:** Se agregó DELETE antes del MERGE para purgar registros > 90 días
+**Solución:** Se agregó DELETE antes del MERGE para purgar registros > NUMBER_OF_DAYS
 
-**Output esperado:** `Purged: X, Merged: Y, Archived: 0` (no `Deleted: 0`)
+**Output esperado:** `Deleted: X, Merged: Y, Archived: Z`
 
-**Nuevo parámetro:** `MAX_DAYS_TO_KEEP` (default: 90 días)
+---
+
+## 📋 ESTRUCTURA ESTÁNDAR DE PROCEDURES INCR
+
+Todos los 11 procedures DEBEN seguir esta estructura idéntica:
+
+### 1. Header de Documentación (OBLIGATORIO)
+```sql
+CREATE OR REPLACE PROCEDURE {{ envi }}_API_REF.FUSE.{TABLE_NAME}_INCR_P("NUMBER_OF_DAYS" VARCHAR(16777216) DEFAULT '3')
+RETURNS VARCHAR(16777216)
+LANGUAGE JAVASCRIPT
+EXECUTE AS OWNER
+AS '
+/*****************************************************************************************
+* PURPOSE   : Merge data from {TABLE_NAME} into {TABLE_NAME}_INCR
+* SOURCE    : {{ RO_PROD }}_WG.{SCHEMA}.{TABLE_NAME}
+* TARGET    : {{ envi }}_API_REF.FUSE.{TABLE_NAME}_INCR
+* BUSINESS KEY: {PRIMARY_KEY_COLUMNS}
+* INCREMENTAL COLUMN: DW_MODIFY_TS
+* DATE: YYYY-MM-DD | AUTHOR: {NOMBRE}
+******************************************************************************************/
+```
+
+### 2. Declaración de Variables
+```javascript
+var sp_result="";
+var sql_count_incr, sql_delete_incr, sql_merge, sql_delete;
+var rs_count_incr, rs_delete_incr, rs_merge, rs_delete;
+var rs_records_incr, rs_deleted_records_incr, rs_merged_records, rs_delete_records;
+```
+
+### 3. SQL Statements (4 OBLIGATORIOS)
+
+| # | Variable | Propósito | Descripción |
+|---|----------|-----------|-------------|
+| 1 | `sql_count_incr` | COUNT registros viejos | Cuenta registros con `dw_modify_ts < DATEADD(day, -NUMBER_OF_DAYS, CURRENT_DATE)` |
+| 2 | `sql_delete_incr` | PURGE (DELETE) | Elimina registros viejos para controlar crecimiento de tabla |
+| 3 | `sql_merge` | MERGE upsert | INSERT nuevos + UPDATE existentes usando HASH comparison |
+| 4 | `sql_delete` | SOFT DELETE (UPDATE) | Marca `DW_LOGICAL_DELETE_FLAG = 'Y'` para registros eliminados en origen |
+
+### 4. Bloque try/catch con Transacción
+```javascript
+try {
+    snowflake.execute({sqlText: "BEGIN WORK;"});
+    
+    // 1. Count old records
+    rs_count_incr = snowflake.execute({sqlText: sql_count_incr});
+    rs_count_incr.next();
+    rs_records_incr = rs_count_incr.getColumnValue('COUNT_CHECK_1');
+    
+    // 2. Delete old records (PURGE) - solo si hay registros
+    rs_deleted_records_incr = rs_records_incr > 0 
+        ? snowflake.execute({sqlText: sql_delete_incr}).getNumRowsAffected() 
+        : 0;
+    
+    // 3. Merge new/updated records
+    rs_merge = snowflake.execute({sqlText: sql_merge});
+    rs_merged_records = rs_merge.getNumRowsAffected();
+    
+    // 4. Soft delete (mark as deleted)
+    rs_delete = snowflake.execute({sqlText: sql_delete});
+    rs_delete_records = rs_delete.getNumRowsAffected();
+    
+    // Build result message
+    sp_result = "Deleted: " + rs_deleted_records_incr + 
+                ", Merged: " + rs_merged_records + 
+                ", Archived: " + rs_delete_records;
+    
+    snowflake.execute({sqlText: "COMMIT WORK;"});
+    return sp_result;
+} catch (err) { 
+    snowflake.execute({sqlText: "ROLLBACK WORK;"}); 
+    throw err; 
+}
+```
+
+### 5. Template Variables
+
+| Variable | Descripción | Valores |
+|----------|-------------|---------|
+| `{{ envi }}` | Ambiente destino | DEV, TEST, PROD |
+| `{{ RO_PROD }}` | Ambiente origen (siempre PROD) | PROD |
+
+---
+
+## 📋 ESTRUCTURA ESTÁNDAR DE TABLAS INCR
+
+Todas las 11 tablas DEBEN tener este header:
+
+```sql
+/*****************************************************************************************
+* TABLE     : {TABLE_NAME}_INCR
+* SCHEMA    : {{ envi }}_API_REF.FUSE
+* SOURCE    : {{ RO_PROD }}_WG.{SCHEMA}.{TABLE_NAME}
+* DATE: YYYY-MM-DD | AUTHOR: {NOMBRE}
+******************************************************************************************/
+create or replace TABLE {{ envi }}_API_REF.FUSE.{TABLE_NAME}_INCR (
+    -- Columnas del source
+    ...
+    -- Columnas de auditoría (OBLIGATORIAS)
+    DW_LOGICAL_DELETE_FLAG VARCHAR(1) DEFAULT 'N',
+    DW_LOAD_TS TIMESTAMP_NTZ(9) DEFAULT CURRENT_TIMESTAMP(),
+    DW_MODIFY_TS TIMESTAMP_NTZ(9) DEFAULT CURRENT_TIMESTAMP(),
+    DW_ROW_HASH NUMBER(38,0)  -- Opcional, para optimización
+);
+```
 
 ---
 
