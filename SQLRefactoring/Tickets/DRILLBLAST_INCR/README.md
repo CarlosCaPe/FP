@@ -13,6 +13,31 @@ This folder contains the complete DDL scripts for the DRILLBLAST INCR (Increment
 | **Total Pipelines** | 14 (10 DRILL_BLAST + 4 LOAD_HAUL) |
 | **Snowflake Schema** | DEV_API_REF.FUSE |
 | **SQL Server Database** | SNOWFLAKE_WG |
+| **E2E Test Status** | ✅ PASSED (590,756 rows) |
+
+---
+
+## E2E Test Results (2026-01-29)
+
+All 14 pipelines executed successfully with data:
+
+| Table | Rows |
+|-------|------|
+| BL_DW_BLAST_INCR | 27 |
+| BL_DW_BLASTPROPERTYVALUE_INCR | 27 |
+| BL_DW_HOLE_INCR | 7,599 |
+| BLAST_PLAN_INCR | 45,941 |
+| BLAST_PLAN_EXECUTION_INCR | 156,197 |
+| DRILL_CYCLE_INCR | 5,396 |
+| DRILL_PLAN_INCR | 5,999 |
+| DRILLBLAST_EQUIPMENT_INCR | 58 |
+| DRILLBLAST_OPERATOR_INCR | 3,062 |
+| DRILLBLAST_SHIFT_INCR | 30,421 |
+| LH_BUCKET_INCR | 52,945 |
+| LH_EQUIPMENT_STATUS_EVENT_INCR | 176,778 |
+| LH_HAUL_CYCLE_INCR | 65,448 |
+| LH_LOADING_CYCLE_INCR | 40,863 |
+| **TOTAL** | **590,756** |
 
 ---
 
