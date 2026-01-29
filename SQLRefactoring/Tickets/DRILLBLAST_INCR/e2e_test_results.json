@@ -1,0 +1,117 @@
+{
+  "timestamp": "2026-01-29T10:28:00.652881",
+  "environment": "DEV_API_REF.FUSE",
+  "passed": 13,
+  "failed": 1,
+  "results": [
+    {
+      "procedure": "BL_DW_BLAST_INCR_P",
+      "status": "PASS",
+      "deleted": 0,
+      "merged": 0,
+      "archived": 0,
+      "time_seconds": 2.820769
+    },
+    {
+      "procedure": "BL_DW_BLASTPROPERTYVALUE_INCR_P",
+      "status": "PASS",
+      "deleted": 0,
+      "merged": 0,
+      "archived": 0,
+      "time_seconds": 2.183237
+    },
+    {
+      "procedure": "BL_DW_HOLE_INCR_P",
+      "status": "PASS",
+      "deleted": 0,
+      "merged": 6751,
+      "archived": 0,
+      "time_seconds": 147.312351
+    },
+    {
+      "procedure": "BLAST_PLAN_INCR_P",
+      "status": "PASS",
+      "deleted": 0,
+      "merged": 45941,
+      "archived": 0,
+      "time_seconds": 272.236913
+    },
+    {
+      "procedure": "BLAST_PLAN_EXECUTION_INCR_P",
+      "status": "FAIL",
+      "error": "invalid literal for int() with base 10: 'Deleted 0 old records'"
+    },
+    {
+      "procedure": "DRILL_CYCLE_INCR_P",
+      "status": "PASS",
+      "deleted": 0,
+      "merged": 4036,
+      "archived": 0,
+      "time_seconds": 14.431465
+    },
+    {
+      "procedure": "DRILL_PLAN_INCR_P",
+      "status": "PASS",
+      "deleted": 0,
+      "merged": 3999,
+      "archived": 0,
+      "time_seconds": 22.290955
+    },
+    {
+      "procedure": "DRILLBLAST_EQUIPMENT_INCR_P",
+      "status": "PASS",
+      "deleted": 0,
+      "merged": 0,
+      "archived": 0,
+      "time_seconds": 3.115726
+    },
+    {
+      "procedure": "DRILLBLAST_OPERATOR_INCR_P",
+      "status": "PASS",
+      "deleted": 0,
+      "merged": 0,
+      "archived": 0,
+      "time_seconds": 2.218169
+    },
+    {
+      "procedure": "DRILLBLAST_SHIFT_INCR_P",
+      "status": "PASS",
+      "deleted": 0,
+      "merged": 0,
+      "archived": 0,
+      "time_seconds": 36.378662
+    },
+    {
+      "procedure": "LH_BUCKET_INCR_P",
+      "status": "PASS",
+      "deleted": 0,
+      "merged": 0,
+      "archived": 0,
+      "time_seconds": 22.567301
+    },
+    {
+      "procedure": "LH_EQUIPMENT_STATUS_EVENT_INCR_P",
+      "status": "PASS",
+      "deleted": 0,
+      "merged": 0,
+      "archived": 0,
+      "time_seconds": 328.397377
+    },
+    {
+      "procedure": "LH_HAUL_CYCLE_INCR_P",
+      "status": "PASS",
+      "deleted": 0,
+      "merged": 0,
+      "archived": 0,
+      "time_seconds": 536.338781
+    },
+    {
+      "procedure": "LH_LOADING_CYCLE_INCR_P",
+      "status": "PASS",
+      "deleted": 0,
+      "merged": 0,
+      "archived": 0,
+      "time_seconds": 116.347944
+    }
+  ]
+}
