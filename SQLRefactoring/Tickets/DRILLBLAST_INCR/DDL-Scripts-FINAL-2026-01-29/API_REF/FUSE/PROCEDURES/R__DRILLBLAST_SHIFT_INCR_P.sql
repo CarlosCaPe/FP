@@ -8,9 +8,9 @@ AS '
 * SOURCE    : {{ RO_PROD }}_WG.DRILL_BLAST.DRILLBLAST_SHIFT
 * TARGET    : {{ envi }}_API_REF.FUSE.DRILLBLAST_SHIFT_INCR
 * BUSINESS KEY: SITE_CODE, SHIFT_ID
-* INCREMENTAL COLUMN: SHIFT_START_TS_LOCAL (per Vikas - matches dynamic table logic)
+* INCREMENTAL COLUMN: SHIFT_DATE (Business timestamp - shift operational date)
 * HASH CHECK: TRUE DELTA DETECTION
-* DATE: 2026-01-28 | AUTHOR: CARLOS CARRILLO
+* DATE: 2026-01-29 | AUTHOR: CARLOS CARRILLO
 ******************************************************************************************/
 
 var sp_result="";
@@ -20,10 +20,10 @@ var rs_records_incr, rs_deleted_records_incr, rs_merged_records, rs_delete_recor
 
 sql_count_incr = `SELECT COUNT(*) AS count_check_1 
                   FROM {{ envi }}_API_REF.fuse.drillblast_shift_incr 
-                  WHERE shift_start_ts_local::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
+                  WHERE shift_date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
 sql_delete_incr = `DELETE FROM {{ envi }}_API_REF.fuse.drillblast_shift_incr 
-                   WHERE shift_start_ts_local::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
+                   WHERE shift_date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
 sql_merge = `MERGE INTO {{ envi }}_API_REF.fuse.drillblast_shift_incr tgt
 USING (
@@ -38,7 +38,7 @@ USING (
            CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ AS dw_load_ts,
            dw_modify_ts::TIMESTAMP_NTZ AS dw_modify_ts
     FROM {{ RO_PROD }}_WG.drill_blast.drillblast_shift
-    WHERE shift_start_ts_local >= DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_TIMESTAMP())
+    WHERE shift_date >= DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE)
 ) AS src
 ON tgt.site_code = src.site_code AND tgt.shift_id = src.shift_id
 

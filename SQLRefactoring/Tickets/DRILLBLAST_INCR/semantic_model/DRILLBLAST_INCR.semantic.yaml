@@ -1,0 +1,561 @@
+# =============================================================================
+# DRILLBLAST INCR SEMANTIC MODEL
+# =============================================================================
+# Purpose: Direct Snowflake access for ConOps dashboards
+# Alternative to: INCR Pipeline (Snowflake → Azure Function → SQL Server)
+# Version: 1.0.0
+# Date: 2026-01-29
+# Author: Carlos Carrillo
+# =============================================================================
+
+semantic_model:
+  name: DRILLBLAST_INCR_DirectQuery
+  description: |
+    Semantic model for direct Snowflake queries on DRILL_BLAST and LOAD_HAUL data.
+    This model provides the same data as the INCR pipeline but queries Snowflake directly,
+    eliminating the need for intermediate SQL Server storage.
+    
+  connection:
+    provider: snowflake
+    account: fcx.west-us-2.azure
+    warehouse: PROD_WH
+    database: PROD_WG
+    authentication: externalbrowser
+    
+  data_retention:
+    default_days: 3
+    description: Rolling window matching INCR pipeline behavior
+
+# =============================================================================
+# DRILL_BLAST DOMAIN (10 Entities)
+# =============================================================================
+
+entities:
+
+  # ---------------------------------------------------------------------------
+  # 1. BL_DW_BLAST
+  # ---------------------------------------------------------------------------
+  - name: Blast
+    description: Blast event records from dispatch systems
+    source:
+      schema: DRILL_BLAST
+      table: BL_DW_BLAST
+    primary_key:
+      - ORIG_SRC_ID
+      - SITE_CODE
+      - ID
+    incremental_column: DW_MODIFY_TS
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: string
+        description: Mining site identifier
+      - name: blast_date
+        column: BLAST_DATE
+        type: date
+      - name: pattern_name
+        column: PATTERN_NAME
+        type: string
+      - name: bench
+        column: BENCH
+        type: string
+      - name: pushback
+        column: PUSHBACK
+        type: string
+        
+    measures:
+      - name: blast_count
+        expression: COUNT(DISTINCT ID)
+        description: Number of blast events
+
+  # ---------------------------------------------------------------------------
+  # 2. BL_DW_BLASTPROPERTYVALUE
+  # ---------------------------------------------------------------------------
+  - name: BlastPropertyValue
+    description: Blast property measurements and values
+    source:
+      schema: DRILL_BLAST
+      table: BL_DW_BLASTPROPERTYVALUE
+    primary_key:
+      - ORIG_SRC_ID
+      - SITE_CODE
+      - BLASTID
+    incremental_column: DW_MODIFY_TS
+    
+    relationships:
+      - name: blast
+        target: Blast
+        type: many-to-one
+        join:
+          - source: BLASTID
+            target: ID
+
+  # ---------------------------------------------------------------------------
+  # 3. BL_DW_HOLE
+  # ---------------------------------------------------------------------------
+  - name: BlastHole
+    description: Blast hole drilling details
+    source:
+      schema: DRILL_BLAST
+      table: BL_DW_HOLE
+    primary_key:
+      - ORIG_SRC_ID
+      - SITE_CODE
+      - ID
+    incremental_column: DW_MODIFY_TS
+    
+    dimensions:
+      - name: hole_name
+        column: NAME
+        type: string
+      - name: hole_type
+        column: TYPE
+        type: string
+        
+    measures:
+      - name: hole_count
+        expression: COUNT(DISTINCT ID)
+      - name: avg_hole_depth
+        expression: AVG(DEPTH_FEET)
+        format: "#,##0.0"
+
+  # ---------------------------------------------------------------------------
+  # 4. BLAST_PLAN
+  # ---------------------------------------------------------------------------
+  - name: BlastPlan
+    description: Planned blast patterns and designs
+    source:
+      schema: DRILL_BLAST
+      table: BLAST_PLAN
+    primary_key:
+      - BLAST_PLAN_SK
+    incremental_column: DW_MODIFY_TS
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: string
+      - name: bench
+        column: BENCH
+        type: string
+      - name: pushback
+        column: PUSHBACK
+        type: string
+      - name: pattern_name
+        column: PATTERN_NAME
+        type: string
+      - name: blast_status
+        column: BLAST_STATUS
+        type: string
+        
+    measures:
+      - name: plan_count
+        expression: COUNT(DISTINCT BLAST_PLAN_SK)
+      - name: total_holes_planned
+        expression: SUM(HOLE_COUNT)
+
+  # ---------------------------------------------------------------------------
+  # 5. BLAST_PLAN_EXECUTION
+  # ---------------------------------------------------------------------------
+  - name: BlastPlanExecution
+    description: Execution details for blast plans
+    source:
+      schema: DRILL_BLAST
+      table: BLAST_PLAN_EXECUTION
+    primary_key:
+      - BLAST_PLAN_SK
+      - SITE_CODE
+      - BENCH
+      - PUSHBACK
+      - PATTERN_NAME
+      - HOLE_NAME
+      - ACTUAL_HOLE_DEPTH_FEET
+    incremental_column: DW_MODIFY_TS
+    
+    dimensions:
+      - name: hole_status
+        column: HOLE_STATUS
+        type: string
+      - name: drill_hole_status
+        column: DRILL_HOLE_STATUS
+        type: string
+        
+    measures:
+      - name: execution_count
+        expression: COUNT(*)
+      - name: avg_actual_depth
+        expression: AVG(ACTUAL_HOLE_DEPTH_FEET)
+        
+    relationships:
+      - name: blast_plan
+        target: BlastPlan
+        type: many-to-one
+        join:
+          - source: BLAST_PLAN_SK
+            target: BLAST_PLAN_SK
+
+  # ---------------------------------------------------------------------------
+  # 6. DRILL_CYCLE
+  # ---------------------------------------------------------------------------
+  - name: DrillCycle
+    description: Individual drill cycle operations
+    source:
+      schema: DRILL_BLAST
+      table: DRILL_CYCLE
+    primary_key:
+      - DRILL_CYCLE_SK
+    incremental_column: DW_MODIFY_TS
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: string
+      - name: bench
+        column: BENCH
+        type: string
+      - name: pushback
+        column: PUSHBACK
+        type: string
+      - name: pattern_name
+        column: PATTERN_NAME
+        type: string
+      - name: drill_hole_status
+        column: DRILL_HOLE_STATUS
+        type: string
+      - name: drill_id
+        column: DRILL_ID
+        type: string
+        
+    measures:
+      - name: cycle_count
+        expression: COUNT(DISTINCT DRILL_CYCLE_SK)
+      - name: total_drill_duration
+        expression: SUM(DRILL_DURATION)
+      - name: avg_penetration_rate
+        expression: AVG(DRILL_HOLE_PENETRATION_RATE_AVG_FEET_HOUR)
+        format: "#,##0.0"
+      - name: total_depth_drilled
+        expression: SUM(ACTUAL_DRILL_HOLE_DEPTH_FEET)
+        format: "#,##0.0"
+
+  # ---------------------------------------------------------------------------
+  # 7. DRILL_PLAN
+  # ---------------------------------------------------------------------------
+  - name: DrillPlan
+    description: Planned drilling operations
+    source:
+      schema: DRILL_BLAST
+      table: DRILL_PLAN
+    primary_key:
+      - DRILL_PLAN_SK
+    incremental_column: DW_MODIFY_TS
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: string
+      - name: bench
+        column: BENCH
+        type: string
+      - name: pushback
+        column: PUSHBACK
+        type: string
+      - name: pattern_name
+        column: PATTERN_NAME
+        type: string
+      - name: hole_name
+        column: HOLE_NAME
+        type: string
+      - name: design_by
+        column: DESIGN_BY
+        type: string
+        
+    measures:
+      - name: plan_count
+        expression: COUNT(DISTINCT DRILL_PLAN_SK)
+      - name: total_planned_depth
+        expression: SUM(HOLE_DEPTH_FEET)
+      - name: avg_burden
+        expression: AVG(BURDEN)
+      - name: avg_spacing
+        expression: AVG(SPACING)
+
+  # ---------------------------------------------------------------------------
+  # 8. DRILLBLAST_EQUIPMENT
+  # ---------------------------------------------------------------------------
+  - name: Equipment
+    description: Drill and blast equipment registry
+    source:
+      schema: DRILL_BLAST
+      table: DRILLBLAST_EQUIPMENT
+    primary_key:
+      - ORIG_SRC_ID
+      - SITE_CODE
+      - DRILL_ID
+    incremental_column: DW_MODIFY_TS
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: string
+      - name: drill_id
+        column: DRILL_ID
+        type: string
+      - name: equipment_name
+        column: EQUIPMENT_NAME
+        type: string
+      - name: equipment_type
+        column: EQUIPMENT_TYPE
+        type: string
+
+  # ---------------------------------------------------------------------------
+  # 9. DRILLBLAST_OPERATOR
+  # ---------------------------------------------------------------------------
+  - name: Operator
+    description: Drill and blast equipment operators
+    source:
+      schema: DRILL_BLAST
+      table: DRILLBLAST_OPERATOR
+    primary_key:
+      - SYSTEM_OPERATOR_ID
+      - SITE_CODE
+    incremental_column: DW_MODIFY_TS
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: string
+      - name: operator_id
+        column: SYSTEM_OPERATOR_ID
+        type: string
+      - name: operator_name
+        column: OPERATOR_NAME
+        type: string
+
+  # ---------------------------------------------------------------------------
+  # 10. DRILLBLAST_SHIFT
+  # ---------------------------------------------------------------------------
+  - name: Shift
+    description: Shift definitions for drill and blast operations
+    source:
+      schema: DRILL_BLAST
+      table: DRILLBLAST_SHIFT
+    primary_key:
+      - SITE_CODE
+      - SHIFT_ID
+    incremental_column: DW_MODIFY_TS
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: string
+      - name: shift_id
+        column: SHIFT_ID
+        type: string
+      - name: shift_name
+        column: SHIFT_NAME
+        type: string
+      - name: shift_date
+        column: SHIFT_DATE
+        type: date
+      - name: crew_name
+        column: CREW_NAME
+        type: string
+
+# =============================================================================
+# LOAD_HAUL DOMAIN (4 Entities)
+# =============================================================================
+
+  # ---------------------------------------------------------------------------
+  # 11. LH_BUCKET
+  # ---------------------------------------------------------------------------
+  - name: Bucket
+    description: Loading bucket operations and measurements
+    source:
+      schema: LOAD_HAUL
+      table: LH_BUCKET
+    primary_key:
+      - BUCKET_ID
+    incremental_column: TRIP_TS_LOCAL
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: string
+      - name: material_type
+        column: MATERIAL_TYPE
+        type: string
+      - name: excav_id
+        column: EXCAV_ID
+        type: string
+        
+    measures:
+      - name: bucket_count
+        expression: COUNT(DISTINCT BUCKET_ID)
+      - name: total_payload
+        expression: SUM(PAYLOAD_SHORT_TONS)
+        format: "#,##0.0"
+
+  # ---------------------------------------------------------------------------
+  # 12. LH_EQUIPMENT_STATUS_EVENT
+  # ---------------------------------------------------------------------------
+  - name: EquipmentStatusEvent
+    description: Equipment status changes and events
+    source:
+      schema: LOAD_HAUL
+      table: LH_EQUIPMENT_STATUS_EVENT
+    primary_key:
+      - EQUIP_STATUS_EVENT_SK
+    incremental_column: START_TS_LOCAL
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: string
+      - name: equipment_id
+        column: EQUIPMENT_ID
+        type: string
+      - name: status_type
+        column: STATUS_TYPE
+        type: string
+      - name: delay_reason
+        column: DELAY_REASON
+        type: string
+        
+    measures:
+      - name: event_count
+        expression: COUNT(DISTINCT EQUIP_STATUS_EVENT_SK)
+      - name: total_duration_mins
+        expression: SUM(DURATION_MINS)
+
+  # ---------------------------------------------------------------------------
+  # 13. LH_HAUL_CYCLE
+  # ---------------------------------------------------------------------------
+  - name: HaulCycle
+    description: Complete haul cycles from loading to dumping
+    source:
+      schema: LOAD_HAUL
+      table: LH_HAUL_CYCLE
+    primary_key:
+      - HAUL_CYCLE_ID
+    incremental_column: CYCLE_START_TS_LOCAL
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: string
+      - name: truck_id
+        column: TRUCK_ID
+        type: string
+      - name: excav_id
+        column: EXCAV_ID
+        type: string
+      - name: material_id
+        column: MATERIAL_ID
+        type: string
+      - name: loading_loc_id
+        column: LOADING_LOC_ID
+        type: string
+      - name: dump_loc_id
+        column: DUMP_LOC_ID
+        type: string
+        
+    measures:
+      - name: cycle_count
+        expression: COUNT(DISTINCT HAUL_CYCLE_ID)
+      - name: total_payload
+        expression: SUM(REPORT_PAYLOAD_SHORT_TONS)
+        format: "#,##0.0"
+      - name: avg_loading_duration
+        expression: AVG(LOADING_DURATION_MINS)
+        format: "#,##0.0"
+      - name: avg_travel_duration
+        expression: AVG(FULL_TRAVEL_DURATION_MINS)
+        format: "#,##0.0"
+      - name: avg_dumping_duration
+        expression: AVG(DUMPING_DURATION_MINS)
+        format: "#,##0.0"
+
+  # ---------------------------------------------------------------------------
+  # 14. LH_LOADING_CYCLE
+  # ---------------------------------------------------------------------------
+  - name: LoadingCycle
+    description: Loading operations at excavator locations
+    source:
+      schema: LOAD_HAUL
+      table: LH_LOADING_CYCLE
+    primary_key:
+      - LOADING_CYCLE_ID
+    incremental_column: CYCLE_START_TS_LOCAL
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: string
+      - name: excav_id
+        column: EXCAV_ID
+        type: string
+      - name: truck_id
+        column: TRUCK_ID
+        type: string
+      - name: material_type
+        column: MATERIAL_TYPE
+        type: string
+        
+    measures:
+      - name: cycle_count
+        expression: COUNT(DISTINCT LOADING_CYCLE_ID)
+      - name: total_payload
+        expression: SUM(PAYLOAD_SHORT_TONS)
+      - name: avg_cycle_time
+        expression: AVG(CYCLE_TIME_MINS)
+
+# =============================================================================
+# QUERY TEMPLATES (for Direct Query)
+# =============================================================================
+
+query_templates:
+
+  # Standard 3-day window query (matches INCR pipeline)
+  - name: drill_cycle_3day
+    description: Drill cycles from the last 3 days
+    sql: |
+      SELECT *
+      FROM PROD_WG.DRILL_BLAST.DRILL_CYCLE
+      WHERE DW_MODIFY_TS >= DATEADD(day, -3, CURRENT_DATE())
+    
+  - name: haul_cycle_3day
+    description: Haul cycles from the last 3 days
+    sql: |
+      SELECT *
+      FROM PROD_WG.LOAD_HAUL.LH_HAUL_CYCLE
+      WHERE CYCLE_START_TS_LOCAL >= DATEADD(day, -3, CURRENT_DATE())
+
+  - name: blast_plan_execution_3day
+    description: Blast plan execution from the last 3 days
+    sql: |
+      SELECT *
+      FROM PROD_WG.DRILL_BLAST.BLAST_PLAN_EXECUTION
+      WHERE DW_MODIFY_TS >= DATEADD(day, -3, CURRENT_DATE())
+
+# =============================================================================
+# COMPARISON WITH INCR PIPELINE
+# =============================================================================
+
+comparison:
+  incr_pipeline:
+    description: |
+      Current architecture: Snowflake → INCR Tables → Azure Function → SQL Server → ConOps
+    latency: "5-15 minutes"
+    data_freshness: "Near real-time (15 min refresh)"
+    cost: "Azure Function + SQL Server compute"
+    complexity: "High (multiple components)"
+    
+  semantic_model_direct:
+    description: |
+      Alternative: Snowflake → Direct Query → ConOps
+    latency: "< 5 seconds"
+    data_freshness: "Real-time"
+    cost: "Snowflake compute credits only"
+    complexity: "Low (single query layer)"

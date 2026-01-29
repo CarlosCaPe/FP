@@ -8,8 +8,8 @@ AS '
 * SOURCE    : {{ RO_PROD }}_WG.DRILL_BLAST.BLAST_PLAN_EXECUTION
 * TARGET    : {{ envi }}_API_REF.FUSE.BLAST_PLAN_EXECUTION_INCR
 * BUSINESS KEY: ORIG_SRC_ID, SITE_CODE, BENCH, PUSHBACK, PATTERN_NAME, BLAST_NAME, DRILLED_HOLE_ID
-* INCREMENTAL COLUMN: DW_MODIFY_TS
-* DATE: 2026-01-23 | AUTHOR: CARLOS CARRILLO
+* INCREMENTAL COLUMN: SHOT_DATE_LOCAL (Business timestamp - blast execution date)
+* DATE: 2026-01-29 | AUTHOR: CARLOS CARRILLO
 ******************************************************************************************/
 
 var sp_result="";
@@ -17,10 +17,10 @@ var sql_count_incr, sql_delete_incr, sql_merge, sql_delete;
 
 sql_count_incr = `SELECT COUNT(*) AS count_check_1 
                   FROM {{ envi }}_API_REF.fuse.blast_plan_execution_incr 
-                  WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
+                  WHERE SHOT_DATE_LOCAL::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
 sql_delete_incr = `DELETE FROM {{ envi }}_API_REF.fuse.blast_plan_execution_incr 
-                   WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
+                   WHERE SHOT_DATE_LOCAL::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
 sql_merge = `MERGE INTO {{ envi }}_API_REF.fuse.blast_plan_execution_incr tgt
 USING (
@@ -53,7 +53,7 @@ USING (
         ''N'' AS DW_LOGICAL_DELETE_FLAG,
         CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ AS dw_load_ts_new
     FROM {{ RO_PROD }}_WG.drill_blast.blast_plan_execution
-    WHERE DW_MODIFY_TS >= DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_TIMESTAMP())
+    WHERE SHOT_DATE_LOCAL >= DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE())
     -- Fix: Deduplicate source to prevent MERGE duplicate row error
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY ORIG_SRC_ID, SITE_CODE, COALESCE(BENCH, -999999), COALESCE(PUSHBACK, ''N/A''), COALESCE(PATTERN_NAME, ''N/A''), BLAST_NAME, DRILLED_HOLE_ID

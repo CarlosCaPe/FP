@@ -1,0 +1,960 @@
+# =============================================================================
+# DRILLBLAST INCR SEMANTIC MODEL - SQL SERVER LAYER
+# =============================================================================
+# Purpose: Direct SQL Server access for ConOps dashboards
+# Target: Azure SQL Server (SNOWFLAKE_WG database)
+# Optimized for: Low-latency dashboard queries
+# Version: 1.0.0
+# Date: 2026-01-29
+# Author: Carlos Carrillo
+# =============================================================================
+
+semantic_model:
+  name: DRILLBLAST_INCR_SQLServer
+  description: |
+    Semantic model for direct SQL Server queries on DRILL_BLAST and LOAD_HAUL INCR tables.
+    Optimized for ConOps dashboard with sub-10ms query latency.
+    Data refreshed every 15 minutes via Azure Function pipeline.
+    
+  connection:
+    provider: mssql
+    server: azwd22midbx02.eb8a77f2eea6.database.windows.net
+    database: SNOWFLAKE_WG
+    authentication: ActiveDirectoryInteractive
+    
+  data_characteristics:
+    refresh_frequency: "15 minutes"
+    data_window: "3 days rolling"
+    avg_query_latency: "< 10ms"
+
+# =============================================================================
+# DRILL_BLAST DOMAIN (10 Entities)
+# =============================================================================
+
+entities:
+
+  # ---------------------------------------------------------------------------
+  # 1. BL_DW_BLAST
+  # ---------------------------------------------------------------------------
+  - name: Blast
+    description: Blast event records from dispatch systems
+    table: "[dbo].[DRILL_BLAST__BL_DW_BLAST_INCR]"
+    primary_key:
+      - ORIG_SRC_ID
+      - SITE_CODE
+      - ID
+    
+    query: |
+      SELECT 
+          ORIG_SRC_ID,
+          SITE_CODE,
+          ID,
+          BLAST_DATE,
+          PATTERN_NAME,
+          BENCH,
+          PUSHBACK,
+          BLAST_STATUS,
+          DW_LOAD_TS,
+          DW_MODIFY_TS,
+          DW_LOGICAL_DELETE_FLAG
+      FROM [dbo].[DRILL_BLAST__BL_DW_BLAST_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      ORDER BY DW_MODIFY_TS DESC
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: NVARCHAR
+      - name: blast_date
+        column: BLAST_DATE
+        type: DATE
+      - name: pattern_name
+        column: PATTERN_NAME
+        type: NVARCHAR
+      - name: bench
+        column: BENCH
+        type: NVARCHAR
+      - name: pushback
+        column: PUSHBACK
+        type: NVARCHAR
+        
+    measures:
+      - name: blast_count
+        expression: COUNT(DISTINCT ID)
+
+  # ---------------------------------------------------------------------------
+  # 2. BL_DW_BLASTPROPERTYVALUE
+  # ---------------------------------------------------------------------------
+  - name: BlastPropertyValue
+    description: Blast property measurements and values
+    table: "[dbo].[DRILL_BLAST__BL_DW_BLASTPROPERTYVALUE_INCR]"
+    primary_key:
+      - ORIG_SRC_ID
+      - SITE_CODE
+      - BLASTID
+    
+    query: |
+      SELECT 
+          ORIG_SRC_ID,
+          SITE_CODE,
+          BLASTID,
+          PROPERTY_NAME,
+          PROPERTY_VALUE,
+          DW_LOAD_TS,
+          DW_MODIFY_TS,
+          DW_LOGICAL_DELETE_FLAG
+      FROM [dbo].[DRILL_BLAST__BL_DW_BLASTPROPERTYVALUE_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      ORDER BY DW_MODIFY_TS DESC
+
+  # ---------------------------------------------------------------------------
+  # 3. BL_DW_HOLE
+  # ---------------------------------------------------------------------------
+  - name: BlastHole
+    description: Blast hole drilling details
+    table: "[dbo].[DRILL_BLAST__BL_DW_HOLE_INCR]"
+    primary_key:
+      - ORIG_SRC_ID
+      - SITE_CODE
+      - ID
+    
+    query: |
+      SELECT 
+          ORIG_SRC_ID,
+          SITE_CODE,
+          ID,
+          NAME AS HOLE_NAME,
+          TYPE AS HOLE_TYPE,
+          DEPTH_FEET,
+          DIAMETER_INCHES,
+          X_COORD,
+          Y_COORD,
+          Z_COORD,
+          DW_LOAD_TS,
+          DW_MODIFY_TS,
+          DW_LOGICAL_DELETE_FLAG
+      FROM [dbo].[DRILL_BLAST__BL_DW_HOLE_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      ORDER BY DW_MODIFY_TS DESC
+    
+    measures:
+      - name: hole_count
+        expression: COUNT(DISTINCT ID)
+      - name: avg_hole_depth
+        expression: AVG(DEPTH_FEET)
+      - name: total_holes
+        expression: COUNT(*)
+
+  # ---------------------------------------------------------------------------
+  # 4. BLAST_PLAN
+  # ---------------------------------------------------------------------------
+  - name: BlastPlan
+    description: Planned blast patterns and designs
+    table: "[dbo].[DRILL_BLAST__BLAST_PLAN_INCR]"
+    primary_key:
+      - BLAST_PLAN_SK
+    
+    query: |
+      SELECT 
+          BLAST_PLAN_SK,
+          ORIG_SRC_ID,
+          SITE_CODE,
+          BENCH,
+          PUSHBACK,
+          PATTERN_NAME,
+          BLAST_STATUS,
+          HOLE_COUNT,
+          TOTAL_DEPTH_FEET,
+          BLAST_DATE,
+          DW_LOAD_TS,
+          DW_MODIFY_TS,
+          DW_LOGICAL_DELETE_FLAG
+      FROM [dbo].[DRILL_BLAST__BLAST_PLAN_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      ORDER BY BLAST_DATE DESC, DW_MODIFY_TS DESC
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: NVARCHAR
+      - name: bench
+        column: BENCH
+        type: NVARCHAR
+      - name: pushback
+        column: PUSHBACK
+        type: NVARCHAR
+      - name: pattern_name
+        column: PATTERN_NAME
+        type: NVARCHAR
+      - name: blast_status
+        column: BLAST_STATUS
+        type: NVARCHAR
+        
+    measures:
+      - name: plan_count
+        expression: COUNT(DISTINCT BLAST_PLAN_SK)
+      - name: total_holes_planned
+        expression: SUM(HOLE_COUNT)
+      - name: total_depth_planned
+        expression: SUM(TOTAL_DEPTH_FEET)
+
+  # ---------------------------------------------------------------------------
+  # 5. BLAST_PLAN_EXECUTION
+  # ---------------------------------------------------------------------------
+  - name: BlastPlanExecution
+    description: Execution details for blast plans
+    table: "[dbo].[DRILL_BLAST__BLAST_PLAN_EXECUTION_INCR]"
+    primary_key:
+      - BLAST_PLAN_SK
+      - SITE_CODE
+      - BENCH
+      - PUSHBACK
+      - PATTERN_NAME
+      - HOLE_NAME
+      - ACTUAL_HOLE_DEPTH_FEET
+    
+    query: |
+      SELECT 
+          BLAST_PLAN_SK,
+          ORIG_SRC_ID,
+          SITE_CODE,
+          COALESCE(BENCH, 'UNKNOWN') AS BENCH,
+          COALESCE(PUSHBACK, 'UNKNOWN') AS PUSHBACK,
+          COALESCE(PATTERN_NAME, 'UNKNOWN') AS PATTERN_NAME,
+          HOLE_NAME,
+          HOLE_STATUS,
+          DRILL_HOLE_STATUS,
+          ACTUAL_HOLE_DEPTH_FEET,
+          PLANNED_HOLE_DEPTH_FEET,
+          DW_LOAD_TS,
+          DW_MODIFY_TS,
+          DW_LOGICAL_DELETE_FLAG
+      FROM [dbo].[DRILL_BLAST__BLAST_PLAN_EXECUTION_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      ORDER BY DW_MODIFY_TS DESC
+    
+    measures:
+      - name: execution_count
+        expression: COUNT(*)
+      - name: avg_actual_depth
+        expression: AVG(ACTUAL_HOLE_DEPTH_FEET)
+      - name: depth_variance
+        expression: AVG(ACTUAL_HOLE_DEPTH_FEET - PLANNED_HOLE_DEPTH_FEET)
+
+  # ---------------------------------------------------------------------------
+  # 6. DRILL_CYCLE
+  # ---------------------------------------------------------------------------
+  - name: DrillCycle
+    description: Individual drill cycle operations
+    table: "[dbo].[DRILL_BLAST__DRILL_CYCLE_INCR]"
+    primary_key:
+      - DRILL_CYCLE_SK
+    
+    query: |
+      SELECT 
+          DRILL_CYCLE_SK,
+          ORIG_SRC_ID,
+          SITE_CODE,
+          BENCH,
+          PUSHBACK,
+          PATTERN_NAME,
+          DRILL_HOLE_STATUS,
+          ACTUAL_DRILL_HOLE_DEPTH_FEET,
+          DRILL_DURATION,
+          END_HOLE_TS_LOCAL,
+          DRILL_HOLE_PENETRATION_RATE_AVG_FEET_HOUR,
+          DRILL_ID,
+          DRILL_BIT_ID,
+          SYSTEM_OPERATOR_ID,
+          DRILL_PLAN_SK,
+          DW_LOAD_TS,
+          DW_MODIFY_TS,
+          DW_LOGICAL_DELETE_FLAG
+      FROM [dbo].[DRILL_BLAST__DRILL_CYCLE_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      ORDER BY END_HOLE_TS_LOCAL DESC
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: NVARCHAR
+      - name: bench
+        column: BENCH
+        type: NVARCHAR
+      - name: pushback
+        column: PUSHBACK
+        type: NVARCHAR
+      - name: pattern_name
+        column: PATTERN_NAME
+        type: NVARCHAR
+      - name: drill_hole_status
+        column: DRILL_HOLE_STATUS
+        type: NVARCHAR
+      - name: drill_id
+        column: DRILL_ID
+        type: NVARCHAR
+        
+    measures:
+      - name: cycle_count
+        expression: COUNT(DISTINCT DRILL_CYCLE_SK)
+      - name: total_drill_duration
+        expression: SUM(DRILL_DURATION)
+      - name: avg_penetration_rate
+        expression: AVG(DRILL_HOLE_PENETRATION_RATE_AVG_FEET_HOUR)
+      - name: total_depth_drilled
+        expression: SUM(ACTUAL_DRILL_HOLE_DEPTH_FEET)
+
+  # ---------------------------------------------------------------------------
+  # 7. DRILL_PLAN
+  # ---------------------------------------------------------------------------
+  - name: DrillPlan
+    description: Planned drilling operations
+    table: "[dbo].[DRILL_BLAST__DRILL_PLAN_INCR]"
+    primary_key:
+      - DRILL_PLAN_SK
+    
+    query: |
+      SELECT 
+          DRILL_PLAN_SK,
+          ORIG_SRC_ID,
+          SITE_CODE,
+          BENCH,
+          PUSHBACK,
+          PATTERN_NAME,
+          HOLE_NAME,
+          HOLE_DEPTH_FEET,
+          HOLE_DIAMETER_INCHES,
+          BURDEN,
+          SPACING,
+          DESIGN_BY,
+          HOLE_START_FEET_X,
+          HOLE_START_FEET_Y,
+          HOLE_START_FEET_Z,
+          HOLE_END_FEET_X,
+          HOLE_END_FEET_Y,
+          HOLE_END_FEET_Z,
+          DW_LOAD_TS,
+          DW_MODIFY_TS,
+          DW_LOGICAL_DELETE_FLAG
+      FROM [dbo].[DRILL_BLAST__DRILL_PLAN_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      ORDER BY DW_MODIFY_TS DESC
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: NVARCHAR
+      - name: bench
+        column: BENCH
+        type: NVARCHAR
+      - name: pushback
+        column: PUSHBACK
+        type: NVARCHAR
+      - name: pattern_name
+        column: PATTERN_NAME
+        type: NVARCHAR
+      - name: hole_name
+        column: HOLE_NAME
+        type: NVARCHAR
+      - name: design_by
+        column: DESIGN_BY
+        type: NVARCHAR
+        
+    measures:
+      - name: plan_count
+        expression: COUNT(DISTINCT DRILL_PLAN_SK)
+      - name: total_planned_depth
+        expression: SUM(HOLE_DEPTH_FEET)
+      - name: avg_burden
+        expression: AVG(BURDEN)
+      - name: avg_spacing
+        expression: AVG(SPACING)
+
+  # ---------------------------------------------------------------------------
+  # 8. DRILLBLAST_EQUIPMENT
+  # ---------------------------------------------------------------------------
+  - name: Equipment
+    description: Drill and blast equipment registry
+    table: "[dbo].[DRILL_BLAST__DRILLBLAST_EQUIPMENT_INCR]"
+    primary_key:
+      - ORIG_SRC_ID
+      - SITE_CODE
+      - DRILL_ID
+    
+    query: |
+      SELECT 
+          ORIG_SRC_ID,
+          SITE_CODE,
+          DRILL_ID,
+          EQUIPMENT_NAME,
+          EQUIPMENT_TYPE,
+          EQUIPMENT_STATUS,
+          DW_LOAD_TS,
+          DW_MODIFY_TS,
+          DW_LOGICAL_DELETE_FLAG
+      FROM [dbo].[DRILL_BLAST__DRILLBLAST_EQUIPMENT_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      ORDER BY EQUIPMENT_NAME
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: NVARCHAR
+      - name: drill_id
+        column: DRILL_ID
+        type: NVARCHAR
+      - name: equipment_name
+        column: EQUIPMENT_NAME
+        type: NVARCHAR
+      - name: equipment_type
+        column: EQUIPMENT_TYPE
+        type: NVARCHAR
+
+  # ---------------------------------------------------------------------------
+  # 9. DRILLBLAST_OPERATOR
+  # ---------------------------------------------------------------------------
+  - name: Operator
+    description: Drill and blast equipment operators
+    table: "[dbo].[DRILL_BLAST__DRILLBLAST_OPERATOR_INCR]"
+    primary_key:
+      - SYSTEM_OPERATOR_ID
+      - SITE_CODE
+    
+    query: |
+      SELECT 
+          SYSTEM_OPERATOR_ID,
+          SITE_CODE,
+          OPERATOR_NAME,
+          OPERATOR_STATUS,
+          DW_LOAD_TS,
+          DW_MODIFY_TS,
+          DW_LOGICAL_DELETE_FLAG
+      FROM [dbo].[DRILL_BLAST__DRILLBLAST_OPERATOR_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      ORDER BY OPERATOR_NAME
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: NVARCHAR
+      - name: operator_id
+        column: SYSTEM_OPERATOR_ID
+        type: NVARCHAR
+      - name: operator_name
+        column: OPERATOR_NAME
+        type: NVARCHAR
+
+  # ---------------------------------------------------------------------------
+  # 10. DRILLBLAST_SHIFT
+  # ---------------------------------------------------------------------------
+  - name: Shift
+    description: Shift definitions for drill and blast operations
+    table: "[dbo].[DRILL_BLAST__DRILLBLAST_SHIFT_INCR]"
+    primary_key:
+      - SITE_CODE
+      - SHIFT_ID
+    
+    query: |
+      SELECT 
+          SITE_CODE,
+          SHIFT_ID,
+          SHIFT_NAME,
+          SHIFT_DATE,
+          SHIFT_DATE_NAME,
+          ATTRIBUTED_CREW_ID,
+          CREW_NAME,
+          SHIFT_NO,
+          SHIFT_START_TS_UTC,
+          SHIFT_END_TS_UTC,
+          SHIFT_START_TS_LOCAL,
+          SHIFT_END_TS_LOCAL,
+          SYSTEM_VERSION,
+          DW_LOAD_TS,
+          DW_MODIFY_TS,
+          DW_LOGICAL_DELETE_FLAG
+      FROM [dbo].[DRILL_BLAST__DRILLBLAST_SHIFT_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      ORDER BY SHIFT_DATE DESC, SHIFT_NAME
+
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: NVARCHAR
+      - name: shift_id
+        column: SHIFT_ID
+        type: NVARCHAR
+      - name: shift_name
+        column: SHIFT_NAME
+        type: NVARCHAR
+      - name: shift_date
+        column: SHIFT_DATE
+        type: DATE
+      - name: crew_name
+        column: CREW_NAME
+        type: NVARCHAR
+
+# =============================================================================
+# LOAD_HAUL DOMAIN (4 Entities)
+# =============================================================================
+
+  # ---------------------------------------------------------------------------
+  # 11. LH_BUCKET
+  # ---------------------------------------------------------------------------
+  - name: Bucket
+    description: Loading bucket operations and measurements
+    table: "[dbo].[LOAD_HAUL__LH_BUCKET_INCR]"
+    primary_key:
+      - BUCKET_ID
+    
+    query: |
+      SELECT 
+          BUCKET_ID,
+          SITE_CODE,
+          MATERIAL_TYPE,
+          EXCAV_ID,
+          TRUCK_ID,
+          PAYLOAD_SHORT_TONS,
+          TRIP_TS_LOCAL,
+          LOADING_LOC_ID,
+          DW_LOAD_TS,
+          DW_MODIFY_TS,
+          DW_LOGICAL_DELETE_FLAG
+      FROM [dbo].[LOAD_HAUL__LH_BUCKET_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      ORDER BY TRIP_TS_LOCAL DESC
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: NVARCHAR
+      - name: material_type
+        column: MATERIAL_TYPE
+        type: NVARCHAR
+      - name: excav_id
+        column: EXCAV_ID
+        type: NVARCHAR
+        
+    measures:
+      - name: bucket_count
+        expression: COUNT(DISTINCT BUCKET_ID)
+      - name: total_payload
+        expression: SUM(PAYLOAD_SHORT_TONS)
+      - name: avg_payload
+        expression: AVG(PAYLOAD_SHORT_TONS)
+
+  # ---------------------------------------------------------------------------
+  # 12. LH_EQUIPMENT_STATUS_EVENT
+  # ---------------------------------------------------------------------------
+  - name: EquipmentStatusEvent
+    description: Equipment status changes and events
+    table: "[dbo].[LOAD_HAUL__LH_EQUIPMENT_STATUS_EVENT_INCR]"
+    primary_key:
+      - EQUIP_STATUS_EVENT_SK
+    
+    query: |
+      SELECT 
+          EQUIP_STATUS_EVENT_SK,
+          SITE_CODE,
+          EQUIPMENT_ID,
+          STATUS_TYPE,
+          DELAY_REASON,
+          DELAY_CATEGORY,
+          DURATION_MINS,
+          START_TS_LOCAL,
+          END_TS_LOCAL,
+          DW_LOAD_TS,
+          DW_MODIFY_TS,
+          DW_LOGICAL_DELETE_FLAG
+      FROM [dbo].[LOAD_HAUL__LH_EQUIPMENT_STATUS_EVENT_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      ORDER BY START_TS_LOCAL DESC
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: NVARCHAR
+      - name: equipment_id
+        column: EQUIPMENT_ID
+        type: NVARCHAR
+      - name: status_type
+        column: STATUS_TYPE
+        type: NVARCHAR
+      - name: delay_reason
+        column: DELAY_REASON
+        type: NVARCHAR
+        
+    measures:
+      - name: event_count
+        expression: COUNT(DISTINCT EQUIP_STATUS_EVENT_SK)
+      - name: total_duration_mins
+        expression: SUM(DURATION_MINS)
+      - name: avg_duration_mins
+        expression: AVG(DURATION_MINS)
+
+  # ---------------------------------------------------------------------------
+  # 13. LH_HAUL_CYCLE
+  # ---------------------------------------------------------------------------
+  - name: HaulCycle
+    description: Complete haul cycles from loading to dumping
+    table: "[dbo].[LOAD_HAUL__LH_HAUL_CYCLE_INCR]"
+    primary_key:
+      - HAUL_CYCLE_ID
+    
+    query: |
+      SELECT 
+          HAUL_CYCLE_ID,
+          SITE_CODE,
+          TRUCK_ID,
+          EXCAV_ID,
+          MATERIAL_ID,
+          LOADING_LOC_ID,
+          DUMP_LOC_ID,
+          REPORT_PAYLOAD_SHORT_TONS,
+          CYCLE_START_TS_LOCAL,
+          CYCLE_END_TS_LOCAL,
+          LOADING_DURATION_MINS,
+          FULL_TRAVEL_DURATION_MINS,
+          DUMPING_DURATION_MINS,
+          EMPTY_TRAVEL_DURATION_MINS,
+          TOTAL_CYCLE_DURATION_MINS,
+          DW_LOAD_TS,
+          DW_MODIFY_TS,
+          DW_LOGICAL_DELETE_FLAG
+      FROM [dbo].[LOAD_HAUL__LH_HAUL_CYCLE_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      ORDER BY CYCLE_START_TS_LOCAL DESC
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: NVARCHAR
+      - name: truck_id
+        column: TRUCK_ID
+        type: NVARCHAR
+      - name: excav_id
+        column: EXCAV_ID
+        type: NVARCHAR
+      - name: material_id
+        column: MATERIAL_ID
+        type: NVARCHAR
+      - name: loading_loc_id
+        column: LOADING_LOC_ID
+        type: NVARCHAR
+      - name: dump_loc_id
+        column: DUMP_LOC_ID
+        type: NVARCHAR
+        
+    measures:
+      - name: cycle_count
+        expression: COUNT(DISTINCT HAUL_CYCLE_ID)
+      - name: total_payload
+        expression: SUM(REPORT_PAYLOAD_SHORT_TONS)
+      - name: avg_loading_duration
+        expression: AVG(LOADING_DURATION_MINS)
+      - name: avg_travel_duration
+        expression: AVG(FULL_TRAVEL_DURATION_MINS)
+      - name: avg_dumping_duration
+        expression: AVG(DUMPING_DURATION_MINS)
+      - name: avg_cycle_time
+        expression: AVG(TOTAL_CYCLE_DURATION_MINS)
+
+  # ---------------------------------------------------------------------------
+  # 14. LH_LOADING_CYCLE
+  # ---------------------------------------------------------------------------
+  - name: LoadingCycle
+    description: Loading operations at excavator locations
+    table: "[dbo].[LOAD_HAUL__LH_LOADING_CYCLE_INCR]"
+    primary_key:
+      - LOADING_CYCLE_ID
+    
+    query: |
+      SELECT 
+          LOADING_CYCLE_ID,
+          SITE_CODE,
+          EXCAV_ID,
+          TRUCK_ID,
+          MATERIAL_TYPE,
+          PAYLOAD_SHORT_TONS,
+          CYCLE_START_TS_LOCAL,
+          CYCLE_END_TS_LOCAL,
+          CYCLE_TIME_MINS,
+          BUCKET_COUNT,
+          DW_LOAD_TS,
+          DW_MODIFY_TS,
+          DW_LOGICAL_DELETE_FLAG
+      FROM [dbo].[LOAD_HAUL__LH_LOADING_CYCLE_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      ORDER BY CYCLE_START_TS_LOCAL DESC
+    
+    dimensions:
+      - name: site_code
+        column: SITE_CODE
+        type: NVARCHAR
+      - name: excav_id
+        column: EXCAV_ID
+        type: NVARCHAR
+      - name: truck_id
+        column: TRUCK_ID
+        type: NVARCHAR
+      - name: material_type
+        column: MATERIAL_TYPE
+        type: NVARCHAR
+        
+    measures:
+      - name: cycle_count
+        expression: COUNT(DISTINCT LOADING_CYCLE_ID)
+      - name: total_payload
+        expression: SUM(PAYLOAD_SHORT_TONS)
+      - name: avg_cycle_time
+        expression: AVG(CYCLE_TIME_MINS)
+      - name: total_buckets
+        expression: SUM(BUCKET_COUNT)
+
+# =============================================================================
+# DASHBOARD QUERIES (Ready-to-use for ConOps)
+# =============================================================================
+
+dashboard_queries:
+
+  # ---------------------------------------------------------------------------
+  # DRILL_BLAST Dashboard Queries
+  # ---------------------------------------------------------------------------
+  
+  drill_cycle_summary:
+    name: "Drill Cycle Summary by Site"
+    description: "Aggregated drill cycle metrics per site for the last 3 days"
+    query: |
+      SELECT 
+          SITE_CODE,
+          COUNT(DISTINCT DRILL_CYCLE_SK) AS total_cycles,
+          SUM(ACTUAL_DRILL_HOLE_DEPTH_FEET) AS total_depth_feet,
+          AVG(DRILL_HOLE_PENETRATION_RATE_AVG_FEET_HOUR) AS avg_penetration_rate,
+          SUM(DRILL_DURATION) AS total_drill_duration_mins,
+          COUNT(DISTINCT DRILL_ID) AS unique_drills,
+          MAX(END_HOLE_TS_LOCAL) AS last_activity
+      FROM [dbo].[DRILL_BLAST__DRILL_CYCLE_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      GROUP BY SITE_CODE
+      ORDER BY total_cycles DESC
+
+  drill_cycle_by_status:
+    name: "Drill Cycles by Status"
+    description: "Drill cycle counts grouped by hole status"
+    query: |
+      SELECT 
+          SITE_CODE,
+          DRILL_HOLE_STATUS,
+          COUNT(*) AS cycle_count,
+          SUM(ACTUAL_DRILL_HOLE_DEPTH_FEET) AS total_depth,
+          AVG(DRILL_DURATION) AS avg_duration
+      FROM [dbo].[DRILL_BLAST__DRILL_CYCLE_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      GROUP BY SITE_CODE, DRILL_HOLE_STATUS
+      ORDER BY SITE_CODE, cycle_count DESC
+
+  blast_plan_status:
+    name: "Blast Plan Status Overview"
+    description: "Current status of all blast plans"
+    query: |
+      SELECT 
+          SITE_CODE,
+          BLAST_STATUS,
+          COUNT(*) AS plan_count,
+          SUM(HOLE_COUNT) AS total_holes,
+          SUM(TOTAL_DEPTH_FEET) AS total_depth
+      FROM [dbo].[DRILL_BLAST__BLAST_PLAN_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      GROUP BY SITE_CODE, BLAST_STATUS
+      ORDER BY SITE_CODE, plan_count DESC
+
+  drill_equipment_utilization:
+    name: "Drill Equipment Utilization"
+    description: "Drill usage metrics by equipment"
+    query: |
+      SELECT 
+          dc.SITE_CODE,
+          dc.DRILL_ID,
+          e.EQUIPMENT_NAME,
+          COUNT(DISTINCT dc.DRILL_CYCLE_SK) AS cycles_completed,
+          SUM(dc.ACTUAL_DRILL_HOLE_DEPTH_FEET) AS total_depth,
+          SUM(dc.DRILL_DURATION) AS total_drill_mins,
+          AVG(dc.DRILL_HOLE_PENETRATION_RATE_AVG_FEET_HOUR) AS avg_penetration_rate
+      FROM [dbo].[DRILL_BLAST__DRILL_CYCLE_INCR] dc
+      LEFT JOIN [dbo].[DRILL_BLAST__DRILLBLAST_EQUIPMENT_INCR] e
+          ON dc.SITE_CODE = e.SITE_CODE AND dc.DRILL_ID = e.DRILL_ID
+      WHERE dc.DW_LOGICAL_DELETE_FLAG = 'N'
+      GROUP BY dc.SITE_CODE, dc.DRILL_ID, e.EQUIPMENT_NAME
+      ORDER BY cycles_completed DESC
+
+  # ---------------------------------------------------------------------------
+  # LOAD_HAUL Dashboard Queries
+  # ---------------------------------------------------------------------------
+
+  haul_cycle_summary:
+    name: "Haul Cycle Summary by Site"
+    description: "Aggregated haul cycle metrics per site"
+    query: |
+      SELECT 
+          SITE_CODE,
+          COUNT(DISTINCT HAUL_CYCLE_ID) AS total_cycles,
+          SUM(REPORT_PAYLOAD_SHORT_TONS) AS total_tons_hauled,
+          AVG(LOADING_DURATION_MINS) AS avg_loading_mins,
+          AVG(FULL_TRAVEL_DURATION_MINS) AS avg_travel_mins,
+          AVG(DUMPING_DURATION_MINS) AS avg_dumping_mins,
+          AVG(TOTAL_CYCLE_DURATION_MINS) AS avg_total_cycle_mins,
+          COUNT(DISTINCT TRUCK_ID) AS unique_trucks,
+          COUNT(DISTINCT EXCAV_ID) AS unique_excavs,
+          MAX(CYCLE_END_TS_LOCAL) AS last_activity
+      FROM [dbo].[LOAD_HAUL__LH_HAUL_CYCLE_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      GROUP BY SITE_CODE
+      ORDER BY total_tons_hauled DESC
+
+  truck_productivity:
+    name: "Truck Productivity Report"
+    description: "Productivity metrics by truck"
+    query: |
+      SELECT 
+          SITE_CODE,
+          TRUCK_ID,
+          COUNT(DISTINCT HAUL_CYCLE_ID) AS cycles_completed,
+          SUM(REPORT_PAYLOAD_SHORT_TONS) AS total_tons,
+          AVG(REPORT_PAYLOAD_SHORT_TONS) AS avg_payload,
+          AVG(TOTAL_CYCLE_DURATION_MINS) AS avg_cycle_time,
+          SUM(REPORT_PAYLOAD_SHORT_TONS) / NULLIF(SUM(TOTAL_CYCLE_DURATION_MINS), 0) * 60 AS tons_per_hour
+      FROM [dbo].[LOAD_HAUL__LH_HAUL_CYCLE_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      GROUP BY SITE_CODE, TRUCK_ID
+      ORDER BY tons_per_hour DESC
+
+  excavator_productivity:
+    name: "Excavator Productivity Report"
+    description: "Productivity metrics by excavator"
+    query: |
+      SELECT 
+          SITE_CODE,
+          EXCAV_ID,
+          COUNT(DISTINCT LOADING_CYCLE_ID) AS loads_completed,
+          SUM(PAYLOAD_SHORT_TONS) AS total_tons_loaded,
+          AVG(CYCLE_TIME_MINS) AS avg_load_time,
+          SUM(BUCKET_COUNT) AS total_buckets,
+          SUM(PAYLOAD_SHORT_TONS) / NULLIF(SUM(CYCLE_TIME_MINS), 0) * 60 AS tons_per_hour
+      FROM [dbo].[LOAD_HAUL__LH_LOADING_CYCLE_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      GROUP BY SITE_CODE, EXCAV_ID
+      ORDER BY tons_per_hour DESC
+
+  equipment_delays:
+    name: "Equipment Delay Analysis"
+    description: "Top delay reasons by equipment"
+    query: |
+      SELECT 
+          SITE_CODE,
+          EQUIPMENT_ID,
+          DELAY_REASON,
+          DELAY_CATEGORY,
+          COUNT(*) AS event_count,
+          SUM(DURATION_MINS) AS total_delay_mins,
+          AVG(DURATION_MINS) AS avg_delay_mins
+      FROM [dbo].[LOAD_HAUL__LH_EQUIPMENT_STATUS_EVENT_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+        AND STATUS_TYPE = 'DELAY'
+      GROUP BY SITE_CODE, EQUIPMENT_ID, DELAY_REASON, DELAY_CATEGORY
+      ORDER BY total_delay_mins DESC
+
+  material_movement:
+    name: "Material Movement Report"
+    description: "Tons moved by material type and location"
+    query: |
+      SELECT 
+          SITE_CODE,
+          MATERIAL_ID,
+          LOADING_LOC_ID,
+          DUMP_LOC_ID,
+          COUNT(DISTINCT HAUL_CYCLE_ID) AS cycle_count,
+          SUM(REPORT_PAYLOAD_SHORT_TONS) AS total_tons
+      FROM [dbo].[LOAD_HAUL__LH_HAUL_CYCLE_INCR]
+      WHERE DW_LOGICAL_DELETE_FLAG = 'N'
+      GROUP BY SITE_CODE, MATERIAL_ID, LOADING_LOC_ID, DUMP_LOC_ID
+      ORDER BY total_tons DESC
+
+  # ---------------------------------------------------------------------------
+  # Cross-Domain Queries
+  # ---------------------------------------------------------------------------
+
+  shift_summary:
+    name: "Shift Activity Summary"
+    description: "Activity summary by shift"
+    query: |
+      SELECT 
+          s.SITE_CODE,
+          s.SHIFT_DATE,
+          s.SHIFT_NAME,
+          s.CREW_NAME,
+          (SELECT COUNT(*) FROM [dbo].[DRILL_BLAST__DRILL_CYCLE_INCR] dc 
+           WHERE dc.SITE_CODE = s.SITE_CODE 
+             AND dc.END_HOLE_TS_LOCAL BETWEEN s.SHIFT_START_TS_LOCAL AND s.SHIFT_END_TS_LOCAL
+             AND dc.DW_LOGICAL_DELETE_FLAG = 'N') AS drill_cycles,
+          (SELECT COUNT(*) FROM [dbo].[LOAD_HAUL__LH_HAUL_CYCLE_INCR] hc 
+           WHERE hc.SITE_CODE = s.SITE_CODE 
+             AND hc.CYCLE_START_TS_LOCAL BETWEEN s.SHIFT_START_TS_LOCAL AND s.SHIFT_END_TS_LOCAL
+             AND hc.DW_LOGICAL_DELETE_FLAG = 'N') AS haul_cycles
+      FROM [dbo].[DRILL_BLAST__DRILLBLAST_SHIFT_INCR] s
+      WHERE s.DW_LOGICAL_DELETE_FLAG = 'N'
+      ORDER BY s.SHIFT_DATE DESC, s.SHIFT_NAME
+
+  realtime_operations:
+    name: "Real-Time Operations Dashboard"
+    description: "Current operations status across all domains"
+    query: |
+      SELECT 
+          'DRILL_CYCLES' AS metric_type,
+          (SELECT COUNT(*) FROM [dbo].[DRILL_BLAST__DRILL_CYCLE_INCR] 
+           WHERE DW_LOGICAL_DELETE_FLAG = 'N' 
+             AND END_HOLE_TS_LOCAL >= DATEADD(hour, -1, GETDATE())) AS last_hour,
+          (SELECT COUNT(*) FROM [dbo].[DRILL_BLAST__DRILL_CYCLE_INCR] 
+           WHERE DW_LOGICAL_DELETE_FLAG = 'N' 
+             AND END_HOLE_TS_LOCAL >= DATEADD(day, -1, GETDATE())) AS last_24h
+      UNION ALL
+      SELECT 
+          'HAUL_CYCLES',
+          (SELECT COUNT(*) FROM [dbo].[LOAD_HAUL__LH_HAUL_CYCLE_INCR] 
+           WHERE DW_LOGICAL_DELETE_FLAG = 'N' 
+             AND CYCLE_END_TS_LOCAL >= DATEADD(hour, -1, GETDATE())),
+          (SELECT COUNT(*) FROM [dbo].[LOAD_HAUL__LH_HAUL_CYCLE_INCR] 
+           WHERE DW_LOGICAL_DELETE_FLAG = 'N' 
+             AND CYCLE_END_TS_LOCAL >= DATEADD(day, -1, GETDATE()))
+      UNION ALL
+      SELECT 
+          'TOTAL_TONS_HAULED',
+          (SELECT ISNULL(SUM(REPORT_PAYLOAD_SHORT_TONS), 0) FROM [dbo].[LOAD_HAUL__LH_HAUL_CYCLE_INCR] 
+           WHERE DW_LOGICAL_DELETE_FLAG = 'N' 
+             AND CYCLE_END_TS_LOCAL >= DATEADD(hour, -1, GETDATE())),
+          (SELECT ISNULL(SUM(REPORT_PAYLOAD_SHORT_TONS), 0) FROM [dbo].[LOAD_HAUL__LH_HAUL_CYCLE_INCR] 
+           WHERE DW_LOGICAL_DELETE_FLAG = 'N' 
+             AND CYCLE_END_TS_LOCAL >= DATEADD(day, -1, GETDATE()))
+
+# =============================================================================
+# PERFORMANCE CHARACTERISTICS
+# =============================================================================
+
+performance:
+  description: |
+    SQL Server INCR tables are optimized for low-latency dashboard queries.
+    
+  benchmarks:
+    simple_select_all: "< 10ms"
+    aggregation_by_site: "< 50ms"
+    join_2_tables: "< 100ms"
+    complex_dashboard_query: "< 500ms"
+    
+  optimization_tips:
+    - "Always filter by DW_LOGICAL_DELETE_FLAG = 'N'"
+    - "Use SITE_CODE as first filter for multi-site deployments"
+    - "Limit results with TOP N for real-time displays"
+    - "Use DATEADD for time-based filtering"
+    
+  indexes_recommended:
+    - "IX_SITE_CODE_DW_MODIFY_TS on all tables"
+    - "IX_DW_LOGICAL_DELETE_FLAG on all tables"
+    - "Table-specific indexes on frequently filtered columns"

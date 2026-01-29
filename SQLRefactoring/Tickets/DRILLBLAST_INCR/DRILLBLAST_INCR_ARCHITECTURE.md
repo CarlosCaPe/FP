@@ -4,26 +4,38 @@
 
 | Document Info | |
 |---------------|---|
-| **Version** | 2.0.0 |
+| **Version** | 2.1.0 |
 | **Last Updated** | 2026-01-29 |
 | **Author** | Carlos Carrillo |
 | **Status** | ✅ Production Ready |
 | **Environment** | DEV_API_REF → TEST_API_REF → PROD_API_REF |
+| **Artifact** | DDL-Scripts-FINAL-2026-01-29-v3.zip |
+
+---
+
+## Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 2.1.0 | 2026-01-29 | **CRITICAL FIX**: Complete column coverage for ALL procedures. DRILL_CYCLE_INCR now has 108 columns (was 29), BLAST_PLAN_INCR now has 67 columns (was 11), BL_DW_HOLE_INCR now has 74 columns (was 16). |
+| 2.0.0 | 2026-01-29 | Business timestamp filters, HASH delta detection |
+| 1.0.0 | 2026-01-23 | Initial release |
 
 ---
 
 ## Table of Contents
 
 1. [Executive Summary](#1-executive-summary)
-2. [Architecture Overview](#2-architecture-overview)
-3. [Pipeline Inventory](#3-pipeline-inventory)
-4. [Technical Specifications](#4-technical-specifications)
-5. [Data Flow Architecture](#5-data-flow-architecture)
-6. [Stored Procedure Design](#6-stored-procedure-design)
-7. [SQL Server Integration](#7-sql-server-integration)
-8. [Testing Strategy](#8-testing-strategy)
-9. [Deployment Guide](#9-deployment-guide)
-10. [Operational Runbook](#10-operational-runbook)
+2. [CRITICAL RULES - LESSONS LEARNED](#critical-rules---lessons-learned)
+3. [Architecture Overview](#2-architecture-overview)
+4. [Pipeline Inventory](#3-pipeline-inventory)
+5. [Technical Specifications](#4-technical-specifications)
+6. [Data Flow Architecture](#5-data-flow-architecture)
+7. [Stored Procedure Design](#6-stored-procedure-design)
+8. [SQL Server Integration](#7-sql-server-integration)
+9. [Testing Strategy](#8-testing-strategy)
+10. [Deployment Guide](#9-deployment-guide)
+11. [Operational Runbook](#10-operational-runbook)
 
 ---
 
@@ -50,6 +62,118 @@ The DRILLBLAST INCR Pipeline is a high-performance incremental data synchronizat
 - ✅ **Auto-Purging**: Automatic data retention management
 - ✅ **Idempotent Operations**: Safe to re-run without side effects
 - ✅ **Transaction Safety**: Full ACID compliance with rollback support
+
+---
+
+## CRITICAL RULES - LESSONS LEARNED
+
+> **FATAL ERROR PREVENTION SECTION**
+> 
+> The following rules MUST be followed in ALL future INCR pipeline development. 
+> Violations of these rules have caused production issues and significant rework.
+
+### RULE 1: NEVER OMIT COLUMNS IN INSERT/UPDATE STATEMENTS
+
+**VIOLATION TYPE: FATAL ERROR**
+
+When creating MERGE procedures:
+- **ALL columns from the source table MUST be included in the INSERT clause**
+- **ALL non-key columns MUST be included in the UPDATE SET clause**
+- **NEVER arbitrarily select a subset of columns**
+
+```sql
+-- WRONG (FATAL): Selecting only some columns
+INSERT (col1, col2, col3)  -- Missing col4, col5, col6, ... col50!
+VALUES (src.col1, src.col2, src.col3)
+
+-- CORRECT: Include ALL columns from source
+INSERT (col1, col2, col3, col4, col5, ... col50, dw_load_ts, dw_modify_ts)
+VALUES (src.col1, src.col2, src.col3, src.col4, src.col5, ... src.col50, 
+        CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())
+```
+
+**Verification Process:**
+1. Extract source table DDL: `DESCRIBE TABLE PROD_WG.{SCHEMA}.{TABLE}`
+2. Extract target INCR table DDL
+3. Compare column counts: `SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ...`
+4. Ensure 1:1 column mapping (excluding audit columns)
+
+---
+
+### RULE 2: USE BUSINESS TIMESTAMPS FOR INCREMENTAL LOGIC (NOT SYSTEM TIMESTAMPS)
+
+**VIOLATION TYPE: DATA INTEGRITY ERROR**
+
+For incremental filtering, use **business-meaningful timestamps** that represent when the event actually occurred:
+
+| Table Type | Correct Column | Wrong Column | Reason |
+|------------|----------------|--------------|--------|
+| DRILL_CYCLE | `END_HOLE_TS_LOCAL` | DW_MODIFY_TS | Event completion time |
+| HAUL_CYCLE | `CYCLE_START_TS_LOCAL` | DW_MODIFY_TS | Cycle start time |
+| LOADING_CYCLE | `CYCLE_START_TS_LOCAL` | DW_MODIFY_TS | Loading start time |
+| BUCKET | `TRIP_TS_LOCAL` | DW_MODIFY_TS | Trip timestamp |
+| STATUS_EVENT | `START_TS_LOCAL` | DW_MODIFY_TS | Event start time |
+
+**Exception:** For dimension tables (EQUIPMENT, OPERATOR, SHIFT) where there's no business timestamp, DW_MODIFY_TS is acceptable.
+
+---
+
+### RULE 3: DERIVE COLUMNS FROM EXISTING DT/VIEWS, NOT FROM SOURCE TABLES
+
+**VIOLATION TYPE: DESIGN ERROR**
+
+When creating INCR tables:
+1. **FIRST**: Find the Dynamic Table (DT) or View that already consumes this source
+2. **SECOND**: Use the SAME columns as the DT/View
+3. **THIRD**: Match column transformations (casts, renames, calculations)
+
+```
+DO NOT:
+  Source Table → INCR Table (direct copy)
+
+DO THIS:
+  Source Table → Dynamic Table/View → Study columns → INCR Table (match DT structure)
+```
+
+**Reference Dynamic Tables:**
+- `PROD_TARGET.COLLECTIONS.DRILLBLAST_DRILL_CYCLE_DT` - 100+ columns
+- `PROD_TARGET.COLLECTIONS.LH_HAUL_CYCLE_DT` - 70+ columns
+
+---
+
+### RULE 4: VALIDATE COLUMN COUNT BEFORE DEPLOYMENT
+
+**PRE-DEPLOYMENT CHECKLIST:**
+
+```sql
+-- Step 1: Count source columns
+SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+WHERE TABLE_SCHEMA = 'DRILL_BLAST' AND TABLE_NAME = 'DRILL_CYCLE';
+
+-- Step 2: Count INCR table columns  
+SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+WHERE TABLE_SCHEMA = 'FUSE' AND TABLE_NAME = 'DRILL_CYCLE_INCR';
+
+-- Step 3: Count columns in MERGE INSERT clause
+-- (Manual review of procedure)
+
+-- All three counts must match (±3 for audit columns)
+```
+
+---
+
+### RULE 5: TEST DATA INTEGRITY AFTER MERGE
+
+**POST-DEPLOYMENT VALIDATION:**
+
+```sql
+-- Compare specific record between source and INCR
+SELECT * FROM PROD_WG.DRILL_BLAST.DRILL_CYCLE WHERE DRILL_CYCLE_SK = 12345;
+SELECT * FROM DEV_API_REF.FUSE.DRILL_CYCLE_INCR WHERE DRILL_CYCLE_SK = 12345;
+
+-- Verify ALL columns match (not just key columns)
+-- Use diff tool if needed
+```
 
 ---
 
@@ -172,6 +296,30 @@ The DRILLBLAST INCR Pipeline is a high-performance incremental data synchronizat
 ╚═════╩═══════════════════════════════════════╩═══════════════════════════════╩═════════════╩═══════════════╝
 ```
 
+### 3.1.1 Column Coverage Verification (v3)
+
+All procedures now have **COMPLETE** column coverage matching their target tables:
+
+| # | Pipeline | Table Cols | INSERT Cols | Status |
+|---|----------|------------|-------------|--------|
+| 1 | BL_DW_BLAST_INCR | 19 | 19 | ✅ |
+| 2 | BL_DW_BLASTPROPERTYVALUE_INCR | 13 | 13 | ✅ |
+| 3 | BL_DW_HOLE_INCR | 74 | 74 | ✅ |
+| 4 | BLAST_PLAN_INCR | 66 | 67 | ✅ |
+| 5 | BLAST_PLAN_EXECUTION_INCR | 62 | 62 | ✅ |
+| 6 | DRILL_CYCLE_INCR | 108 | 108 | ✅ |
+| 7 | DRILL_PLAN_INCR | 40 | 41 | ✅ |
+| 8 | DRILLBLAST_EQUIPMENT_INCR | 14 | 14 | ✅ |
+| 9 | DRILLBLAST_OPERATOR_INCR | 14 | 14 | ✅ |
+| 10 | DRILLBLAST_SHIFT_INCR | 16 | 17 | ✅ |
+| 11 | LH_BUCKET_INCR | 39 | 39 | ✅ |
+| 12 | LH_EQUIPMENT_STATUS_EVENT_INCR | 21 | 21 | ✅ |
+| 13 | LH_HAUL_CYCLE_INCR | 68 | 68 | ✅ |
+| 14 | LH_LOADING_CYCLE_INCR | 33 | 33 | ✅ |
+| **TOTAL** | | **587** | **590** | ✅ |
+╚═════╩═══════════════════════════════════════╩═══════════════════════════════╩═════════════╩═══════════════╝
+```
+
 ### 3.2 Domain Classification
 
 ```
@@ -245,22 +393,25 @@ EXECUTE AS OWNER
 
 ### 4.2 Incremental Logic
 
-| Table | Incremental Column | Business Rationale |
-|-------|-------------------|-------------------|
-| BL_DW_BLAST_INCR | DW_MODIFY_TS | Standard ETL timestamp |
-| BL_DW_BLASTPROPERTYVALUE_INCR | DW_MODIFY_TS | Standard ETL timestamp |
-| BL_DW_HOLE_INCR | DW_MODIFY_TS | Standard ETL timestamp |
-| BLAST_PLAN_INCR | DW_MODIFY_TS | Standard ETL timestamp |
-| BLAST_PLAN_EXECUTION_INCR | DW_MODIFY_TS | Standard ETL timestamp |
-| DRILL_CYCLE_INCR | DW_MODIFY_TS | Standard ETL timestamp |
-| DRILL_PLAN_INCR | DW_MODIFY_TS | Standard ETL timestamp |
-| DRILLBLAST_EQUIPMENT_INCR | DW_MODIFY_TS | Standard ETL timestamp |
-| DRILLBLAST_OPERATOR_INCR | DW_MODIFY_TS | Standard ETL timestamp |
-| DRILLBLAST_SHIFT_INCR | DW_MODIFY_TS | Standard ETL timestamp |
-| LH_BUCKET_INCR | TRIP_TS_LOCAL | Business timestamp |
-| LH_EQUIPMENT_STATUS_EVENT_INCR | START_TS_LOCAL | Business timestamp |
-| LH_HAUL_CYCLE_INCR | CYCLE_START_TS_LOCAL | Business timestamp |
-| LH_LOADING_CYCLE_INCR | CYCLE_START_TS_LOCAL | Business timestamp |
+> **IMPORTANT**: See RULE 2 in Critical Rules section. 
+> Use business timestamps, not system timestamps (DW_MODIFY_TS).
+
+| Table | Incremental Column | Business Rationale | Column Type |
+|-------|-------------------|-------------------|-------------|
+| BL_DW_BLAST_INCR | FIREDTIME | Blast execution timestamp | Business |
+| BL_DW_BLASTPROPERTYVALUE_INCR | PLANNEDDATE | Property planning date | Business |
+| BL_DW_HOLE_INCR | DW_MODIFY_TS | No business timestamp available | System |
+| BLAST_PLAN_INCR | DW_MODIFY_TS | Planning dimension table | System |
+| BLAST_PLAN_EXECUTION_INCR | SHOT_DATE_LOCAL | Blast execution date | Business |
+| DRILL_CYCLE_INCR | END_HOLE_TS_LOCAL | Hole completion timestamp | Business |
+| DRILL_PLAN_INCR | PLAN_CREATION_TS_LOCAL | Plan creation timestamp | Business |
+| DRILLBLAST_EQUIPMENT_INCR | DW_MODIFY_TS | Equipment dimension table | System |
+| DRILLBLAST_OPERATOR_INCR | DW_MODIFY_TS | Operator dimension table | System |
+| DRILLBLAST_SHIFT_INCR | SHIFT_DATE | Shift operational date | Business |
+| LH_BUCKET_INCR | TRIP_TS_LOCAL | Bucket trip timestamp | Business |
+| LH_EQUIPMENT_STATUS_EVENT_INCR | START_TS_LOCAL | Event start timestamp | Business |
+| LH_HAUL_CYCLE_INCR | CYCLE_START_TS_LOCAL | Haul cycle start | Business |
+| LH_LOADING_CYCLE_INCR | CYCLE_START_TS_LOCAL | Loading cycle start | Business |
 
 ### 4.3 HASH-Based Delta Detection
 

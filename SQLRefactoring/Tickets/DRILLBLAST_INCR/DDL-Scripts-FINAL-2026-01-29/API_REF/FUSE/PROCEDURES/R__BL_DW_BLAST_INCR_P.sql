@@ -8,8 +8,8 @@ AS '
 * SOURCE    : {{ RO_PROD }}_WG.DRILL_BLAST.BL_DW_BLAST
 * TARGET    : {{ envi }}_API_REF.FUSE.BL_DW_BLAST_INCR
 * BUSINESS KEY: ORIG_SRC_ID, SITE_CODE, ID
-* INCREMENTAL COLUMN: DW_MODIFY_TS
-* DATE: 2026-01-23 | AUTHOR: CARLOS CARRILLO
+* INCREMENTAL COLUMN: FIREDTIME (Business timestamp - blast execution time)
+* DATE: 2026-01-29 | AUTHOR: CARLOS CARRILLO
 ******************************************************************************************/
 
 var sp_result="";
@@ -19,10 +19,10 @@ var rs_records_incr, rs_deleted_records_incr, rs_merged_records, rs_delete_recor
 
 sql_count_incr = `SELECT COUNT(*) AS count_check_1 
                   FROM {{ envi }}_API_REF.fuse.bl_dw_blast_incr 
-                  WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
+                  WHERE firedtime::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
 sql_delete_incr = `DELETE FROM {{ envi }}_API_REF.fuse.bl_dw_blast_incr 
-                   WHERE dw_modify_ts::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
+                   WHERE firedtime::date < DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_DATE);`;
 
 sql_merge = `MERGE INTO {{ envi }}_API_REF.fuse.bl_dw_blast_incr tgt
 USING (
@@ -36,7 +36,7 @@ USING (
         CURRENT_TIMESTAMP(0)::TIMESTAMP_NTZ AS dw_load_ts,
         dw_modify_ts
     FROM {{ RO_PROD }}_WG.drill_blast.bl_dw_blast
-    WHERE dw_modify_ts >= DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_TIMESTAMP())
+    WHERE firedtime >= DATEADD(day, -` + NUMBER_OF_DAYS + `, CURRENT_TIMESTAMP())
 ) AS src
 
 ON tgt.orig_src_id = src.orig_src_id 
